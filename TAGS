@@ -1,0 +1,10 @@
+
+lib/DhanHQ/version.rb,97
+module DhanHQDhanHQ3,0
+  VERSION = "0.1.0"VERSION4,0
+  VERSION = "0.1.0"DhanHQ::VERSION4,0
+
+lib/DhanHQ.rb,123
+module DhanHQDhanHQ5,0
+  class Error < StandardError; endError6,0
+  class Error < StandardError; endDhanHQ::Error6,0
