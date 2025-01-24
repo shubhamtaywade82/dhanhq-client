@@ -1,8 +1,21 @@
+require:
+  - rubocop-rspec
+  - rubocop-rake
+  - rubocop-performance
+
 AllCops:
   TargetRubyVersion: 3.1
+  NewCops: enable
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+# RSpec
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/ExampleLength:
+  Max: 15
