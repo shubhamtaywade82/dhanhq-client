@@ -3,6 +3,15 @@
 require_relative "DhanHQ/version"
 
 require_relative "DhanHQ/configuration"
+require_relative "DhanHQ/client"
+require_relative "DhanHQ/base_resource"
+require_relative "DhanHQ/base_api"
+
+require_relative "DhanHQ/resources/orders"
+
+require_relative "DhanHQ/models/order"
+
+require_relative "DhanHQ/error_handler"
 
 # The top-level module for the DhanHQ client library.
 #
