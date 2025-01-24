@@ -2,6 +2,8 @@
 
 require_relative "DhanHQ/version"
 
+require_relative "DhanHQ/configuration"
+
 # The top-level module for the DhanHQ client library.
 #
 # Provides configuration management for setting credentials and API-related settings.

@@ -3,6 +3,8 @@
 module DhanHQ
   module Resources
     class Orders < BaseAPI
+      HTTP_PATH = "/orders"
+
       # Place an order
       def place(params)
         post("", params: params)
