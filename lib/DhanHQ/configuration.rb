@@ -35,8 +35,8 @@ module DhanHQ
     #   config.client_id = "your_client_id"
     #   config.access_token = "your_access_token"
     def initialize
-      @client_id = nil
-      @access_token = nil
+      @client_id = ENV.fetch("CLIENT_ID", nil)
+      @access_token = ENV.fetch("ACCESS_TOKEN", nil)
       @base_url = "https://api.dhan.co/v2"
       @compact_csv_url = "https://images.dhan.co/api-data/api-scrip-master.csv"
       @detailed_csv_url = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"

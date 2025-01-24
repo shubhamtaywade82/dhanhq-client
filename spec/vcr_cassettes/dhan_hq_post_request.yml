@@ -1,0 +1,43 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/charts/historical
+    body:
+      encoding: UTF-8
+      string: '{"securityId":"1333","exchangeSegment":"NSE_EQ","instrument":"EQUITY","expiryCode":0,"fromDate":"2025-01-23","toDate":"2025-01-24","dhanClientId":"<CLIENT_ID>"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Client-Id:
+      - "<CLIENT_ID>"
+      Accept:
+      - application/json
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Fri, 24 Jan 2025 22:25:50 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"open":[1687.0],"high":[1687.0],"low":[1651.25],"close":[1664.9],"volume":[1.7454579E7],"timestamp":[1.7375706E9]}'
+  recorded_at: Fri, 24 Jan 2025 22:25:50 GMT
+recorded_with: VCR 6.3.1

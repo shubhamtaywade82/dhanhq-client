@@ -24,3 +24,7 @@ gem "debug"
 gem "rubycritic"
 
 gem "rubocop-performance"
+
+gem "vcr"
+
+gem "dotenv", groups: %i[development test]

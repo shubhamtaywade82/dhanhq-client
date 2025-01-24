@@ -1,0 +1,43 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/orders
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Client-Id:
+      - "<CLIENT_ID>"
+      Accept:
+      - application/json
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Fri, 24 Jan 2025 22:11:22 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: "[]"
+  recorded_at: Fri, 24 Jan 2025 22:11:22 GMT
+recorded_with: VCR 6.3.1

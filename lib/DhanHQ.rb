@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "dotenv/load"
 require_relative "DhanHQ/version"
 
 require_relative "DhanHQ/configuration"
@@ -38,6 +39,18 @@ module DhanHQ
     def configure
       self.configuration ||= Configuration.new
       yield(configuration)
+    end
+
+    # Configures the DhanHQ client with user-defined settings.
+    #
+    # @example
+    #   DhanHQ.configure_with_env
+    #
+    # @return [void]
+    def configure_with_env
+      self.configuration ||= Configuration.new
+      configuration.access_token = ENV.fetch("ACCESS_TOKEN", nil)
+      configuration.client_id = ENV.fetch("CLIENT_ID", nil)
     end
   end
 end
