@@ -1,0 +1,39 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/marketfeed/quote
+    body:
+      encoding: UTF-8
+      string: '{"NSE_FNO":[49081],"dhanClientId":"<CLIENT_ID>"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Client-Id:
+      - "<CLIENT_ID>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Sat, 25 Jan 2025 08:17:43 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '709'
+      Connection:
+      - keep-alive
+    body:
+      encoding: UTF-8
+      string: '{"data":{"NSE_FNO":{"49081":{"average_price":0,"buy_quantity":0,"depth":{"buy":[{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0}],"sell":[{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0},{"quantity":0,"orders":0,"price":0}]},"last_price":0,"last_quantity":0,"last_trade_time":"","lower_circuit_limit":0.05,"net_change":0,"ohlc":{"open":0,"close":0,"high":0,"low":0},"oi":0,"oi_day_high":0,"oi_day_low":0,"sell_quantity":0,"upper_circuit_limit":20.05,"volume":0}}},"status":"success"}'
+  recorded_at: Sat, 25 Jan 2025 08:17:43 GMT
+recorded_with: VCR 6.3.1

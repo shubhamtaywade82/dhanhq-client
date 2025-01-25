@@ -32,6 +32,22 @@ module DhanHQ
       end
     end
 
+    # Sends an HTTP request to the API.
+    #
+    # @param method [Symbol] The HTTP method (e.g., :get, :post, :put, :delete).
+    # @param path [String] The API endpoint path.
+    # @param payload [Hash] The parameters or body for the request.
+    # @return [Hash, Array] The parsed JSON response.
+    # @raise [DhanHQ::Error] If the response indicates an error.
+    def request(method, path, payload)
+      response = connection.send(method) do |req|
+        req.url path
+        req.headers.merge!(build_headers(path))
+        prepare_payload(req, payload, method)
+      end
+      handle_response(response)
+    end
+
     # Sends a GET request to the API.
     #
     # @param path [String] The API endpoint path.
@@ -74,20 +90,30 @@ module DhanHQ
 
     private
 
-    # Handles HTTP requests to the DhanHQ API.
-    #
-    # @param method [Symbol] The HTTP method (e.g., :get, :post, :put, :delete).
-    # @param path [String] The API endpoint path.
-    # @param payload [Hash] The parameters or body for the request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
-    def request(method, path, payload)
-      response = connection.send(method) do |req|
-        req.url path
-        headers(req)
-        prepare_payload(req, payload, method)
-      end
-      handle_response(response)
+    # Dynamically builds headers for the request
+    def build_headers(path)
+      headers = {
+        "Content-Type" => "application/json",
+        "Accept" => "application/json",
+        "access-token" => DhanHQ.configuration.access_token
+      }
+
+      # Add client-id for DATA APIs
+      headers["client-id"] = DhanHQ.configuration.client_id if data_api?(path)
+
+      headers
+    end
+
+    # Check if the path belongs to a DATA API
+    def data_api?(path)
+      data_api_paths = [
+        "/v2/marketfeed/ltp",
+        "/v2/marketfeed/ohlc",
+        "/v2/marketfeed/quote",
+        "/v2/optionchain",
+        "/v2/optionchain/expirylist"
+      ]
+      data_api_paths.any? { |data_path| path.start_with?(data_path) }
     end
 
     # Sets headers for the request.

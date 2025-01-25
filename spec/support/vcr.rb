@@ -11,6 +11,7 @@ VCR.configure do |config|
   # Filter sensitive data from cassettes
   config.filter_sensitive_data("<ACCESS_TOKEN>") { DhanHQ.configuration.access_token }
   config.filter_sensitive_data("<CLIENT_ID>") { DhanHQ.configuration.client_id }
+  config.filter_sensitive_data("<CLIENT_ID>") { ENV.fetch("CLIENT_ID", nil) }
 
   # Allow localhost connections (useful for Capybara)
   config.allow_http_connections_when_no_cassette = false

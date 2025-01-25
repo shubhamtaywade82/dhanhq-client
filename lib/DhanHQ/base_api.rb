@@ -57,7 +57,25 @@ module DhanHQ
     # @param endpoint [String] The endpoint to append
     # @return [String] The full path
     def build_path(endpoint)
-      "#{resource_path}#{endpoint}"
+      "#{self.class::HTTP_PATH}#{endpoint}"
+    end
+
+    # Add dhanClientId to request parameters
+    #
+    # @param params [Hash] The request parameters
+    # @return [Hash] The parameters including dhanClientId
+    def add_client_id(params)
+      params.merge(dhanClientId: DhanHQ.configuration.client_id)
+    end
+
+    # Build the default headers for API requests
+    #
+    # @return [Hash] The default headers
+    def build_headers
+      {
+        "Content-Type" => "application/json",
+        "Authorization" => "Bearer #{DhanHQ.configuration.access_token}"
+      }
     end
 
     # Perform the actual request
@@ -71,24 +89,6 @@ module DhanHQ
       handle_response(response)
     rescue StandardError => e
       handle_error(e)
-    end
-
-    # Build the default headers for API requests
-    #
-    # @return [Hash] The default headers
-    def build_headers
-      {
-        "Content-Type" => "application/json",
-        "Authorization" => "Bearer #{DhanHQ.configuration.access_token}"
-      }
-    end
-
-    # Add dhanClientId to request parameters
-    #
-    # @param params [Hash] The request parameters
-    # @return [Hash] The parameters including dhanClientId
-    def add_client_id(params)
-      params.merge(dhanClientId: DhanHQ.configuration.client_id)
     end
 
     # Handle the API response

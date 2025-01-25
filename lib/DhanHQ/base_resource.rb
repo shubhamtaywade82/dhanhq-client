@@ -19,6 +19,83 @@ module DhanHQ
       assign_attributes
     end
 
+    # Class Methods
+
+    class << self
+      # Find a resource by ID
+      #
+      # @param id [String] The ID of the resource
+      # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject] The resource or error object
+      def find(id)
+        response = api_client.get("#{resource_path}/#{id}")
+        build_from_response(response)
+      end
+
+      # Find all resources
+      #
+      # @return [Array<DhanHQ::BaseResource>, DhanHQ::ErrorObject] An array of resources or error object
+      def all
+        response = api_client.get(resource_path)
+        return ErrorObject.new(response) unless response[:status] == "success"
+
+        response[:data].map { |attributes| new(attributes) }
+      end
+
+      # Create a new resource
+      #
+      # @param attributes [Hash] The attributes of the resource
+      # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject] The resource or error object
+      def create(attributes)
+        response = api_client.post(resource_path, attributes)
+        build_from_response(response)
+      end
+
+      # Build a resource object from an API response
+      #
+      # @param response [Hash] API response
+      # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
+      def build_from_response(response)
+        return new(response[:data]) if response[:status] == "success"
+
+        DhanHQ::ErrorObject.new(response)
+      end
+
+      # Retrieve the resource path for the API
+      #
+      # @return [String] The resource path
+      def self.resource_path
+        self::HTTP_PATH
+      end
+    end
+
+    # Update an existing resource
+    #
+    # @param attributes [Hash] Attributes to update
+    # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
+    def update(attributes = {})
+      response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
+      self.class.build_from_response(response)
+    end
+
+    # Delete the resource
+    #
+    # @return [Boolean] True if deletion was successful
+    def delete
+      response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
+      response[:status] == "success"
+    rescue StandardError
+      false
+    end
+
+    private
+
+    # Placeholder for the resource path
+    #
+    # @raise [NotImplementedError] If not implemented in a subclass
+    def resource_path
+      raise NotImplementedError, "#{name} must implement `resource_path`."
+    end
+
     # Check if the resource is valid
     #
     # @return [Boolean] True if valid, false otherwise
@@ -32,18 +109,6 @@ module DhanHQ
     def to_request_params
       camelize_keys(@attributes)
     end
-
-    # Build a resource object from an API response
-    #
-    # @param response [Hash] The API response
-    # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject] A resource or error object
-    def self.build_from_response(response)
-      return new(response[:data]) if response[:status] == "success"
-
-      ErrorObject.new(response)
-    end
-
-    private
 
     # Validate the attributes using the validation contract
     def validate!
