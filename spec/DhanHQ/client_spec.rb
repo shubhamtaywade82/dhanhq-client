@@ -55,7 +55,7 @@ RSpec.describe DhanHQ::Client do
 
   describe "#build_headers" do
     it "includes client-id for DATA APIs" do
-      headers = client.send(:build_headers, "/marketfeed/quote")
+      headers = client.send(:build_headers, "/v2/marketfeed/quote")
       expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
     end
 
