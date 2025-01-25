@@ -60,23 +60,23 @@ module DhanHQ
       "#{self.class::HTTP_PATH}#{endpoint}"
     end
 
-    # Add dhanClientId to request parameters
-    #
-    # @param params [Hash] The request parameters
-    # @return [Hash] The parameters including dhanClientId
-    def add_client_id(params)
-      params.merge(dhanClientId: DhanHQ.configuration.client_id)
-    end
+    # # Add dhanClientId to request parameters
+    # #
+    # # @param params [Hash] The request parameters
+    # # @return [Hash] The parameters including dhanClientId
+    # def add_client_id(params)
+    #   params.merge(dhanClientId: DhanHQ.configuration.client_id)
+    # end
 
-    # Build the default headers for API requests
-    #
-    # @return [Hash] The default headers
-    def build_headers
-      {
-        "Content-Type" => "application/json",
-        "Authorization" => "Bearer #{DhanHQ.configuration.access_token}"
-      }
-    end
+    # # Build the default headers for API requests
+    # #
+    # # @return [Hash] The default headers
+    # def build_headers
+    #   {
+    #     "Content-Type" => "application/json",
+    #     "Authorization" => "Bearer #{DhanHQ.configuration.access_token}"
+    #   }
+    # end
 
     # Perform the actual request
     #
@@ -85,9 +85,9 @@ module DhanHQ
     # @param params [Hash] Request parameters
     # @return [Hash, Array] The parsed API response
     def perform_request(method, endpoint, params: {})
-      response = @client.request(method, endpoint, params: add_client_id(params), headers: build_headers)
+      response = @client.request(method, endpoint, params)
       handle_response(response)
-    rescue StandardError => e
+    rescue DhanHQ::Error => e
       handle_error(e)
     end
 
@@ -96,13 +96,9 @@ module DhanHQ
     # @param response [Hash] The API response
     # @return [Hash, Array] The parsed response
     # @raise [ApiError] If the response indicates an error
+    # Handle the API response
     def handle_response(response)
-      case response[:status]
-      when "success"
-        response
-      else
-        raise ApiError.new(response[:message], response[:errors])
-      end
+      response
     end
 
     # Handle API errors
