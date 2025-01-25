@@ -1,0 +1,42 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/orders
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 401
+      message: ''
+    headers:
+      Date:
+      - Sat, 25 Jan 2025 09:04:35 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"errorType":"Invalid_Authentication","errorCode":"DH-901","errorMessage":"Client
+        ID or user generated access token is invalid or expired."}'
+  recorded_at: Sat, 25 Jan 2025 09:04:35 GMT
+recorded_with: VCR 6.3.1

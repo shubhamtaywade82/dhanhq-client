@@ -168,10 +168,19 @@ RSpec.describe DhanHQ::Client do
   # end
 
   describe "error handling" do
-    it "raises a DhanHQ::Error for DH-901", vcr: { cassette_name: "client/error_dh_901" } do
-      expect do
-        client.get("/v2/invalid_endpoint")
-      end.to raise_error(DhanHQ::Error, /Invalid Authentication: 401:/)
+    context "when the access token is not set" do
+      before do
+        DhanHQ.configure do |config|
+          config.access_token = "access_token"
+          config.client_id = "client_id"
+        end
+      end
+
+      it "raises a DhanHQ::Error for DH-901", vcr: { cassette_name: "client/error_dh_901" } do
+        expect do
+          client.get("/v2/orders")
+        end.to raise_error(DhanHQ::Error, /Invalid Authentication: 401:/)
+      end
     end
 
     it "raises a DhanHQ::Error for DH-905", vcr: { cassette_name: "client/error_dh_905" } do
@@ -182,7 +191,7 @@ RSpec.describe DhanHQ::Client do
 
     it "raises a DhanHQ::Error for rate limit exceeded (DH-904)", vcr: { cassette_name: "client/error_dh_904" } do
       expect do
-        client.get("/v2/marketfeed/quote")
+        client.post("/v2/marketfeed/quote")
       end.to raise_error(DhanHQ::Error, /Rate Limit Exceeded: 429:/)
     end
 
