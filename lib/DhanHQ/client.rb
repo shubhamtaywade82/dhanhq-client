@@ -27,7 +27,7 @@ module DhanHQ
       @connection = Faraday.new(url: DhanHQ.configuration.base_url) do |conn|
         conn.request :json
         conn.response :json, content_type: /\bjson$/
-        conn.response :logger if ENV["DHAN_DEBUG"]
+        conn.response :logger if ENV["DHAN_DEBUG"] == "true"
         conn.adapter Faraday.default_adapter
       end
     end

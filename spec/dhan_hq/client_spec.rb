@@ -206,5 +206,17 @@ RSpec.describe DhanHQ::Client do
         client.get("/v2/unknown_error_endpoint")
       end.to raise_error(DhanHQ::Error, /Unknown Error:/)
     end
+
+    it "raises an error for invalid payload types", vcr: { cassette_name: "client/error_invalid_payload" } do
+      expect do
+        client.post("/v2/orders", "invalid_payload")
+      end.to raise_error(DhanHQ::Error, /Input Exception:/)
+    end
+
+    it "handles large payload responses", vcr: { cassette_name: "client/large_payload" } do
+      response = client.post("/v2/marketfeed/quote", { NSE_FNO: (1..1000).to_a })
+      expect(response).to be_a(Hash)
+      expect(response.keys).to include("status", "data")
+    end
   end
 end

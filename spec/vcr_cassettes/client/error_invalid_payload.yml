@@ -1,0 +1,44 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/orders
+    body:
+      encoding: UTF-8
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Content-Length:
+      - '0'
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 400
+      message: ''
+    headers:
+      Date:
+      - Sat, 25 Jan 2025 09:17:45 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"Missing
+        required fields, bad values for parameters etc."}'
+  recorded_at: Sat, 25 Jan 2025 09:17:45 GMT
+recorded_with: VCR 6.3.1
