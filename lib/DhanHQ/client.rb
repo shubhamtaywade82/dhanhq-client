@@ -183,6 +183,15 @@ module DhanHQ
       when 806 then raise DhanHQ::Error, "Data API Error: Subscription Missing - #{error_message}"
       when 807, "DH-910" then raise DhanHQ::Error, "Access Token Expired or Invalid: #{error_message}"
       when 808..814 then raise DhanHQ::Error, "Data API Error: #{error_message}"
+      end
+
+      # Handle HTTP status codes
+      case response.status
+      when 400 then raise DhanHQ::Error, "Bad Request: #{error_message}"
+      when 401 then raise DhanHQ::Error, "Unauthorized: #{error_message}"
+      when 403 then raise DhanHQ::Error, "Forbidden: #{error_message}"
+      when 404 then raise DhanHQ::Error, "Not Found: #{error_message}"
+      when 500..599 then raise DhanHQ::Error, "Server Error: #{error_message}"
       else
         raise DhanHQ::Error, "Unknown Error: #{error_message}"
       end
@@ -193,7 +202,20 @@ module DhanHQ
     # @param body [String, Hash] The response body.
     # @return [Hash] The response body as a hash with indifferent access.
     def symbolize_keys(body)
-      body.is_a?(Hash) ? body.with_indifferent_access : body
+      parsed_body =
+        if body.is_a?(String)
+          begin
+            JSON.parse(body, symbolize_names: true)
+          rescue JSON::ParserError
+            {} # Return an empty hash if the string is not valid JSON
+          end
+        elsif body.is_a?(Hash)
+          body
+        else
+          {}
+        end
+
+      parsed_body.with_indifferent_access
     end
   end
 end

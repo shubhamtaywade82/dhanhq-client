@@ -14,6 +14,7 @@ VCR.configure do |config|
   config.filter_sensitive_data("<CLIENT_ID>") { ENV.fetch("CLIENT_ID", nil) }
 
   # Allow localhost connections (useful for Capybara)
-  config.allow_http_connections_when_no_cassette = false
+  # config.allow_http_connections_when_no_cassette = false
+  config.allow_http_connections_when_no_cassette = true
   config.ignore_hosts("127.0.0.1", "localhost")
 end

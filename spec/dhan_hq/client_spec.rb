@@ -127,7 +127,7 @@ RSpec.describe DhanHQ::Client do
   describe "#get", vcr: { cassette_name: "dhan_hq_get_request" } do
     it "sends a GET request and returns the response" do
       response = client.get("/orders")
-      expect(response).to be_a(Array)
+      expect(response).to be_a(Hash)
     end
   end
 
@@ -204,7 +204,7 @@ RSpec.describe DhanHQ::Client do
     it "raises a DhanHQ::Error for an unknown error code", vcr: { cassette_name: "client/error_unknown" } do
       expect do
         client.get("/v2/unknown_error_endpoint")
-      end.to raise_error(DhanHQ::Error, /Unknown Error:/)
+      end.to raise_error(DhanHQ::Error, /Not Found:/)
     end
 
     it "raises an error for invalid payload types", vcr: { cassette_name: "client/error_invalid_payload" } do

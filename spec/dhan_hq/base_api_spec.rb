@@ -1,136 +1,108 @@
 # frozen_string_literal: true
 
 require "webmock/rspec"
+require "json"
 
 RSpec.describe DhanHQ::BaseAPI do
-  class TestAPI < DhanHQ::BaseAPI
-    HTTP_PATH = "/test"
-  end
-
-  let(:api) { TestAPI.new }
-  let(:client_id) { "test_client_id" }
-  let(:access_token) { "test_access_token" }
-
   before do
+    VCR.turn_off!
     DhanHQ.configure do |config|
-      config.client_id = client_id
-      config.access_token = access_token
+      config.access_token = "test_access_token"
+      config.client_id = "test_client_id"
     end
   end
 
-  describe "#resource_path" do
-    it "returns the correct resource path" do
-      expect(api.resource_path).to eq("/test")
+  after { VCR.turn_on! }
+
+  let(:api) { DhanHQ::TestAPI.new }
+  let(:test_params) { { param1: "value1", param2: "value2", dhanClientId: "test_client_id" } }
+  let(:base_url) { DhanHQ.configuration.base_url.chomp("/") }
+  let(:headers) do
+    {
+      "Content-Type" => "application/json",
+      "Accept" => "application/json",
+      "access-token" => "test_access_token",
+      "User-Agent" => "Faraday v1.10.4",
+      "Accept-Encoding" => "gzip;q=1.0,deflate;q=0.6,identity;q=0.3" # Include this
+    }
+  end
+
+  def stub_response(file_name, status, method, endpoint, body = nil)
+    response = File.read(File.join("spec/support/stubs", file_name))
+    stub_request(method, "#{base_url}#{endpoint}")
+      .with(
+        body: body&.to_json,
+        headers: headers
+      )
+      .to_return(status: status, body: response, headers: {})
+  end
+
+  describe "GET requests" do
+    it "sends a GET request and returns the response" do
+      stub_response("get_success.json", 200, :get, "/test/123")
+
+      response = api.get("/123")
+      expect(response).to include("status" => "success")
+      expect(response["data"]).to include("id" => 123)
+    end
+
+    it "handles errors for GET requests" do
+      stub_response("error_response.json", 404, :get, "/test/123")
+
+      expect { api.get("/123") }.to raise_error(DhanHQ::ApiError, /Not Found/)
     end
   end
 
-  describe "#get" do
-    it "sends a GET request and returns the parsed response" do
-      stub_request(:get, "https://api.dhan.co/v2/test/endpoint")
-        .with(
-          headers: {
-            "Content-Type" => "application/json",
-            "Authorization" => "Bearer #{access_token}"
-          },
-          query: { dhanClientId: client_id, param: "value" }
-        )
-        .to_return(status: 200, body: { status: "success", data: { key: "value" } }.to_json)
+  describe "POST requests" do
+    it "sends a POST request and returns the response" do
+      stub_response("post_success.json", 200, :post, "/test", test_params)
 
-      response = api.get("/endpoint", params: { param: "value" })
-      expect(response[:data]).to eq({ key: "value" })
+      response = api.fetch(test_params)
+      expect(response).to include("status" => "success")
     end
 
-    it "raises an error for an unsuccessful GET request" do
-      stub_request(:get, "https://api.dhan.co/v2/test/endpoint")
-        .to_return(status: 400, body: { status: "error", message: "Invalid request" }.to_json)
+    it "handles errors for POST requests" do
+      stub_response("error_response.json", 404, :post, "/test", test_params)
 
-      expect { api.get("/endpoint") }.to raise_error(DhanHQ::ApiError, "Invalid request")
+      expect { api.fetch(test_params) }.to raise_error(DhanHQ::ApiError, /Not Found/)
     end
   end
 
-  describe "#post" do
-    it "sends a POST request and returns the parsed response" do
-      stub_request(:post, "https://api.dhan.co/v2/test/endpoint")
-        .with(
-          headers: {
-            "Content-Type" => "application/json",
-            "Authorization" => "Bearer #{access_token}"
-          },
-          body: { dhanClientId: client_id, param: "value" }.to_json
-        )
-        .to_return(status: 200, body: { status: "success", data: { key: "value" } }.to_json)
+  describe "PUT requests" do
+    it "sends a PUT request and returns the response" do
+      stub_response("put_success.json", 200, :put, "/test/123", test_params)
 
-      response = api.post("/endpoint", params: { param: "value" })
-      expect(response[:data]).to eq({ key: "value" })
+      response = api.update("123", test_params)
+      expect(response).to include("status" => "success")
     end
 
-    it "raises an error for an unsuccessful POST request" do
-      stub_request(:post, "https://api.dhan.co/v2/test/endpoint")
-        .to_return(status: 422, body: { status: "error", message: "Validation failed" }.to_json)
+    it "handles errors for PUT requests" do
+      stub_response("error_response.json", 400, :put, "/test/123", test_params)
 
-      expect { api.post("/endpoint", params: { param: "value" }) }.to raise_error(DhanHQ::ApiError, "Validation failed")
+      expect { api.update("123", test_params) }.to raise_error(DhanHQ::ApiError, /Not Found/)
     end
   end
 
-  describe "#put" do
-    it "sends a PUT request and returns the parsed response" do
-      stub_request(:put, "https://api.dhan.co/v2/test/endpoint")
-        .with(
-          headers: {
-            "Content-Type" => "application/json",
-            "Authorization" => "Bearer #{access_token}"
-          },
-          body: { dhanClientId: client_id, param: "value" }.to_json
-        )
-        .to_return(status: 200, body: { status: "success", data: { key: "updated_value" } }.to_json)
+  describe "DELETE requests" do
+    it "sends a DELETE request and returns the response" do
+      stub_response("delete_success.json", 200, :delete, "/test/123", { dhanClientId: "test_client_id" })
 
-      response = api.put("/endpoint", params: { param: "value" })
-      expect(response[:data]).to eq({ key: "updated_value" })
+      response = api.delete("/123")
+      expect(response).to include("status" => "success")
     end
 
-    it "raises an error for an unsuccessful PUT request" do
-      stub_request(:put, "https://api.dhan.co/v2/test/endpoint")
-        .to_return(status: 404, body: { status: "error", message: "Not found" }.to_json)
+    it "handles errors for DELETE requests" do
+      stub_response("error_response.json", 404, :delete, "/test/123", { dhanClientId: "test_client_id" })
 
-      expect { api.put("/endpoint", params: { param: "value" }) }.to raise_error(DhanHQ::ApiError, "Not found")
+      expect { api.delete("/123") }.to raise_error(DhanHQ::ApiError, /Not Found/)
     end
   end
 
-  describe "#delete" do
-    it "sends a DELETE request and returns the parsed response" do
-      stub_request(:delete, "https://api.dhan.co/v2/test/endpoint")
-        .with(
-          headers: {
-            "Content-Type" => "application/json",
-            "Authorization" => "Bearer #{access_token}"
-          },
-          query: { dhanClientId: client_id }
-        )
-        .to_return(status: 200, body: { status: "success" }.to_json)
+  describe "Error handling" do
+    it "raises an error for unexpected server errors" do
+      stub_response("internal_error_response.json", 500, :get, "/test/123")
 
-      response = api.delete("/endpoint")
-      expect(response[:status]).to eq("success")
-    end
-
-    it "raises an error for an unsuccessful DELETE request" do
-      stub_request(:delete, "https://api.dhan.co/v2/test/endpoint")
-        .to_return(status: 403, body: { status: "error", message: "Forbidden" }.to_json)
-
-      expect { api.delete("/endpoint") }.to raise_error(DhanHQ::ApiError, "Forbidden")
-    end
-  end
-
-  describe "error handling" do
-    it "handles generic errors" do
-      allow(api).to receive(:perform_request).and_raise(StandardError.new("Unexpected error"))
-      expect { api.get("/endpoint") }.to raise_error(DhanHQ::ApiError, "Unexpected error")
-    end
-
-    it "raises a DhanHQ::ApiError for HTTP request errors" do
-      stub_request(:get, "https://api.dhan.co/v2/test/endpoint")
-        .to_return(status: 500, body: { status: "error", message: "Internal server error" }.to_json)
-
-      expect { api.get("/endpoint") }.to raise_error(DhanHQ::ApiError, "Internal server error")
+      expect { api.get("/123") }.to raise_error(DhanHQ::ApiError, /Internal Server Error/)
     end
   end
 end

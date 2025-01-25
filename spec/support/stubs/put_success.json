@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "message": "Resource updated successfully.",
+  "data": {
+    "id": 123,
+    "name": "Updated Resource",
+    "description": "This is a test resource updated via PUT."
+  }
+}

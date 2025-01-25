@@ -98,7 +98,7 @@ module DhanHQ
     # @raise [ApiError] If the response indicates an error
     # Handle the API response
     def handle_response(response)
-      response
+      response.is_a?(String) ? JSON.parse(response, symbolize_keys: true) : response
     end
 
     # Handle API errors

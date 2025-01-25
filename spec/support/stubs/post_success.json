@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "message": "Resource created successfully.",
+  "data": {
+    "id": 123,
+    "name": "Test Resource",
+    "description": "This is a test resource created via POST."
+  }
+}
