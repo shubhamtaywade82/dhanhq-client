@@ -138,35 +138,64 @@ RSpec.describe DhanHQ::Client do
     end
   end
 
+  # describe "#post", vcr: { cassette_name: "dhan_hq_post_request" } do
+  #   it "sends a POST request and returns the response" do
+  #     response = client.post("/v2/charts/historical", historical_request_params)
+  #     expect(response).to include("close" => [1664.9])
+  #   end
+  # end
+
   # describe "#put", vcr: { cassette_name: "dhan_hq_put_request" } do
   #   it "sends a PUT request and returns the response" do
-  #     # VCR.use_cassette("dhan_hq_put_request") do
-  #       response = client.put("/test_endpoint", { param1: "value1" })
-  #       expect(response).to include("success" => true)
-  #     # end
+  #     response = client.put("/v2/orders/modify", put_request_params)
+  #     expect(response).to include("status" => "success")
+  #   end
+
+  #   it "raises an error for an unsuccessful PUT request", vcr: { cassette_name: "client/put_error" } do
+  #     expect { client.put("/v2/orders/modify", { invalid_param: true }) }.to raise_error(DhanHQ::Error, /Bad Request/)
   #   end
   # end
 
   # describe "#delete", vcr: { cassette_name: "dhan_hq_delete_request" } do
   #   it "sends a DELETE request and returns the response" do
-  #     # VCR.use_cassette("dhan_hq_delete_request") do
-  #       response = client.delete("/test_endpoint", { param1: "value1" })
-  #       expect(response).to include("success" => true)
-  #     # end
+  #     response = client.delete("/v2/orders", delete_request_params)
+  #     expect(response).to include("status" => "success")
+  #   end
+
+  #   it "raises an error for an unsuccessful DELETE request", vcr: { cassette_name: "client/delete_error" } do
+  #     expect { client.delete("/v2/orders", { invalid_param: true }) }.to raise_error(DhanHQ::Error, /Bad Request/)
   #   end
   # end
 
-  # describe "error handling" do
-  #   it "raises a DhanHQ::Error for a 400 response", vcr: { cassette_name: "dhan_hq_error_400" } do
-  #     # VCR.use_cassette("dhan_hq_error_400") do
-  #       expect { client.get("/test_endpoint") }.to raise_error(DhanHQ::Error, /Bad Request/)
-  #     # end
-  #   end
+  describe "error handling" do
+    it "raises a DhanHQ::Error for DH-901", vcr: { cassette_name: "client/error_dh_901" } do
+      expect do
+        client.get("/v2/invalid_endpoint")
+      end.to raise_error(DhanHQ::Error, /Invalid Authentication: 401:/)
+    end
 
-  #   it "raises a DhanHQ::Error for a 500 response", vcr: { cassette_name: "dhan_hq_error_500" } do
-  #     # VCR.use_cassette("dhan_hq_error_500") do
-  #       expect { client.get("/test_endpoint") }.to raise_error(DhanHQ::Error, /Server Error/)
-  #     # end
-  #   end
-  # end
+    it "raises a DhanHQ::Error for DH-905", vcr: { cassette_name: "client/error_dh_905" } do
+      expect do
+        client.post("/v2/orders", { invalid_param: true })
+      end.to raise_error(DhanHQ::Error, /Input Exception: 400:/)
+    end
+
+    it "raises a DhanHQ::Error for rate limit exceeded (DH-904)", vcr: { cassette_name: "client/error_dh_904" } do
+      expect do
+        client.get("/v2/marketfeed/quote")
+      end.to raise_error(DhanHQ::Error, /Rate Limit Exceeded: 429:/)
+    end
+
+    it "raises a DhanHQ::Error for data API subscription missing (806)", vcr: { cassette_name: "client/error_806" } do
+      expect do
+        client.post("/v2/marketfeed/ltp", { instruments: ["NSE:INFY"] })
+      end.to raise_error(DhanHQ::Error, /Data API Error: Subscription Missing/)
+    end
+
+    it "raises a DhanHQ::Error for an unknown error code", vcr: { cassette_name: "client/error_unknown" } do
+      expect do
+        client.get("/v2/unknown_error_endpoint")
+      end.to raise_error(DhanHQ::Error, /Unknown Error:/)
+    end
+  end
 end

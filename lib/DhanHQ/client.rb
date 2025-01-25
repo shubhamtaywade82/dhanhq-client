@@ -160,16 +160,31 @@ module DhanHQ
     #
     # @param response [Faraday::Response] The response object.
     # @return [void]
-    # @raise [DhanHQ::Error] The specific error based on the response status.
+    # @raise [DhanHQ::Error] The specific error based on the response status or error code.
     def handle_error(response)
-      error_message = "#{response.status}: #{response.body}"
-      case response.status
-      when 400 then raise DhanHQ::Error, "Bad Request: #{error_message}"
-      when 401 then raise DhanHQ::Error, "Unauthorized: #{error_message}"
-      when 403 then raise DhanHQ::Error, "Forbidden: #{error_message}"
-      when 404 then raise DhanHQ::Error, "Not Found: #{error_message}"
-      when 500..599 then raise DhanHQ::Error, "Server Error: #{error_message}"
-      else raise DhanHQ::Error, "Unknown Error: #{error_message}"
+      body = symbolize_keys(response.body)
+      error_code = body[:errorCode] || response.status
+      error_message = "#{response.status}: #{body[:error] || body[:message] || response.body}"
+
+      case error_code
+      when "DH-901" then raise DhanHQ::Error, "Invalid Authentication: #{error_message}"
+      when "DH-902" then raise DhanHQ::Error, "Invalid Access: #{error_message}"
+      when "DH-903" then raise DhanHQ::Error, "User Account Error: #{error_message}"
+      when "DH-904" then raise DhanHQ::Error, "Rate Limit Exceeded: #{error_message}"
+      when "DH-905" then raise DhanHQ::Error, "Input Exception: #{error_message}"
+      when "DH-906" then raise DhanHQ::Error, "Order Error: #{error_message}"
+      when "DH-907" then raise DhanHQ::Error, "Data Error: #{error_message}"
+      when "DH-908" then raise DhanHQ::Error, "Internal Server Error: #{error_message}"
+      when "DH-909" then raise DhanHQ::Error, "Network Error: #{error_message}"
+      when "DH-910" then raise DhanHQ::Error, "Other Error: #{error_message}"
+      when 800 then raise DhanHQ::Error, "Data API Error: Internal Server Error - #{error_message}"
+      when 804 then raise DhanHQ::Error, "Data API Error: Instrument Limit Exceeded - #{error_message}"
+      when 805 then raise DhanHQ::Error, "Data API Error: Rate Limit Exceeded - #{error_message}"
+      when 806 then raise DhanHQ::Error, "Data API Error: Subscription Missing - #{error_message}"
+      when 807, "DH-910" then raise DhanHQ::Error, "Access Token Expired or Invalid: #{error_message}"
+      when 808..814 then raise DhanHQ::Error, "Data API Error: #{error_message}"
+      else
+        raise DhanHQ::Error, "Unknown Error: #{error_message}"
       end
     end
 
