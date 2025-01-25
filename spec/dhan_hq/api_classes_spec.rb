@@ -36,7 +36,7 @@ RSpec.describe "API Classes" do
   end
   let(:historical_request_params) do
     {
-      securityId: "133",
+      securityId: "1333",
       exchangeSegment: "NSE_EQ",
       instrument: "EQUITY",
       expiryCode: 0,
