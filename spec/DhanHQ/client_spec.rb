@@ -1,11 +1,41 @@
 # frozen_string_literal: true
 
-# spec/dhan_hq/client_spec.rb
-
 require "vcr"
 
 RSpec.describe DhanHQ::Client do
   let(:client) { described_class.new }
+  let(:marketquote_request_params) do
+    {
+      NSE_FNO: [49_081]
+    }
+  end
+  let(:ltp_request_params) do
+    {
+      instruments: ["NSE:INFY"],
+      fields: ["lastPrice"]
+    }
+  end
+  let(:ohlc_request_params) do
+    {
+      instruments: ["NSE:INFY"],
+      fields: ["ohlc"]
+    }
+  end
+
+  let(:option_chain_request_params) do
+    {
+      UnderlyingScrip: 13,
+      UnderlyingSeg: "IDX_I",
+      Expiry: "2025-01-30"
+    }
+  end
+
+  let(:expiry_list_request_params) do
+    {
+      UnderlyingScrip: 13,
+      UnderlyingSeg: "IDX_I"
+    }
+  end
 
   let(:historical_request_params) do
     {
@@ -15,12 +45,6 @@ RSpec.describe DhanHQ::Client do
       expiryCode: 0,
       fromDate: "2025-01-23",
       toDate: "2025-01-24"
-    }
-  end
-
-  let(:marketquote_request_params) do
-    {
-      NSE_FNO: [49_081]
     }
   end
 
@@ -42,8 +66,28 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#request" do
-    it "sends headers correctly for DATA APIs", vcr: { cassette_name: "client/market_quote" } do
+    it "sends headers correctly for /marketfeed/ltp", vcr: { cassette_name: "client/marketfeed_ltp" } do
+      response = client.post("/v2/marketfeed/ltp", ltp_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "sends headers correctly for /marketfeed/ohlc", vcr: { cassette_name: "client/marketfeed_ohlc" } do
+      response = client.post("/v2/marketfeed/ohlc", ohlc_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "sends headers correctly for /marketfeed/quote", vcr: { cassette_name: "client/market_quote" } do
       response = client.post("/v2/marketfeed/quote", marketquote_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "sends headers correctly for /optionchain", vcr: { cassette_name: "client/optionchain" } do
+      response = client.post("/v2/optionchain", option_chain_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "sends headers correctly for /optionchain/expirylist", vcr: { cassette_name: "client/optionchain_expirylist" } do
+      response = client.post("/v2/optionchain/expirylist", expiry_list_request_params)
       expect(response).to include("status" => "success")
     end
 
