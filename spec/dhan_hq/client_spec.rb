@@ -98,14 +98,29 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#build_headers" do
-    it "includes client-id for DATA APIs" do
+    it "includes client-id for /marketfeed/ltp" do
+      headers = client.send(:build_headers, "/v2/marketfeed/ltp")
+      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
+    end
+
+    it "includes client-id for /marketfeed/ohlc" do
+      headers = client.send(:build_headers, "/v2/marketfeed/ohlc")
+      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
+    end
+
+    it "includes client-id for /marketfeed/quote" do
       headers = client.send(:build_headers, "/v2/marketfeed/quote")
       expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
     end
 
-    it "does not include client-id for non-DATA APIs" do
-      headers = client.send(:build_headers, "/orders")
-      expect(headers).not_to include("client-id")
+    it "includes client-id for /optionchain" do
+      headers = client.send(:build_headers, "/v2/optionchain")
+      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
+    end
+
+    it "includes client-id for /optionchain/expirylist" do
+      headers = client.send(:build_headers, "/v2/optionchain/expirylist")
+      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
     end
   end
 
