@@ -1,0 +1,39 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/marketfeed/quote
+    body:
+      encoding: UTF-8
+      string: '{"dhanClientId":"<CLIENT_ID>"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Client-Id:
+      - "<CLIENT_ID>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 429
+      message: OK
+    headers:
+      Date:
+      - Sat, 25 Jan 2025 09:06:18 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '30'
+      Connection:
+      - keep-alive
+    body:
+      encoding: UTF-8
+      string: '{"errorType":"Input_Exception","errorCode":"DH-904","errorMessage":"Too many requests on server from single user breaching rate limits. Try throttling API calls."}'
+  recorded_at: Sat, 25 Jan 2025 09:06:18 GMT
+recorded_with: VCR 6.3.1
