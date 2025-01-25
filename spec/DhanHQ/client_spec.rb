@@ -9,7 +9,7 @@ RSpec.describe DhanHQ::Client do
 
   let(:historical_request_params) do
     {
-      securityId: "1333",
+      securityId: "133",
       exchangeSegment: "NSE_EQ",
       instrument: "EQUITY",
       expiryCode: 0,
@@ -75,7 +75,7 @@ RSpec.describe DhanHQ::Client do
   describe "#post", vcr: { cassette_name: "dhan_hq_post_request" } do
     it "sends a POST request and returns the response" do
       response = client.post("/v2/charts/historical", historical_request_params)
-      expect(response).to include("success" => true)
+      expect(response).to include("close" => [1664.9])
     end
   end
 
