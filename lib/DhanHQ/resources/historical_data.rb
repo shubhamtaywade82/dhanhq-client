@@ -3,14 +3,22 @@
 module DhanHQ
   module Resources
     class HistoricalData < BaseAPI
-      HTTP_PATH = "/charts"
+      HTTP_PATH = "/v2"
 
-      def daily(params)
-        post("/historical", params: params)
+      # Fetch daily historical data (OHLC)
+      #
+      # @param params [Hash] Parameters for the daily historical data request
+      # @return [Hash] The API response with OHLC data
+      def fetch_daily_data(params)
+        post("/charts/historical", params: params)
       end
 
-      def intraday(params)
-        post("/intraday", params: params)
+      # Fetch intraday historical data (OHLC)
+      #
+      # @param params [Hash] Parameters for the intraday historical data request
+      # @return [Hash] The API response with OHLC data
+      def fetch_intraday_data(params)
+        post("/charts/intraday", params: params)
       end
     end
   end

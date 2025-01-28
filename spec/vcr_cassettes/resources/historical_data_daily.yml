@@ -1,0 +1,41 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/charts/historical
+    body:
+      encoding: UTF-8
+      string: '{"securityId":"1333","exchangeSegment":"NSE_EQ","instrument":"EQUITY","fromDate":"2022-01-08","toDate":"2022-02-08","dhanClientId":"<CLIENT_ID>"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Tue, 28 Jan 2025 08:51:40 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"open":[1558.0,1561.55,1568.0,1555.0,1530.0,1530.0,1533.0,1534.0,1528.45,1500.0,1509.95,1458.65,1450.0,1477.5,1472.75,1508.5,1511.95,1528.75,1528.4,1512.1],"high":[1572.0,1568.7,1576.65,1555.0,1548.7,1556.0,1550.9,1539.75,1528.5,1529.8,1521.25,1495.0,1485.0,1486.7,1491.55,1517.0,1535.0,1539.95,1532.85,1519.0],"low":[1545.5,1547.8,1552.0,1520.4,1519.0,1519.15,1523.0,1513.35,1500.1,1485.6,1467.55,1444.0,1435.0,1460.0,1466.8,1473.45,1505.6,1509.0,1514.1,1460.0],"close":[1559.15,1565.9,1556.65,1528.0,1545.15,1521.5,1529.25,1518.45,1509.0,1521.6,1486.65,1488.05,1474.95,1463.25,1485.7,1497.0,1531.2,1515.35,1524.0,1468.15],"volume":[4428248.0,4194599.0,1.0542765E7,2.0981948E7,5604484.0,1.1494686E7,6170576.0,7158813.0,7598923.0,5768847.0,5934254.0,6797124.0,1.4308919E7,1.2462604E7,6421273.0,7369742.0,6984645.0,5282381.0,5789979.0,6134021.0],"timestamp":[1.641753E9,1.6418394E9,1.6419258E9,1.6420122E9,1.6420986E9,1.6423578E9,1.6424442E9,1.6425306E9,1.642617E9,1.6427034E9,1.6429626E9,1.643049E9,1.6432218E9,1.6433082E9,1.6435674E9,1.6436538E9,1.6437402E9,1.6438266E9,1.643913E9,1.6441722E9]}'
+  recorded_at: Tue, 28 Jan 2025 08:51:40 GMT
+recorded_with: VCR 6.3.1
