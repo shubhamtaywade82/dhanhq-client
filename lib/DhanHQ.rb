@@ -14,7 +14,7 @@ require_relative "DhanHQ/resources/forever_orders"
 require_relative "DhanHQ/resources/portfolio"
 require_relative "DhanHQ/resources/funds"
 require_relative "DhanHQ/resources/historical_data"
-require_relative "DhanHQ/resources/market_feed"
+require_relative "DhanHQ/resources/market_quote"
 require_relative "DhanHQ/resources/option_chain"
 require_relative "DhanHQ/resources/trades"
 
