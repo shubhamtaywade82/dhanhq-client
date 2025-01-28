@@ -30,6 +30,10 @@ module DhanHQ
         @defined_attributes.concat(args.map(&:to_s))
       end
 
+      def defined_attributes
+        @defined_attributes || []
+      end
+
       # Find a resource by ID
       #
       # @param id [String] The ID of the resource
@@ -142,7 +146,7 @@ module DhanHQ
 
     # Dynamically assign attributes as methods
     def assign_attributes
-      self.class.defined_attributes.each do |attr|
+      self.class.defined_attributes&.each do |attr|
         define_singleton_method(attr) { @attributes[attr] }
         define_singleton_method(attr.to_s.camelize(:lower)) { @attributes[attr] }
       end
