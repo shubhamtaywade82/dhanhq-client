@@ -3,13 +3,61 @@
 module DhanHQ
   module Resources
     class Orders < BaseAPI
-      HTTP_PATH = "/orders"
+      HTTP_PATH = "/v2/orders"
 
-      def slicing(params)
+      # Place a new order
+      #
+      # @param params [Hash] Order parameters
+      # @return [Hash] The API response
+      def place_order(params)
+        post("", params: params)
+      end
+
+      # Modify a pending order
+      #
+      # @param order_id [String] Order ID
+      # @param params [Hash] Modified order parameters
+      # @return [Hash] The API response
+      def modify_order(order_id, params)
+        put("/#{order_id}", params: params)
+      end
+
+      # Cancel a pending order
+      #
+      # @param order_id [String] Order ID
+      # @return [Hash] The API response
+      def cancel_order(order_id)
+        delete("/#{order_id}")
+      end
+
+      # Slice an order into multiple legs
+      #
+      # @param params [Hash] Order slicing parameters
+      # @return [Array<Hash>] The API response
+      def slice_order(params)
         post("/slicing", params: params)
       end
 
-      def by_correlation_id(correlation_id)
+      # Retrieve the list of all orders for the day
+      #
+      # @return [Array<Hash>] The API response
+      def list_orders
+        get
+      end
+
+      # Retrieve the status of an order by order ID
+      #
+      # @param order_id [String] Order ID
+      # @return [Hash] The API response
+      def get_order(order_id)
+        get("/#{order_id}")
+      end
+
+      # Retrieve the status of an order by correlation ID
+      #
+      # @param correlation_id [String] Correlation ID
+      # @return [Hash] The API response
+      def get_order_by_correlation(correlation_id)
         get("/external/#{correlation_id}")
       end
     end

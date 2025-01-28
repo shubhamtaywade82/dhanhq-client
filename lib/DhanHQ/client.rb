@@ -197,10 +197,10 @@ module DhanHQ
       end
     end
 
-    # Converts response body to a hash with indifferent access.
+    # Converts response body to a hash or array with indifferent access.
     #
-    # @param body [String, Hash] The response body.
-    # @return [Hash] The response body as a hash with indifferent access.
+    # @param body [String, Hash, Array] The response body.
+    # @return [Hash, Array] The response body as a hash/array with indifferent access.
     def symbolize_keys(body)
       parsed_body =
         if body.is_a?(String)
@@ -209,13 +209,17 @@ module DhanHQ
           rescue JSON::ParserError
             {} # Return an empty hash if the string is not valid JSON
           end
-        elsif body.is_a?(Hash)
-          body
         else
-          {}
+          body
         end
 
-      parsed_body.with_indifferent_access
+      if parsed_body.is_a?(Hash)
+        parsed_body.with_indifferent_access
+      elsif parsed_body.is_a?(Array)
+        parsed_body.map(&:with_indifferent_access)
+      else
+        parsed_body
+      end
     end
   end
 end

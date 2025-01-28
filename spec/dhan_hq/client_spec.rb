@@ -127,7 +127,7 @@ RSpec.describe DhanHQ::Client do
   describe "#get", vcr: { cassette_name: "dhan_hq_get_request" } do
     it "sends a GET request and returns the response" do
       response = client.get("/orders")
-      expect(response).to be_a(Hash)
+      expect(response).to be_a(Array)
     end
   end
 
