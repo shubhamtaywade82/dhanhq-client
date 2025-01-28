@@ -9,6 +9,8 @@ require_relative "DhanHQ/base_resource"
 require_relative "DhanHQ/base_api"
 
 require_relative "DhanHQ/resources/orders"
+require_relative "DhanHQ/resources/forever_orders"
+require_relative "DhanHQ/resources/portfolio"
 
 require_relative "DhanHQ/models/order"
 
