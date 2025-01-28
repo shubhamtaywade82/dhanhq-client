@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../contracts/order_contract"
+require_relative "../contracts/place_order_contract"
 require_relative "../resources/orders"
 
 module DhanHQ
@@ -48,9 +48,9 @@ module DhanHQ
 
       private
 
-      # Validation contract for Order
+      # Validation contract for order placement
       def validation_contract
-        DhanHQ::Validation::OrderContract
+        DhanHQ::Contracts::PlaceOrderContract.new
       end
     end
   end

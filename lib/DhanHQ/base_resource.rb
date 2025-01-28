@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "dry-validation"
 require "active_support/core_ext/hash/indifferent_access"
 require "active_support/inflector"
 
@@ -13,7 +14,7 @@ module DhanHQ
     #
     # @param attributes [Hash] The attributes of the resource
     def initialize(attributes = {})
-      @attributes = attributes
+      @attributes = normalize_keys(attributes)
       @errors = {}
       validate!
       assign_attributes
@@ -22,6 +23,13 @@ module DhanHQ
     # Class Methods
 
     class << self
+      attr_reader :defined_attributes
+
+      def attributes(*args)
+        @defined_attributes ||= []
+        @defined_attributes.concat(args.map(&:to_s))
+      end
+
       # Find a resource by ID
       #
       # @param id [String] The ID of the resource
@@ -55,7 +63,7 @@ module DhanHQ
       # @param response [Hash] API response
       # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
       def build_from_response(response)
-        return new(response[:data]) if response[:status] == "success"
+        return new(response[:data].with_indifferent_access) if response[:status] == "success"
 
         DhanHQ::ErrorObject.new(response)
       end
@@ -63,8 +71,15 @@ module DhanHQ
       # Retrieve the resource path for the API
       #
       # @return [String] The resource path
-      def self.resource_path
+      def resource_path
         self::HTTP_PATH
+      end
+
+      # Provide a reusable API client instance
+      #
+      # @return [DhanHQ::Client] The client instance
+      def api_client
+        @api_client ||= DhanHQ::Client.new
       end
     end
 
@@ -74,7 +89,9 @@ module DhanHQ
     # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
     def update(attributes = {})
       response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
-      self.class.build_from_response(response)
+      return self.class.build_from_response(response) if response[:status] == "success"
+
+      DhanHQ::ErrorObject.new(response)
     end
 
     # Delete the resource
@@ -86,8 +103,6 @@ module DhanHQ
     rescue StandardError
       false
     end
-
-    private
 
     # Placeholder for the resource path
     #
@@ -110,6 +125,10 @@ module DhanHQ
       camelize_keys(@attributes)
     end
 
+    def id
+      @attributes[:id] || @attributes[:order_id] || @attributes[:security_id]
+    end
+
     # Validate the attributes using the validation contract
     def validate!
       contract = validation_contract
@@ -117,14 +136,29 @@ module DhanHQ
 
       result = contract.call(@attributes)
       @errors = result.errors.to_h unless result.success?
+
+      raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
     end
 
     # Dynamically assign attributes as methods
     def assign_attributes
-      @attributes.each do |key, value|
-        define_singleton_method(snake_case(key)) { value }
-        define_singleton_method(key) { value }
+      self.class.defined_attributes.each do |attr|
+        define_singleton_method(attr) { @attributes[attr] }
+        define_singleton_method(attr.to_s.camelize(:lower)) { @attributes[attr] }
       end
+    end
+
+    # Normalize attribute keys to be accessible as both snake_case and camelCase
+    #
+    # @param hash [Hash] The attributes hash
+    # @return [HashWithIndifferentAccess] The normalized attributes
+    def normalize_keys(hash)
+      normalized_hash = hash.each_with_object({}) do |(key, value), result|
+        string_key = key.to_s
+        result[string_key] = value
+        result[string_key.underscore] = value
+      end
+      normalized_hash.with_indifferent_access
     end
 
     # Convert keys from camelCase to snake_case

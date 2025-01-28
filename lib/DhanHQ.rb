@@ -14,6 +14,8 @@ require_relative "DhanHQ/models/order"
 
 require_relative "DhanHQ/error_handler"
 
+require_relative "DhanHQ/constants"
+
 # The top-level module for the DhanHQ client library.
 #
 # Provides configuration management for setting credentials and API-related settings.
