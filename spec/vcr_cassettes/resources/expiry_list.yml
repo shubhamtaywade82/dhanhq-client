@@ -1,0 +1,39 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/optionchain/expirylist
+    body:
+      encoding: UTF-8
+      string: '{"UnderlyingScrip":13,"UnderlyingSeg":"IDX_I","dhanClientId":"<CLIENT_ID>"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Client-Id:
+      - "<CLIENT_ID>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 28 Jan 2025 09:31:45 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '263'
+      Connection:
+      - keep-alive
+    body:
+      encoding: UTF-8
+      string: '{"data":["2025-01-30","2025-02-06","2025-02-13","2025-02-20","2025-02-27","2025-03-06","2025-03-27","2025-06-26","2025-09-25","2025-12-24","2026-06-25","2026-12-31","2027-06-24","2027-12-30","2028-06-29","2028-12-28","2029-06-28","2029-12-27"],"status":"success"}'
+  recorded_at: Tue, 28 Jan 2025 09:31:45 GMT
+recorded_with: VCR 6.3.1
