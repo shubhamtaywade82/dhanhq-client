@@ -3,14 +3,21 @@
 module DhanHQ
   module Resources
     class Trades < BaseAPI
-      # Fetch trades for a specific order
-      def fetch_by_order(order_id)
-        get("/#{order_id}")
+      HTTP_PATH = "/v2/trades"
+
+      # Retrieve the list of all trades for the day
+      #
+      # @return [Array<Hash>] The API response with the trade book
+      def fetch_trades
+        get
       end
 
-      # Fetch all trades for the day
-      def fetch_all
-        get
+      # Retrieve the details of trades by order ID
+      #
+      # @param order_id [String] Order ID
+      # @return [Hash] The API response with trade details for the order
+      def fetch_trades_by_order(order_id)
+        get("/#{order_id}")
       end
     end
   end

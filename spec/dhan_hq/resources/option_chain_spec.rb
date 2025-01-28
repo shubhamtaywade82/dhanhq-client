@@ -26,7 +26,7 @@ RSpec.describe DhanHQ::Resources::OptionChain do
     it "fetches the option chain data successfully", :vcr do
       VCR.use_cassette("resources/option_chain") do
         response = option_chain.fetch_option_chain(option_chain_params)
-        expect(response["data"]["last_price"]).to eq(22952.94921875)
+        expect(response["data"]["last_price"]).to eq(22_952.94921875)
         expect(response["data"]["oc"]["22900.000000"]["ce"]["last_price"]).to eq(186.2)
         expect(response["data"]["oc"]["22900.000000"]["pe"]["last_price"]).to eq(105.4)
       end
