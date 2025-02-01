@@ -1,17 +1,19 @@
 # frozen_string_literal: true
 
-module DhanHQ
+require_relative "../contracts/base_contract"
+
+module Dhanhq
   module Contracts
-    # Validation contract for placing an order via Dhanhq's API.
+    # Validation contract for slicing an order into multiple parts for Dhanhq's API.
     #
-    # This contract validates the parameters required to place an order,
-    # ensuring the correctness of inputs based on API requirements. It includes:
-    # - Mandatory fields for order placement.
-    # - Conditional validation for optional fields based on provided values.
-    # - Validation of enumerated values using constants for consistency.
+    # This contract ensures all required parameters are provided and optional parameters
+    # meet the required constraints when they are specified. It validates:
+    # - Required fields for slicing orders.
+    # - Conditional logic for fields based on the provided values.
+    # - Constraints such as inclusion, numerical ranges, and string formats.
     #
     # Example usage:
-    #   contract = Dhanhq::Contracts::PlaceOrderContract.new
+    #   contract = Dhanhq::Contracts::SliceOrderContract.new
     #   result = contract.call(
     #     dhanClientId: "123456",
     #     transactionType: "BUY",
@@ -20,33 +22,30 @@ module DhanHQ
     #     orderType: "LIMIT",
     #     validity: "DAY",
     #     securityId: "1001",
-    #     quantity: 10,
-    #     price: 150.0
+    #     quantity: 10
     #   )
     #   result.success? # => true or false
     #
     # @see https://dhanhq.co/docs/v2/ Dhanhq API Documentation
-    class PlaceOrderContract < BaseContract
-      # Parameters and validation rules for the place order request.
+    class SliceOrderContract < BaseContract
+      # Parameters and validation rules for the slicing order request.
       #
       # @!attribute [r] correlationId
       #   @return [String] Optional. Identifier for tracking, max length 25 characters.
       # @!attribute [r] transactionType
       #   @return [String] Required. BUY or SELL.
       # @!attribute [r] exchangeSegment
-      #   @return [String] Required. Exchange segment for the order.
-      #     Must be one of: `EXCHANGE_SEGMENTS`.
+      #   @return [String] Required. The segment in which the order is placed.
+      #     Must be one of: NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, BSE_FNO, BSE_CURRENCY, MCX_COMM.
       # @!attribute [r] productType
       #   @return [String] Required. Product type for the order.
-      #     Must be one of: `PRODUCT_TYPES`.
+      #     Must be one of: CNC, INTRADAY, MARGIN, MTF, CO, BO.
       # @!attribute [r] orderType
       #   @return [String] Required. Type of order.
-      #     Must be one of: `ORDER_TYPES`.
+      #     Must be one of: LIMIT, MARKET, STOP_LOSS, STOP_LOSS_MARKET.
       # @!attribute [r] validity
       #   @return [String] Required. Validity of the order.
-      #     Must be one of: DAY, IOC.
-      # @!attribute [r] tradingSymbol
-      #   @return [String] Optional. Trading symbol of the instrument.
+      #     Must be one of: DAY, IOC, GTC, GTD.
       # @!attribute [r] securityId
       #   @return [String] Required. Security identifier for the order.
       # @!attribute [r] quantity
@@ -73,12 +72,13 @@ module DhanHQ
       #   @return [Float] Optional. Strike price for options, must be > 0 if provided.
       params do
         optional(:correlationId).maybe(:string, max_size?: 25)
-        required(:transactionType).filled(:string, included_in?: TRANSACTION_TYPES)
-        required(:exchangeSegment).filled(:string, included_in?: EXCHANGE_SEGMENTS)
-        required(:productType).filled(:string, included_in?: PRODUCT_TYPES)
-        required(:orderType).filled(:string, included_in?: ORDER_TYPES)
-        required(:validity).filled(:string, included_in?: VALIDITY_TYPES)
-        optional(:tradingSymbol).maybe(:string)
+        required(:transactionType).filled(:string, included_in?: %w[BUY SELL])
+        required(:exchangeSegment).filled(:string,
+                                          included_in?: %w[NSE_EQ NSE_FNO NSE_CURRENCY BSE_EQ BSE_FNO BSE_CURRENCY
+                                                           MCX_COMM])
+        required(:productType).filled(:string, included_in?: %w[CNC INTRADAY MARGIN MTF CO BO])
+        required(:orderType).filled(:string, included_in?: %w[LIMIT MARKET STOP_LOSS STOP_LOSS_MARKET])
+        required(:validity).filled(:string, included_in?: %w[DAY IOC GTC GTD])
         required(:securityId).filled(:string)
         required(:quantity).filled(:integer, gt?: 0)
         optional(:disclosedQuantity).maybe(:integer, gteq?: 0)
@@ -95,7 +95,7 @@ module DhanHQ
 
       # Custom validation for trigger price when the order type is STOP_LOSS or STOP_LOSS_MARKET.
       rule(:triggerPrice, :orderType) do
-        if values[:orderType] =~ (/^STOP_LOSS/) && !values[:triggerPrice]
+        if values[:orderType].start_with?("STOP_LOSS") && !values[:triggerPrice]
           key(:triggerPrice).failure("is required for orderType STOP_LOSS or STOP_LOSS_MARKET")
         end
       end
@@ -104,14 +104,6 @@ module DhanHQ
       rule(:afterMarketOrder, :amoTime) do
         if values[:afterMarketOrder] == true && !values[:amoTime]
           key(:amoTime).failure("is required when afterMarketOrder is true")
-        end
-      end
-
-      # Custom validation for Bracket Order (BO) fields.
-      rule(:boProfitValue, :boStopLossValue, :productType) do
-        if values[:productType] == "BO" && (!values[:boProfitValue] || !values[:boStopLossValue])
-          key(:boProfitValue).failure("is required for Bracket Orders")
-          key(:boStopLossValue).failure("is required for Bracket Orders")
         end
       end
     end

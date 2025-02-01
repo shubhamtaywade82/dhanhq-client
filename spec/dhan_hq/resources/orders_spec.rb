@@ -149,7 +149,6 @@ RSpec.describe DhanHQ::Resources::Orders do
         )
 
       response = orders.slice_order(valid_order_params)
-      pp response
       expect(response).to be_an(Array)
       expect(response.first["orderId"]).to eq("552209237100")
     end
@@ -165,7 +164,6 @@ RSpec.describe DhanHQ::Resources::Orders do
         )
 
       response = orders.list_orders
-      pp response
       expect(response).to be_an(Array)
       expect(response.first["orderId"]).to eq("112111182198")
     end

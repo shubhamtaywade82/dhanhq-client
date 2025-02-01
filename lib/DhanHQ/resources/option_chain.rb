@@ -3,22 +3,34 @@
 module DhanHQ
   module Resources
     class OptionChain < BaseAPI
-      HTTP_PATH = "/v2"
+      HTTP_PATH = "/v2/optionchain"
 
-      # Fetch the Option Chain for an underlying
+      # Fetch Option Chain Data for a specific underlying security
       #
-      # @param params [Hash] Parameters including `UnderlyingScrip`, `UnderlyingSeg`, and `Expiry`
-      # @return [Hash] The API response with the option chain data
+      # @param params [Hash] Parameters for fetching the option chain
+      # @return [Hash] The API response containing the option chain
       def fetch_option_chain(params)
-        post("/optionchain", params: params)
+        formatted_params = format_params_for_option_chain(params)
+        post("", params: formatted_params)
       end
 
-      # Fetch the expiry list for options of an underlying
+      # Fetch Expiry List for an underlying security
       #
-      # @param params [Hash] Parameters including `UnderlyingScrip` and `UnderlyingSeg`
-      # @return [Array<String>] List of expiry dates
+      # @param params [Hash] Parameters for fetching expiry dates
+      # @return [Array] The API response containing expiry dates
       def fetch_expiry_list(params)
-        post("/optionchain/expirylist", params: params)
+        formatted_params = format_params_for_option_chain(params)
+        post("/expirylist", params: formatted_params)
+      end
+
+      private
+
+      # Convert request parameters to PascalCase for the Option Chain API
+      #
+      # @param params [Hash] Request parameters
+      # @return [Hash] Parameters formatted with PascalCase keys
+      def format_params_for_option_chain(params)
+        params.transform_keys { |key| key.to_s.split("_").map(&:capitalize).join }
       end
     end
   end

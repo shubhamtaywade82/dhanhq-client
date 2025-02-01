@@ -8,6 +8,9 @@ require_relative "DhanHQ/client"
 require_relative "DhanHQ/base_resource"
 require_relative "DhanHQ/base_api"
 
+# Contracts
+require_relative "DhanHQ/contracts/base_contract"
+
 # Resources
 require_relative "DhanHQ/resources/orders"
 require_relative "DhanHQ/resources/forever_orders"
@@ -20,6 +23,8 @@ require_relative "DhanHQ/resources/trades"
 
 # Models
 require_relative "DhanHQ/models/order"
+require_relative "DhanHQ/models/funds"
+require_relative "DhanHQ/models/option_chain"
 
 require_relative "DhanHQ/error_handler"
 

@@ -13,10 +13,10 @@ module DhanHQ
     # Initialize a new resource object
     #
     # @param attributes [Hash] The attributes of the resource
-    def initialize(attributes = {})
+    def initialize(attributes = {}, skip_validation: false)
       @attributes = normalize_keys(attributes)
       @errors = {}
-      validate!
+      validate! unless skip_validation
       assign_attributes
     end
 
@@ -28,10 +28,6 @@ module DhanHQ
       def attributes(*args)
         @defined_attributes ||= []
         @defined_attributes.concat(args.map(&:to_s))
-      end
-
-      def defined_attributes
-        @defined_attributes || []
       end
 
       # Find a resource by ID
@@ -67,7 +63,7 @@ module DhanHQ
       # @param response [Hash] API response
       # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
       def build_from_response(response)
-        return new(response[:data].with_indifferent_access) if response[:status] == "success"
+        return new(response[:data].with_indifferent_access, skip_validation: true) if response[:status] == "success"
 
         DhanHQ::ErrorObject.new(response)
       end
@@ -84,6 +80,13 @@ module DhanHQ
       # @return [DhanHQ::Client] The client instance
       def api_client
         @api_client ||= DhanHQ::Client.new
+      end
+
+      def validate_params!(params)
+        contract = validation_contract
+
+        result = contract.call(params)
+        raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
       end
     end
 
@@ -142,6 +145,13 @@ module DhanHQ
       @errors = result.errors.to_h unless result.success?
 
       raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
+    end
+
+    def validate_params!(params)
+      contract = validation_contract
+
+      result = contract.call(params)
+      raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
     end
 
     # Dynamically assign attributes as methods
