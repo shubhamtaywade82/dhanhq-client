@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "../contracts/base_contract"
+require_relative "base_contract"
 
-module Dhanhq
+module DhanHQ
   module Contracts
     # Validation contract for slicing an order into multiple parts for Dhanhq's API.
     #

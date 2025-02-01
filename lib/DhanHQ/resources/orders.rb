@@ -10,11 +10,6 @@ module DhanHQ
       # @param params [Hash] Order parameters
       # @return [Hash] The API response
       def place_order(params)
-        contract = DhanHQ::Contracts::PlaceOrderContract.new
-        validation = contract.call(params)
-
-        raise DhanHQ::Error, "Validation Error: #{validation.errors.to_h}" unless validation.success?
-
         post("", params: params)
       end
 
@@ -24,11 +19,6 @@ module DhanHQ
       # @param params [Hash] Modified order parameters
       # @return [Hash] The API response
       def modify_order(order_id, params)
-        contract = DhanHQ::Contracts::ModifyOrderContract.new
-        validation = contract.call(params)
-
-        raise DhanHQ::Error, "Validation Error: #{validation.errors.to_h}" unless validation.success?
-
         put("/#{order_id}", params: params)
       end
 
@@ -45,11 +35,6 @@ module DhanHQ
       # @param params [Hash] Order slicing parameters
       # @return [Array<Hash>] The API response
       def slice_order(params)
-        contract = DhanHQ::Contracts::SliceOrderContract.new
-        validation = contract.call(params)
-
-        raise DhanHQ::Error, "Validation Error: #{validation.errors.to_h}" unless validation.success?
-
         post("/slicing", params: params)
       end
 
