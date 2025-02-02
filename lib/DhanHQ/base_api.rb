@@ -11,14 +11,18 @@ module DhanHQ
       @client = DhanHQ::Client.new
     end
 
+    def request(method, endpoint = "", params: {})
+      formatted_params = format_params(endpoint, params)
+      client.send(method, build_path(endpoint), formatted_params)
+    end
+
     # Perform a GET request via `Client`
     #
     # @param endpoint [String] API endpoint
     # @param params [Hash] Query parameters
     # @return [Hash, Array] The parsed API response
     def get(endpoint = "", params: {})
-      formatted_params = format_params(endpoint, params)
-      client.get(build_path(endpoint), formatted_params)
+      request(:get, endpoint, params: params)
     end
 
     # Perform a POST request via `Client`
@@ -27,8 +31,7 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def post(endpoint = "", params: {})
-      formatted_params = format_params(endpoint, params)
-      client.post(build_path(endpoint), formatted_params)
+      request(:post, endpoint, params: params)
     end
 
     # Perform a PUT request via `Client`
@@ -37,8 +40,7 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def put(endpoint = "", params: {})
-      formatted_params = format_params(endpoint, params)
-      client.put(build_path(endpoint), formatted_params)
+      request(:put, endpoint, params: params)
     end
 
     # Perform a DELETE request via `Client`
@@ -46,7 +48,7 @@ module DhanHQ
     # @param endpoint [String] API endpoint
     # @return [Hash, Array] The parsed API response
     def delete(endpoint = "")
-      client.delete(build_path(endpoint))
+      request(:delete, endpoint)
     end
 
     private
