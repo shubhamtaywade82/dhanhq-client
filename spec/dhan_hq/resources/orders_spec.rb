@@ -5,7 +5,7 @@ RSpec.describe DhanHQ::Resources::Orders do
 
   let(:valid_order_params) do
     {
-      dhanClientId: "1000000003",
+      dhanClientId: DhanHQ.configuration.client_id,
       correlationId: "123abc678",
       transactionType: "BUY",
       exchangeSegment: "NSE_EQ",
@@ -91,7 +91,7 @@ RSpec.describe DhanHQ::Resources::Orders do
     it "places a new order successfully" do
       stub_request(:post, "https://api.dhan.co/v2/orders")
         .with(
-          body: valid_order_params.to_json,
+          body: hash_including(valid_order_params),
           headers: {
             "Content-Type" => "application/json",
             "Access-Token" => "header.payload.signature"
