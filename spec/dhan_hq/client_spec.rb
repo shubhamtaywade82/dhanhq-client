@@ -65,30 +65,31 @@ RSpec.describe DhanHQ::Client do
     DhanHQ.configure_with_env
   end
 
+  # Centralized helper method for API request testing
+  def api_request(method, endpoint, params, expected_status)
+    response = client.send(method, endpoint, params)
+    expect(response).to include("status" => expected_status)
+  end
+
   describe "#request" do
     it "sends headers correctly for /marketfeed/ltp", vcr: { cassette_name: "client/marketfeed_ltp" } do
-      response = client.post("/v2/marketfeed/ltp", ltp_request_params)
-      expect(response).to include("status" => "success")
+      api_request(:post, "/v2/marketfeed/ltp", ltp_request_params, "success")
     end
 
     it "sends headers correctly for /marketfeed/ohlc", vcr: { cassette_name: "client/marketfeed_ohlc" } do
-      response = client.post("/v2/marketfeed/ohlc", ohlc_request_params)
-      expect(response).to include("status" => "success")
+      api_request(:post, "/v2/marketfeed/ohlc", ohlc_request_params, "success")
     end
 
-    it "sends headers correctly for /marketfeed/quote", vcr: { cassette_name: "client/market_quote" } do
-      response = client.post("/v2/marketfeed/quote", marketquote_request_params)
-      expect(response).to include("status" => "success")
+    it "sends headers correctly for /marketfeed/quote", vcr: { cassette_name: "client/marketfeed_quote" } do
+      api_request(:post, "/v2/marketfeed/quote", marketquote_request_params, "success")
     end
 
     it "sends headers correctly for /optionchain", vcr: { cassette_name: "client/optionchain" } do
-      response = client.post("/v2/optionchain", option_chain_request_params)
-      expect(response).to include("status" => "success")
+      api_request(:post, "/v2/optionchain", option_chain_request_params, "success")
     end
 
     it "sends headers correctly for /optionchain/expirylist", vcr: { cassette_name: "client/optionchain_expirylist" } do
-      response = client.post("/v2/optionchain/expirylist", expiry_list_request_params)
-      expect(response).to include("status" => "success")
+      api_request(:post, "/v2/optionchain/expirylist", expiry_list_request_params, "success")
     end
 
     it "sends headers correctly for non-DATA APIs", vcr: { cassette_name: "client/margin_calculator" } do
@@ -97,31 +98,19 @@ RSpec.describe DhanHQ::Client do
     end
   end
 
+  shared_examples "a client-id header test" do |endpoint|
+    it "includes client-id for #{endpoint}" do
+      headers = client.send(:build_headers, endpoint)
+      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
+    end
+  end
+
   describe "#build_headers" do
-    it "includes client-id for /marketfeed/ltp" do
-      headers = client.send(:build_headers, "/v2/marketfeed/ltp")
-      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
-    end
-
-    it "includes client-id for /marketfeed/ohlc" do
-      headers = client.send(:build_headers, "/v2/marketfeed/ohlc")
-      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
-    end
-
-    it "includes client-id for /marketfeed/quote" do
-      headers = client.send(:build_headers, "/v2/marketfeed/quote")
-      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
-    end
-
-    it "includes client-id for /optionchain" do
-      headers = client.send(:build_headers, "/v2/optionchain")
-      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
-    end
-
-    it "includes client-id for /optionchain/expirylist" do
-      headers = client.send(:build_headers, "/v2/optionchain/expirylist")
-      expect(headers).to include("client-id" => DhanHQ.configuration.client_id)
-    end
+    include_examples "a client-id header test", "/v2/marketfeed/ltp"
+    include_examples "a client-id header test", "/v2/marketfeed/ohlc"
+    include_examples "a client-id header test", "/v2/marketfeed/quote"
+    include_examples "a client-id header test", "/v2/optionchain"
+    include_examples "a client-id header test", "/v2/optionchain/expirylist"
   end
 
   describe "#get", vcr: { cassette_name: "dhan_hq_get_request" } do
