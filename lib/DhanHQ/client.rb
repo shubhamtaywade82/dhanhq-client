@@ -3,6 +3,7 @@
 require "faraday"
 require "json"
 require "active_support/core_ext/hash/indifferent_access"
+require_relative "errors"
 
 module DhanHQ
   # The `Client` class provides a wrapper for HTTP requests to interact with the DhanHQ API.
@@ -12,6 +13,31 @@ module DhanHQ
   #
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Client
+    ERROR_MAPPING = {
+      "DH-901" => DhanHQ::InvalidAuthenticationError,
+      "DH-902" => DhanHQ::InvalidAccessError,
+      "DH-903" => DhanHQ::UserAccountError,
+      "DH-904" => DhanHQ::RateLimitError,
+      "DH-905" => DhanHQ::InputExceptionError,
+      "DH-906" => DhanHQ::OrderError,
+      "DH-907" => DhanHQ::DataError,
+      "DH-908" => DhanHQ::InternalServerError,
+      "DH-909" => DhanHQ::NetworkError,
+      "DH-910" => DhanHQ::OtherError,
+      "800" => DhanHQ::InternalServerError,
+      "804" => DhanHQ::Error,                   # Too many instruments
+      "805" => DhanHQ::RateLimitError,          # Too many requests
+      "806" => DhanHQ::DataError, # Data API not subscribed
+      "807" => DhanHQ::InvalidTokenError, # Token expired
+      "808" => DhanHQ::AuthenticationFailedError, # Auth failed
+      "809" => DhanHQ::InvalidTokenError,       # Invalid token
+      "810" => DhanHQ::InvalidClientIDError,    # Invalid Client ID
+      "811" => DhanHQ::InvalidRequestError,     # Invalid expiry date
+      "812" => DhanHQ::InvalidRequestError,     # Invalid date format
+      "813" => DhanHQ::InvalidRequestError,     # Invalid security ID
+      "814" => DhanHQ::InvalidRequestError      # Invalid request
+    }.freeze
+
     # The Faraday connection object used for HTTP requests.
     #
     # @return [Faraday::Connection] The connection instance used for API requests.
@@ -90,6 +116,16 @@ module DhanHQ
 
     private
 
+    def format_params(path, params)
+      return params unless params.is_a?(Hash)
+
+      if optionchain_api?(path)
+        titleize_keys(params)
+      else
+        camelize_keys(params)
+      end
+    end
+
     # Dynamically builds headers for the request
     def build_headers(path)
       headers = {
@@ -116,6 +152,18 @@ module DhanHQ
       data_api_paths.any? { |data_path| path.start_with?(data_path) }
     end
 
+    def camelize_keys(hash)
+      hash.transform_keys { |key| key.to_s.camelize(:lower) }
+    end
+
+    def titleize_keys(hash)
+      hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
+    end
+
+    def optionchain_api?(path)
+      path.include?("/optionchain")
+    end
+
     # Sets headers for the request.
     #
     # @param req [Faraday::Request] The request object.
@@ -134,11 +182,24 @@ module DhanHQ
     # @param method [Symbol] The HTTP method.
     # @return [void]
     def prepare_payload(req, payload, method)
-      if method == :get
-        req.params = payload if payload.is_a?(Hash)
-      elsif payload.is_a?(Hash)
-        payload[:dhanClientId] ||= DhanHQ.configuration.client_id
-        req.body = payload.to_json
+      return if payload.nil? || payload.empty?
+
+      unless payload.is_a?(Hash)
+        raise DhanHQ::InputExceptionError, "Invalid payload: Expected a Hash, got #{payload.class}"
+      end
+
+      formatted_payload = format_params(req.path, payload)
+
+      case method
+      when :delete
+        req.params = {}
+      when :get
+        req.params = formatted_payload
+      else
+        unless formatted_payload&.key?(:dhanClientId)
+          formatted_payload[:dhanClientId] ||= DhanHQ.configuration.client_id
+        end
+        req.body = formatted_payload.to_json
       end
     end
 
@@ -166,34 +227,20 @@ module DhanHQ
       error_code = body[:errorCode] || response.status
       error_message = "#{response.status}: #{body[:error] || body[:message] || response.body}"
 
-      case error_code
-      when "DH-901" then raise DhanHQ::Error, "Invalid Authentication: #{error_message}"
-      when "DH-902" then raise DhanHQ::Error, "Invalid Access: #{error_message}"
-      when "DH-903" then raise DhanHQ::Error, "User Account Error: #{error_message}"
-      when "DH-904" then raise DhanHQ::Error, "Rate Limit Exceeded: #{error_message}"
-      when "DH-905" then raise DhanHQ::Error, "Input Exception: #{error_message}"
-      when "DH-906" then raise DhanHQ::Error, "Order Error: #{error_message}"
-      when "DH-907" then raise DhanHQ::Error, "Data Error: #{error_message}"
-      when "DH-908" then raise DhanHQ::Error, "Internal Server Error: #{error_message}"
-      when "DH-909" then raise DhanHQ::Error, "Network Error: #{error_message}"
-      when "DH-910" then raise DhanHQ::Error, "Other Error: #{error_message}"
-      when 800 then raise DhanHQ::Error, "Data API Error: Internal Server Error - #{error_message}"
-      when 804 then raise DhanHQ::Error, "Data API Error: Instrument Limit Exceeded - #{error_message}"
-      when 805 then raise DhanHQ::Error, "Data API Error: Rate Limit Exceeded - #{error_message}"
-      when 806 then raise DhanHQ::Error, "Data API Error: Subscription Missing - #{error_message}"
-      when 807, "DH-910" then raise DhanHQ::Error, "Access Token Expired or Invalid: #{error_message}"
-      when 808..814 then raise DhanHQ::Error, "Data API Error: #{error_message}"
+      if ERROR_MAPPING.key?(error_code)
+        raise ERROR_MAPPING[error_code],
+              "#{ERROR_MAPPING[error_code].name.split("::").last.gsub("Error", "")}: #{error_message}"
       end
 
-      # Handle HTTP status codes
       case response.status
-      when 400 then raise DhanHQ::Error, "Bad Request: #{error_message}"
-      when 401 then raise DhanHQ::Error, "Unauthorized: #{error_message}"
-      when 403 then raise DhanHQ::Error, "Forbidden: #{error_message}"
-      when 404 then raise DhanHQ::Error, "Not Found: #{error_message}"
-      when 500..599 then raise DhanHQ::Error, "Server Error: #{error_message}"
+      when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
+      when 401 then raise DhanHQ::InvalidAuthenticationError, "Unauthorized: #{error_message}"
+      when 403 then raise DhanHQ::InvalidAccessError, "Forbidden: #{error_message}"
+      when 404 then raise DhanHQ::NotFoundError, "Not Found: #{error_message}"
+      when 429 then raise DhanHQ::RateLimitError, "Rate Limit Exceeded: #{error_message}"
+      when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
       else
-        raise DhanHQ::Error, "Unknown Error: #{error_message}"
+        raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
       end
     end
 

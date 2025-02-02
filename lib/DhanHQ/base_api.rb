@@ -2,121 +2,87 @@
 
 module DhanHQ
   # Base class for all API resource classes
-  # Handles HTTP requests, error handling, and dynamic path building
+  # Delegates HTTP requests to `DhanHQ::Client`
   class BaseAPI
+    HTTP_PATH = ""
+    attr_reader :client
+
     def initialize
       @client = DhanHQ::Client.new
     end
 
-    # Dynamically build the base path for the resource
+    # Perform a GET request via `Client`
     #
-    # @return [String] The base resource path
-    def resource_path
-      self.class::HTTP_PATH
-    end
-
-    # Perform a GET request
-    #
-    # @param endpoint [String] The endpoint to append to the resource path
-    # @param params [Hash] Query parameters for the request
+    # @param endpoint [String] API endpoint
+    # @param params [Hash] Query parameters
     # @return [Hash, Array] The parsed API response
     def get(endpoint = "", params: {})
-      perform_request(:get, build_path(endpoint), params: params)
+      formatted_params = format_params(endpoint, params)
+      client.get(build_path(endpoint), formatted_params)
     end
 
-    # Perform a POST request
+    # Perform a POST request via `Client`
     #
-    # @param endpoint [String] The endpoint to append to the resource path
-    # @param params [Hash] The request body
+    # @param endpoint [String] API endpoint
+    # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def post(endpoint = "", params: {})
-      perform_request(:post, build_path(endpoint), params: params)
+      formatted_params = format_params(endpoint, params)
+      client.post(build_path(endpoint), formatted_params)
     end
 
-    # Perform a PUT request
+    # Perform a PUT request via `Client`
     #
-    # @param endpoint [String] The endpoint to append to the resource path
-    # @param params [Hash] The request body
+    # @param endpoint [String] API endpoint
+    # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def put(endpoint = "", params: {})
-      perform_request(:put, build_path(endpoint), params: params)
+      formatted_params = format_params(endpoint, params)
+      client.put(build_path(endpoint), formatted_params)
     end
 
-    # Perform a DELETE request
+    # Perform a DELETE request via `Client`
     #
-    # @param endpoint [String] The endpoint to append to the resource path
+    # @param endpoint [String] API endpoint
     # @return [Hash, Array] The parsed API response
     def delete(endpoint = "")
-      perform_request(:delete, build_path(endpoint))
+      client.delete(build_path(endpoint))
     end
 
     private
 
-    # Build the complete path by appending the endpoint to the resource path
+    # Construct the complete API URL
     #
-    # @param endpoint [String] The endpoint to append
-    # @return [String] The full path
+    # @param endpoint [String] API endpoint
+    # @return [String] Full API path
     def build_path(endpoint)
       "#{self.class::HTTP_PATH}#{endpoint}"
     end
 
-    # # Add dhanClientId to request parameters
-    # #
-    # # @param params [Hash] The request parameters
-    # # @return [Hash] The parameters including dhanClientId
-    # def add_client_id(params)
-    #   params.merge(dhanClientId: DhanHQ.configuration.client_id)
-    # end
+    # Format parameters based on API endpoint
+    def format_params(_endpoint, params)
+      return params if params.empty?
 
-    # # Build the default headers for API requests
-    # #
-    # # @return [Hash] The default headers
-    # def build_headers
-    #   {
-    #     "Content-Type" => "application/json",
-    #     "Authorization" => "Bearer #{DhanHQ.configuration.access_token}"
-    #   }
-    # end
-
-    # Perform the actual request
-    #
-    # @param method [Symbol] The HTTP method (e.g., :get, :post)
-    # @param endpoint [String] The full path of the API
-    # @param params [Hash] Request parameters
-    # @return [Hash, Array] The parsed API response
-    def perform_request(method, endpoint, params: {})
-      response = @client.request(method, endpoint, params)
-      handle_response(response)
-    rescue DhanHQ::Error => e
-      handle_error(e)
+      if optionchain_api?
+        titleize_keys(params) # Convert to TitleCase for Option Chain APIs
+      else
+        camelize_keys(params) # Convert to camelCase for other APIs
+      end
     end
 
-    # Handle the API response
-    #
-    # @param response [Hash] The API response
-    # @return [Hash, Array] The parsed response
-    # @raise [ApiError] If the response indicates an error
-    # Handle the API response
-    def handle_response(response)
-      response.is_a?(String) ? JSON.parse(response, symbolize_keys: true) : response
+    # Converts keys from snake_case to camelCase
+    def camelize_keys(hash)
+      hash.transform_keys { |key| key.to_s.camelize(:lower) }
     end
 
-    # Handle API errors
-    #
-    # @param error [StandardError] The raised error
-    # @raise [ApiError] The formatted API error
-    def handle_error(error)
-      raise ApiError.new(error.message, error.backtrace)
+    # Converts keys from snake_case to TitleCase
+    def titleize_keys(hash)
+      hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
     end
-  end
 
-  # Custom error class for API-related errors
-  class ApiError < StandardError
-    attr_reader :errors
-
-    def initialize(message, errors = nil)
-      super(message)
-      @errors = errors || {}
+    # Determines if the API endpoint is for Option Chain
+    def optionchain_api?
+      self.class::HTTP_PATH.include?("/optionchain")
     end
   end
 end

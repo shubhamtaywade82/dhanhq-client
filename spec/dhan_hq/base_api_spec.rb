@@ -15,7 +15,8 @@ RSpec.describe DhanHQ::BaseAPI do
   after { VCR.turn_on! }
 
   let(:api) { DhanHQ::TestAPI.new }
-  let(:test_params) { { param1: "value1", param2: "value2", dhanClientId: "test_client_id" } }
+  let(:test_params) { { param1: "value1", param2: "value2" } }
+  let(:expected_request_body) { test_params.merge(dhanClientId: "test_client_id") }
   let(:base_url) { DhanHQ.configuration.base_url.chomp("/") }
   let(:headers) do
     {
@@ -27,13 +28,11 @@ RSpec.describe DhanHQ::BaseAPI do
     }
   end
 
-  def stub_response(file_name, status, method, endpoint, body = nil)
+  def stub_response(file_name, status, method, endpoint)
     response = File.read(File.join("spec/support/stubs", file_name))
+
     stub_request(method, "#{base_url}#{endpoint}")
-      .with(
-        body: body&.to_json,
-        headers: headers
-      )
+      .with(headers: headers)
       .to_return(status: status, body: response, headers: {})
   end
 
@@ -49,52 +48,52 @@ RSpec.describe DhanHQ::BaseAPI do
     it "handles errors for GET requests" do
       stub_response("error_response.json", 404, :get, "/test/123")
 
-      expect { api.get("/123") }.to raise_error(DhanHQ::ApiError, /Not Found/)
+      expect { api.get("/123") }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
     end
   end
 
   describe "POST requests" do
     it "sends a POST request and returns the response" do
-      stub_response("post_success.json", 200, :post, "/test", test_params)
+      stub_response("post_success.json", 200, :post, "/test")
 
       response = api.fetch(test_params)
       expect(response).to include("status" => "success")
     end
 
     it "handles errors for POST requests" do
-      stub_response("error_response.json", 404, :post, "/test", test_params)
+      stub_response("error_response.json", 404, :post, "/test")
 
-      expect { api.fetch(test_params) }.to raise_error(DhanHQ::ApiError, /Not Found/)
+      expect { api.fetch(test_params) }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
     end
   end
 
   describe "PUT requests" do
     it "sends a PUT request and returns the response" do
-      stub_response("put_success.json", 200, :put, "/test/123", test_params)
+      stub_response("put_success.json", 200, :put, "/test/123")
 
       response = api.update("123", test_params)
       expect(response).to include("status" => "success")
     end
 
     it "handles errors for PUT requests" do
-      stub_response("error_response.json", 400, :put, "/test/123", test_params)
+      stub_response("error_response.json", 400, :put, "/test/123")
 
-      expect { api.update("123", test_params) }.to raise_error(DhanHQ::ApiError, /Not Found/)
+      expect { api.update("123", test_params) }.to raise_error(DhanHQ::InputExceptionError, /Not Found/)
     end
   end
 
   describe "DELETE requests" do
     it "sends a DELETE request and returns the response" do
-      stub_response("delete_success.json", 200, :delete, "/test/123", { dhanClientId: "test_client_id" })
+      stub_response("delete_success.json", 202, :delete, "/test/123")
 
       response = api.delete("/123")
-      expect(response).to include("status" => "success")
+      expect(response).to include("message" => "Resource deleted successfully.", "status" => "success")
     end
 
     it "handles errors for DELETE requests" do
-      stub_response("error_response.json", 404, :delete, "/test/123", { dhanClientId: "test_client_id" })
+      stub_response("error_response.json", 404, :delete, "/test/123")
 
-      expect { api.delete("/123") }.to raise_error(DhanHQ::ApiError, /Not Found/)
+      expect { api.delete("/123") }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
     end
   end
 
@@ -102,7 +101,7 @@ RSpec.describe DhanHQ::BaseAPI do
     it "raises an error for unexpected server errors" do
       stub_response("internal_error_response.json", 500, :get, "/test/123")
 
-      expect { api.get("/123") }.to raise_error(DhanHQ::ApiError, /Internal Server Error/)
+      expect { api.get("/123") }.to raise_error(DhanHQ::InternalServerError, /Internal Server Error/)
     end
   end
 end

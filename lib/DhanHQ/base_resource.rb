@@ -16,6 +16,7 @@ module DhanHQ
     def initialize(attributes = {}, skip_validation: false)
       @attributes = normalize_keys(attributes)
       @errors = {}
+
       validate! unless skip_validation
       assign_attributes
     end
@@ -82,9 +83,12 @@ module DhanHQ
         @api_client ||= DhanHQ::Client.new
       end
 
-      def validate_params!(params)
-        contract = validation_contract
-
+      # Validate the attributes using the validation contract
+      #
+      # @param params [Hash] The parameters to validate
+      # @param contract_class [Class] The contract class to use for validation
+      def validate_params!(params, contract_class = validation_contract)
+        contract = contract_class.new
         result = contract.call(params)
         raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
       end
@@ -125,11 +129,15 @@ module DhanHQ
       @errors.empty?
     end
 
-    # Convert attributes to camelCase for API requests
+    # Format request parameters before sending to API
     #
     # @return [Hash] The camelCased attributes
     def to_request_params
-      camelize_keys(@attributes)
+      if optionchain_api?
+        titleize_keys(@attributes) # Convert to TitleCase
+      else
+        camelize_keys(@attributes) # Convert to camelCase
+      end
     end
 
     def id
@@ -147,9 +155,12 @@ module DhanHQ
       raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
     end
 
-    def validate_params!(params)
-      contract = validation_contract
-
+    # Validate the attributes using the validation contract
+    #
+    # @param params [Hash] The parameters to validate
+    # @param contract_class [Class] The contract class to use for validation
+    def validate_params!(params, contract_class = validation_contract)
+      contract = contract_class.new
       result = contract.call(params)
       raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
     end
@@ -157,8 +168,9 @@ module DhanHQ
     # Dynamically assign attributes as methods
     def assign_attributes
       self.class.defined_attributes&.each do |attr|
-        define_singleton_method(attr) { @attributes[attr] }
-        define_singleton_method(attr.to_s.camelize(:lower)) { @attributes[attr] }
+        instance_variable_set(:"@#{attr}", @attributes[attr])
+        define_singleton_method(attr) { instance_variable_get(:"@#{attr}") }
+        define_singleton_method(attr.to_s.camelize(:lower)) { instance_variable_get(:"@#{attr}") }
       end
     end
 
@@ -191,6 +203,10 @@ module DhanHQ
       hash.transform_keys { |key| key.to_s.camelize(:lower) }
     end
 
+    def titleize_keys(hash)
+      hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
+    end
+
     # Placeholder for the validation contract
     #
     # @raise [NotImplementedError] If not implemented in a subclass
@@ -203,6 +219,18 @@ module DhanHQ
     # @return [DhanHQ::Client] The client instance
     def api_client
       @api_client ||= DhanHQ::Client.new
+    end
+
+    # Override `inspect` to display instance variables instead of attributes hash
+    #
+    # @return [String] Readable debug output for the object
+    def inspect
+      instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
+      "#<#{self.class.name} #{instance_vars.join(", ")}>"
+    end
+
+    def optionchain_api?
+      self.class.name.include?("OptionChain")
     end
   end
 

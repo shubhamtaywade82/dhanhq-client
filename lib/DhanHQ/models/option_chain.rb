@@ -14,7 +14,7 @@ module DhanHQ
         # @param params [Hash] The request parameters (snake_case format)
         # @return [HashWithIndifferentAccess] The filtered option chain data
         def fetch(params)
-          validate_params!(params)
+          validate_params!(params, DhanHQ::Contracts::OptionChainContract)
 
           response = resource.fetch_option_chain(params)
           return {}.with_indifferent_access unless response[:status] == "success"

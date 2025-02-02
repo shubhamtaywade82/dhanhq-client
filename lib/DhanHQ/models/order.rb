@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "../contracts/base_contract"
-
 require_relative "../contracts/place_order_contract"
-# require_relative "../contracts/modify_order_contract"
-# require_relative "../contracts/slice_order_contract"
+require_relative "../contracts/modify_order_contract"
+
 module DhanHQ
   module Models
     class Order < BaseResource
@@ -24,19 +22,20 @@ module DhanHQ
         # @return [Array<Order>]
         def all
           response = resource.list_orders
-
           return [] unless response.is_a?(Array)
 
           response.map { |order| new(order, skip_validation: true) }
         end
 
-        # Fetch a specific order by order ID
+        # Fetch a specific order by ID
         #
         # @param order_id [String]
         # @return [Order, nil]
         def find(order_id)
           response = resource.get_order(order_id)
-          response.first ? new(response.first, skip_validation: true) : nil
+          return nil unless response.is_a?(Array) && response.any?
+
+          new(response.first, skip_validation: true)
         end
 
         # Fetch a specific order by correlation ID
@@ -45,7 +44,9 @@ module DhanHQ
         # @return [Order, nil]
         def find_by_correlation(correlation_id)
           response = resource.get_order_by_correlation(correlation_id)
-          response[:status] == "success" ? new(response[:data]) : nil
+          return nil unless response[:status] == "success"
+
+          new(response[:data], skip_validation: true)
         end
 
         # Place a new order
@@ -53,12 +54,12 @@ module DhanHQ
         # @param params [Hash] Order parameters
         # @return [Order]
         def place(params)
-          contract = DhanHQ::Contracts::PlaceOrderContract.new
-          validation = contract.call(params)
-          raise DhanHQ::Error, "Validation Error: #{validation.errors.to_h}" unless validation.success?
+          validate_params!(params, DhanHQ::Contracts::PlaceOrderContract)
 
           response = resource.place_order(params)
-          response[:status] == "success" ? new(response[:data]) : nil
+          return new(response[:data], skip_validation: true) if response[:status] == "success"
+
+          nil
         end
 
         # Access the API resource for orders
@@ -73,13 +74,13 @@ module DhanHQ
       #
       # @param new_params [Hash]
       # @return [Order, nil]
-      def modify(order_id, params)
-        contract = DhanHQ::Contracts::ModifyOrderContract.new
-        validation = contract.call(params)
-        raise DhanHQ::Error, "Validation Error: #{validation.errors.to_h}" unless validation.success?
+      def modify(new_params)
+        validate_params!(new_params, DhanHQ::Contracts::ModifyOrderContract)
 
-        response = resource.modify_order(order_id, params)
-        response[:status] == "success" ? new(response[:data]) : nil
+        response = self.class.resource.modify_order(id, new_params)
+        return self.class.new(response[:data], skip_validation: true) if response[:status] == "success"
+
+        nil
       end
 
       # Cancel the order
