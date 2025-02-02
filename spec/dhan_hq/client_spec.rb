@@ -65,32 +65,20 @@ RSpec.describe DhanHQ::Client do
     DhanHQ.configure_with_env
   end
 
-  # Centralized helper method for API request testing
-  def api_request(method, endpoint, params, expected_status)
-    response = client.send(method, endpoint, params)
-    expect(response).to include("status" => expected_status)
+  # Centralized shared example for API requests
+  shared_examples "a successful API request" do |method, endpoint, params_lambda, expected_status, cassette|
+    it "sends request correctly for #{endpoint}", vcr: { cassette_name: cassette } do
+      response = client.send(method, endpoint, instance_exec(&params_lambda))
+      expect(response).to include("status" => expected_status)
+    end
   end
 
   describe "#request" do
-    it "sends headers correctly for /marketfeed/ltp", vcr: { cassette_name: "client/marketfeed_ltp" } do
-      api_request(:post, "/v2/marketfeed/ltp", ltp_request_params, "success")
-    end
-
-    it "sends headers correctly for /marketfeed/ohlc", vcr: { cassette_name: "client/marketfeed_ohlc" } do
-      api_request(:post, "/v2/marketfeed/ohlc", ohlc_request_params, "success")
-    end
-
-    it "sends headers correctly for /marketfeed/quote", vcr: { cassette_name: "client/marketfeed_quote" } do
-      api_request(:post, "/v2/marketfeed/quote", marketquote_request_params, "success")
-    end
-
-    it "sends headers correctly for /optionchain", vcr: { cassette_name: "client/optionchain" } do
-      api_request(:post, "/v2/optionchain", option_chain_request_params, "success")
-    end
-
-    it "sends headers correctly for /optionchain/expirylist", vcr: { cassette_name: "client/optionchain_expirylist" } do
-      api_request(:post, "/v2/optionchain/expirylist", expiry_list_request_params, "success")
-    end
+    include_examples "a successful API request", :post, "/v2/marketfeed/ltp", -> { ltp_request_params }, "success", "client/marketfeed_ltp"
+    include_examples "a successful API request", :post, "/v2/marketfeed/ohlc", -> { ohlc_request_params }, "success", "client/marketfeed_ohlc"
+    include_examples "a successful API request", :post, "/v2/marketfeed/quote", -> { marketquote_request_params }, "success", "client/marketfeed_quote"
+    include_examples "a successful API request", :post, "/v2/optionchain", -> { option_chain_request_params }, "success", "client/optionchain"
+    include_examples "a successful API request", :post, "/v2/optionchain/expirylist", -> { expiry_list_request_params }, "success", "client/optionchain_expirylist"
 
     it "sends headers correctly for non-DATA APIs", vcr: { cassette_name: "client/margin_calculator" } do
       response = client.post("/v2/margincalculator", margin_calculator_request_params)
