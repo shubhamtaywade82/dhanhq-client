@@ -9,12 +9,14 @@ module DhanHQ
       attr_reader :order_id, :order_status
 
       # Define attributes that are part of an order
-      attributes :correlation_id, :transaction_type, :exchange_segment,
-                 :product_type, :order_type, :validity, :security_id, :quantity,
-                 :disclosed_quantity, :price, :trigger_price, :order_flag, :price1,
-                 :trigger_price1, :quantity1, :trading_symbol, :create_time,
+      attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
+                 :transaction_type, :exchange_segment, :product_type, :order_type,
+                 :validity, :trading_symbol, :security_id, :quantity,
+                 :disclosed_quantity, :price, :trigger_price, :after_market_order,
+                 :bo_profit_value, :bo_stop_loss_value, :leg_name, :create_time,
                  :update_time, :exchange_time, :drv_expiry_date, :drv_option_type,
-                 :drv_strike_price
+                 :drv_strike_price, :oms_error_code, :oms_error_description, :algo_id,
+                 :remaining_quantity, :average_traded_price, :filled_qty
 
       class << self
         # Fetch all orders for the day
@@ -33,9 +35,9 @@ module DhanHQ
         # @return [Order, nil]
         def find(order_id)
           response = resource.get_order(order_id)
-          return nil unless response.is_a?(Array) && response.any?
+          return nil unless response.is_a?(Hash) && response.any?
 
-          new(response.first, skip_validation: true)
+          new(response, skip_validation: true)
         end
 
         # Fetch a specific order by correlation ID
@@ -57,9 +59,10 @@ module DhanHQ
           validate_params!(params, DhanHQ::Contracts::PlaceOrderContract)
 
           response = resource.place_order(params)
-          return new(response[:data], skip_validation: true) if response[:status] == "success"
+          return nil unless response.is_a?(Hash) && response["orderId"]
 
-          nil
+          # Fetch the complete order details
+          find(response["orderId"])
         end
 
         # Access the API resource for orders
@@ -70,15 +73,23 @@ module DhanHQ
         end
       end
 
-      # Modify the order
+      # Modify the order while preserving existing attributes
       #
       # @param new_params [Hash]
       # @return [Order, nil]
       def modify(new_params)
-        validate_params!(new_params, DhanHQ::Contracts::ModifyOrderContract)
+        raise "Order ID is required to modify an order" unless id
 
-        response = self.class.resource.modify_order(id, new_params)
-        return self.class.new(response[:data], skip_validation: true) if response[:status] == "success"
+        # Merge current order attributes with new parameters
+        updated_params = attributes.merge(new_params)
+
+        # Validate with ModifyOrderContract
+        validate_params!(updated_params, DhanHQ::Contracts::ModifyOrderContract)
+
+        response = self.class.resource.modify_order(id, updated_params)
+
+        # Fetch the latest order details
+        return self.class.find(id) if response[:orderStatus] == "TRANSIT"
 
         nil
       end
@@ -90,7 +101,7 @@ module DhanHQ
         raise "Order ID is required to cancel an order" unless id
 
         response = self.class.resource.cancel_order(id)
-        response[:status] == "success"
+        response["orderStatus"] == "CANCELLED"
       end
 
       # Fetch the latest details of the order

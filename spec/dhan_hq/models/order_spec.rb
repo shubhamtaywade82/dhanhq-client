@@ -31,7 +31,7 @@ RSpec.describe DhanHQ::Models::Order do
     }
   end
 
-  let(:order_response) do
+  let(:initial_order_response) do
     {
       dhanClientId: "1000000003",
       orderId: "452501297117",
@@ -46,7 +46,7 @@ RSpec.describe DhanHQ::Models::Order do
       securityId: "11536",
       quantity: 5,
       disclosedQuantity: 0,
-      price: 0.0,
+      price: 100.00,
       triggerPrice: 0.0,
       afterMarketOrder: false,
       boProfitValue: 0.0,
@@ -67,6 +67,14 @@ RSpec.describe DhanHQ::Models::Order do
     }
   end
 
+  # Updated order response after modification
+  let(:updated_order_response) do
+    initial_order_response.merge(
+      orderStatus: "TRANSIT", # Simulate order modification
+      price: 105.0 # Confirm price change
+    )
+  end
+
   before do
     VCR.turn_off!
     DhanHQ.configure do |config|
@@ -77,7 +85,7 @@ RSpec.describe DhanHQ::Models::Order do
 
     stub_request(:post, "https://api.dhan.co/v2/orders")
       .with(
-        body: camelized_order_params.merge("dhanClientId" => "testClientId").to_json,
+        body: hash_including(camelized_order_params),
         headers: {
           "Accept" => "application/json",
           "Accept-Encoding" => "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
@@ -88,25 +96,26 @@ RSpec.describe DhanHQ::Models::Order do
       )
       .to_return(status: 200, body: { orderId: order_id, orderStatus: "TRANSIT" }.to_json)
 
+    # Stub PUT request for modifying the order
     stub_request(:put, "https://api.dhan.co/v2/orders/#{order_id}")
       .with(
-        body: { price: 105.0 }.to_json,
+        body: hash_including("price" => 105.0), # Ensure price update
         headers: {
           "Accept" => "application/json",
           "Access-Token" => "header.payload.signature",
           "Content-Type" => "application/json"
         }
       )
-      .to_return(status: 200, body: { orderId: order_id, orderStatus: "MODIFIED" }.to_json)
+      .to_return(status: 200, body: { orderId: order_id, orderStatus: "TRANSIT" }.to_json)
 
     stub_request(:delete, "https://api.dhan.co/v2/orders/#{order_id}")
       .to_return(status: 200, body: { orderId: order_id, orderStatus: "CANCELLED" }.to_json)
 
     stub_request(:get, "https://api.dhan.co/v2/orders/#{order_id}")
-      .to_return(status: 200, body: order_response.to_json)
-
-    stub_request(:get, "https://api.dhan.co/v2/orders")
-      .to_return(status: 200, body: [{ orderId: order_id, orderStatus: "TRADED" }].to_json)
+      .to_return(
+        { status: 200, body: initial_order_response.to_json }, # First call (Before modify)
+        { status: 200, body: updated_order_response.to_json } # Second call (After modify)
+      )
   end
 
   after { VCR.turn_on! }
@@ -117,7 +126,7 @@ RSpec.describe DhanHQ::Models::Order do
 
       expect(order).to be_a(described_class)
       expect(order.order_id).to eq(order_id)
-      expect(order.order_status).to eq("TRANSIT")
+      expect(order.order_status).to eq("PENDING")
     end
   end
 
@@ -127,17 +136,22 @@ RSpec.describe DhanHQ::Models::Order do
 
       expect(order).to be_a(described_class)
       expect(order.order_id).to eq(order_id)
-      expect(order.order_status).to eq("TRADED")
+      expect(order.order_status).to eq("PENDING")
     end
   end
 
   describe "#modify" do
-    it "modifies an order successfully" do
+    it "modifies an order successfully while retaining existing attributes" do
       order = order_model.find(order_id)
+
+      # Ensure price update while keeping other fields unchanged
       modified_order = order.modify(price: 105.0)
 
       expect(modified_order).to be_a(described_class)
-      expect(modified_order.order_status).to eq("MODIFIED")
+      expect(modified_order.order_status).to eq("TRANSIT")
+      expect(modified_order.price).to eq(105.0) # Confirm price updated
+      expect(modified_order.quantity).to eq(order.quantity) # Ensure quantity is unchanged
+      expect(modified_order.security_id).to eq(order.security_id) # Security ID should remain the same
     end
   end
 

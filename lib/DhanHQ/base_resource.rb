@@ -162,6 +162,7 @@ module DhanHQ
     def validate_params!(params, contract_class = validation_contract)
       contract = contract_class.new
       result = contract.call(params)
+
       raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
     end
 
