@@ -37,5 +37,13 @@ module DhanHQ
         result[string_key.underscore] = value
       end.with_indifferent_access
     end
+
+    # Override `inspect` to display instance variables instead of attributes hash
+    #
+    # @return [String] Readable debug output for the object
+    def inspect
+      instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
+      "#<#{self.class.name} #{instance_vars.join(", ")}>"
+    end
   end
 end

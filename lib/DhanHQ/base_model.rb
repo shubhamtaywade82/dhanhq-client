@@ -13,6 +13,7 @@ module DhanHQ
   # Base class for resource objects
   # Handles validation, attribute mapping, and response parsing
   class BaseModel
+    # Extend & Include Modules
     extend DhanHQ::APIHelper
     extend DhanHQ::AttributeHelper
     extend DhanHQ::ValidationHelper
@@ -23,6 +24,7 @@ module DhanHQ
     include DhanHQ::ValidationHelper
     include DhanHQ::RequestHelper
 
+    # Attribute Accessors
     attr_reader :attributes, :errors
 
     # Initialize a new resource object
@@ -37,7 +39,6 @@ module DhanHQ
     end
 
     # Class Methods
-
     class << self
       attr_reader :defined_attributes
 
@@ -45,13 +46,22 @@ module DhanHQ
         @defined_attributes ||= []
         @defined_attributes.concat(args.map(&:to_s))
       end
+    end
 
+    # # Validations (Override in subclasses)
+    # def self.validation_contract
+    #   raise DhanHQ::Error, "#{name} must define `validation_contract`."
+    # end
+
+    # Class methods for resources
+    class << self
       # Find a resource by ID
       #
       # @param id [String] The ID of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def find(id)
         response = api_client.get("#{resource_path}/#{id}")
+
         build_from_response(response)
       end
 
@@ -60,7 +70,7 @@ module DhanHQ
       # @return [Array<DhanHQ::BaseModel>, DhanHQ::ErrorObject] An array of resources or error object
       def all
         response = api_client.get(resource_path)
-        return ErrorObject.new(response) unless response[:status] == "success"
+        return ErrorObject.new(response) unless success_response?(response)
 
         response[:data].map { |attributes| new(attributes) }
       end
@@ -75,6 +85,8 @@ module DhanHQ
       # @param attributes [Hash] The attributes of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def create(attributes)
+        # validate_params!(attributes, validation_contract)
+
         response = api_client.post(resource_path, attributes)
         build_from_response(response)
       end
@@ -87,21 +99,24 @@ module DhanHQ
       end
     end
 
+    # Instance Methods
+
     # Update an existing resource
     #
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
       response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
+
       success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
     end
 
     def save
-      new_record? ? create_record : update(attributes)
+      new_record? ? self.class.create(attributes) : update(attributes)
     end
 
     def save!
-      raise ActiveRecord::RecordInvalid, self unless save
+      raise DhanHQ::ErrorObject, "Failed to save the record" unless save
     end
 
     # Delete the resource
@@ -109,14 +124,14 @@ module DhanHQ
     # @return [Boolean] True if deletion was successful
     def delete
       response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
-      response[:status] == "success"
+      success_response?(response)
     rescue StandardError
       false
     end
 
     def destroy
       response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
-      response[:status] == "success"
+      success_response?(response)
     rescue StandardError
       false
     end
@@ -127,20 +142,6 @@ module DhanHQ
 
     def new_record?
       !persisted?
-    end
-
-    # Placeholder for the resource path
-    #
-    # @raise [NotImplementedError] If not implemented in a subclass
-    def resource_path
-      raise NotImplementedError, "#{name} must implement `resource_path`."
-    end
-
-    # Check if the resource is valid
-    #
-    # @return [Boolean] True if valid, false otherwise
-    def valid?
-      @errors.empty?
     end
 
     # Format request parameters before sending to API
@@ -161,21 +162,6 @@ module DhanHQ
         define_singleton_method(attr) { instance_variable_get(:"@#{attr}") }
         define_singleton_method(attr.to_s.camelize(:lower)) { instance_variable_get(:"@#{attr}") }
       end
-    end
-
-    # Placeholder for the validation contract
-    #
-    # @raise [NotImplementedError] If not implemented in a subclass
-    def validation_contract
-      raise NotImplementedError, "#{self.class.name} must implement `validation_contract`."
-    end
-
-    # Override `inspect` to display instance variables instead of attributes hash
-    #
-    # @return [String] Readable debug output for the object
-    def inspect
-      instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
-      "#<#{self.class.name} #{instance_vars.join(", ")}>"
     end
 
     def optionchain_api?

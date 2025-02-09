@@ -22,6 +22,13 @@ module DhanHQ
       raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
     end
 
+    # Placeholder for the validation contract
+    #
+    # @raise [NotImplementedError] If not implemented in a subclass
+    def validation_contract
+      raise NotImplementedError, "#{self.class.name} must implement `validation_contract`."
+    end
+
     # Checks if the current instance is valid
     #
     # @return [Boolean] True if the model is valid
