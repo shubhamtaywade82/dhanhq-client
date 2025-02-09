@@ -1,10 +1,19 @@
 # frozen_string_literal: true
 
+require_relative "helpers/api_helper"
+require_relative "helpers/attribute_helper"
+require_relative "helpers/request_helper"
+
 module DhanHQ
   # Base class for all API resource classes
   # Delegates HTTP requests to `DhanHQ::Client`
   class BaseAPI
+    include DhanHQ::APIHelper
+    include DhanHQ::AttributeHelper
+    include DhanHQ::RequestHelper
+
     HTTP_PATH = ""
+
     attr_reader :client
 
     def initialize
@@ -65,21 +74,7 @@ module DhanHQ
     def format_params(_endpoint, params)
       return params if params.empty?
 
-      if optionchain_api?
-        titleize_keys(params) # Convert to TitleCase for Option Chain APIs
-      else
-        camelize_keys(params) # Convert to camelCase for other APIs
-      end
-    end
-
-    # Converts keys from snake_case to camelCase
-    def camelize_keys(hash)
-      hash.transform_keys { |key| key.to_s.camelize(:lower) }
-    end
-
-    # Converts keys from snake_case to TitleCase
-    def titleize_keys(hash)
-      hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
+      optionchain_api? ? titleize_keys(params) : camelize_keys(params)
     end
 
     # Determines if the API endpoint is for Option Chain

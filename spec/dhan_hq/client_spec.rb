@@ -74,11 +74,21 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#request" do
-    include_examples "a successful API request", :post, "/v2/marketfeed/ltp", -> { ltp_request_params }, "success", "client/marketfeed_ltp"
-    include_examples "a successful API request", :post, "/v2/marketfeed/ohlc", -> { ohlc_request_params }, "success", "client/marketfeed_ohlc"
-    include_examples "a successful API request", :post, "/v2/marketfeed/quote", -> { marketquote_request_params }, "success", "client/marketfeed_quote"
-    include_examples "a successful API request", :post, "/v2/optionchain", -> { option_chain_request_params }, "success", "client/optionchain"
-    include_examples "a successful API request", :post, "/v2/optionchain/expirylist", -> { expiry_list_request_params }, "success", "client/optionchain_expirylist"
+    include_examples "a successful API request", :post, "/v2/marketfeed/ltp", lambda {
+      ltp_request_params
+    }, "success", "client/marketfeed_ltp"
+    include_examples "a successful API request", :post, "/v2/marketfeed/ohlc", lambda {
+      ohlc_request_params
+    }, "success", "client/marketfeed_ohlc"
+    include_examples "a successful API request", :post, "/v2/marketfeed/quote", lambda {
+      marketquote_request_params
+    }, "success", "client/marketfeed_quote"
+    include_examples "a successful API request", :post, "/v2/optionchain", lambda {
+      option_chain_request_params
+    }, "success", "client/optionchain"
+    include_examples "a successful API request", :post, "/v2/optionchain/expirylist", lambda {
+      expiry_list_request_params
+    }, "success", "client/optionchain_expirylist"
 
     it "sends headers correctly for non-DATA APIs", vcr: { cassette_name: "client/margin_calculator" } do
       response = client.post("/v2/margincalculator", margin_calculator_request_params)
