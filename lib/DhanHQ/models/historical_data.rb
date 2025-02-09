@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class HistoricalData < BaseResource
+    class HistoricalData < BaseModel
       class << self
         def daily(params)
           resource.daily(params)

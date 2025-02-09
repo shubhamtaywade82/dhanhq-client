@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class Funds < BaseResource
+    class Funds < BaseModel
       class << self
         def margin_calculator(params)
           resource.margin_calculator(params)

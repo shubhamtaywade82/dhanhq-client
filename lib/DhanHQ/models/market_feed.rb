@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class MarketFeed < BaseResource
+    class MarketFeed < BaseModel
       class << self
         def ltp(params)
           resource.ltp(params)

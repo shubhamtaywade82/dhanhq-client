@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class ForeverOrder < BaseResource
+    class ForeverOrder < BaseModel
       HTTP_PATH = "/forever/orders"
     end
   end

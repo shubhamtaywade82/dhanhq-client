@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class Trade < BaseResource
+    class Trade < BaseModel
       private
 
       # Validation contract for the Trade model

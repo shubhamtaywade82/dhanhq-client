@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Models
-    class Portfolio < BaseResource
+    class Portfolio < BaseModel
       class << self
         def holdings
           resource.holdings

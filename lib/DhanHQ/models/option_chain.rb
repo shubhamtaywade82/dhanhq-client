@@ -5,7 +5,7 @@ require_relative "../contracts/option_chain_contract"
 
 module DhanHQ
   module Models
-    class OptionChain < BaseResource
+    class OptionChain < BaseModel
       attr_reader :underlying_scrip, :underlying_seg, :expiry, :last_price, :option_data
 
       class << self

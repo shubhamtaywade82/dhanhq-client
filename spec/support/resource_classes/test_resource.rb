@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  class TestResource < BaseResource
+  class TestResource < BaseModel
     HTTP_PATH = "/test_resources"
 
     attributes :dhan_client_id, :correlation_id, :transaction_type, :exchange_segment,

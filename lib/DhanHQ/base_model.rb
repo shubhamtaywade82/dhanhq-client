@@ -12,7 +12,7 @@ require_relative "helpers/request_helper"
 module DhanHQ
   # Base class for resource objects
   # Handles validation, attribute mapping, and response parsing
-  class BaseResource
+  class BaseModel
     extend DhanHQ::APIHelper
     extend DhanHQ::AttributeHelper
     extend DhanHQ::ValidationHelper
@@ -49,7 +49,7 @@ module DhanHQ
       # Find a resource by ID
       #
       # @param id [String] The ID of the resource
-      # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject] The resource or error object
+      # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def find(id)
         response = api_client.get("#{resource_path}/#{id}")
         build_from_response(response)
@@ -57,7 +57,7 @@ module DhanHQ
 
       # Find all resources
       #
-      # @return [Array<DhanHQ::BaseResource>, DhanHQ::ErrorObject] An array of resources or error object
+      # @return [Array<DhanHQ::BaseModel>, DhanHQ::ErrorObject] An array of resources or error object
       def all
         response = api_client.get(resource_path)
         return ErrorObject.new(response) unless response[:status] == "success"
@@ -68,7 +68,7 @@ module DhanHQ
       # Create a new resource
       #
       # @param attributes [Hash] The attributes of the resource
-      # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject] The resource or error object
+      # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def create(attributes)
         response = api_client.post(resource_path, attributes)
         build_from_response(response)
@@ -77,7 +77,7 @@ module DhanHQ
       # # Build a resource object from an API response
       # #
       # # @param response [Hash] API response
-      # # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
+      # # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
       # def build_from_response(response)
       #   return new(response[:data].with_indifferent_access, skip_validation: true) if response[:status] == "success"
 
@@ -112,7 +112,7 @@ module DhanHQ
     # Update an existing resource
     #
     # @param attributes [Hash] Attributes to update
-    # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
+    # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
       response = api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
       return self.class.build_from_response(response) if response[:status] == "success"
@@ -233,13 +233,13 @@ module DhanHQ
     #   @api_client ||= DhanHQ::Client.new
     # end
 
-    # # Override `inspect` to display instance variables instead of attributes hash
-    # #
-    # # @return [String] Readable debug output for the object
-    # def inspect
-    #   instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
-    #   "#<#{self.class.name} #{instance_vars.join(", ")}>"
-    # end
+    # Override `inspect` to display instance variables instead of attributes hash
+    #
+    # @return [String] Readable debug output for the object
+    def inspect
+      instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
+      "#<#{self.class.name} #{instance_vars.join(", ")}>"
+    end
 
     def optionchain_api?
       self.class.name.include?("OptionChain")

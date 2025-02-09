@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe DhanHQ::BaseResource do
+RSpec.describe DhanHQ::BaseModel do
   let(:valid_attributes) do
     {
       dhanClientId: "12345",

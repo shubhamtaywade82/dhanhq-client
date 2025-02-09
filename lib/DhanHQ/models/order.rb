@@ -5,7 +5,7 @@ require_relative "../contracts/modify_order_contract"
 
 module DhanHQ
   module Models
-    class Order < BaseResource
+    class Order < BaseModel
       attr_reader :order_id, :order_status
 
       # Define attributes that are part of an order

@@ -7,7 +7,7 @@ require_relative "DhanHQ/errors"
 require_relative "DhanHQ/configuration"
 require_relative "DhanHQ/client"
 require_relative "DhanHQ/base_api"
-require_relative "DhanHQ/base_resource"
+require_relative "DhanHQ/base_model"
 
 # Contracts
 require_relative "DhanHQ/contracts/base_contract"
