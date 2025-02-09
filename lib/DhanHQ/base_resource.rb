@@ -114,7 +114,7 @@ module DhanHQ
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseResource, DhanHQ::ErrorObject]
     def update(attributes = {})
-      response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
+      response = api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
       return self.class.build_from_response(response) if response[:status] == "success"
 
       DhanHQ::ErrorObject.new(response)
