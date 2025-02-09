@@ -113,15 +113,18 @@ position.exit!
 
 ## 🔹 Available Resources
 
-| Resource     | Model                 | Actions                                             |
-| ------------ | --------------------- | --------------------------------------------------- |
-| Orders       | `DhanHQ::Order`       | `find`, `all`, `where`, `place`, `update`, `cancel` |
-| Positions    | `DhanHQ::Position`    | `all`, `find`, `exit!`                              |
-| Trades       | `DhanHQ::Trade`       | `all`, `find`                                       |
-| Option Chain | `DhanHQ::OptionChain` | `fetch`, `fetch_expiry_list`                        |
-| Market Feeds | `DhanHQ::MarketFeed`  | `ltp, ohlc`, `quote`                                |
-| Portfolio    | `DhanHQ::Portfolio`   | `holdings`, `positions`                             |
-| Funds        | `DhanHQ::Funds`       | `fund_limit`, `margin_calculator`                   |
+| Resource                 | Model                            | Actions                                             |
+| ------------------------ | -------------------------------- | --------------------------------------------------- |
+| Orders                   | `DhanHQ::Models::Order`          | `find`, `all`, `where`, `place`, `update`, `cancel` |
+| Trades                   | `DhanHQ::Models::Trade`          | `all`, `find_by_order_id`                           |
+| Forever Orders           | `DhanHQ::Models::ForeverOrder`   | `create`, `find`, `modify`, `cancel`, `all`         |
+| Holdings                 | `DhanHQ::Models::Holding`        | `all`                                               |
+| Positions                | `DhanHQ::Models::Position`       | `all`, `find`, `exit!`                              |
+| Funds & Margin           | `DhanHQ::Models::Funds`          | `fund_limit`, `margin_calculator`                   |
+| Ledger                   | `DhanHQ::Models::Ledger`         | `all`                                               |
+| Market Feeds             | `DhanHQ::Models::MarketFeed`     | `ltp, ohlc`, `quote`                                |
+| Historical Data (Charts) | `DhanHQ::Models::HistoricalData` | `daily`, `intraday`                                 |
+| Option Chain             | `DhanHQ::Models::OptionChain`    | `fetch`, `fetch_expiry_list`                        |
 
 ## 📌 Development
 
