@@ -65,6 +65,11 @@ module DhanHQ
         response[:data].map { |attributes| new(attributes) }
       end
 
+      def where(params)
+        response = api_client.get(resource_path, params)
+        success_response?(response) ? response[:data].map { |attr| new(attr) } : []
+      end
+
       # Create a new resource
       #
       # @param attributes [Hash] The attributes of the resource
@@ -87,10 +92,16 @@ module DhanHQ
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
-      response = api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
-      return self.class.build_from_response(response) if response[:status] == "success"
+      response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
+      success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
+    end
 
-      DhanHQ::ErrorObject.new(response)
+    def save
+      new_record? ? create_record : update(attributes)
+    end
+
+    def save!
+      raise ActiveRecord::RecordInvalid, self unless save
     end
 
     # Delete the resource
@@ -101,6 +112,21 @@ module DhanHQ
       response[:status] == "success"
     rescue StandardError
       false
+    end
+
+    def destroy
+      response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
+      response[:status] == "success"
+    rescue StandardError
+      false
+    end
+
+    def persisted?
+      !!id
+    end
+
+    def new_record?
+      !persisted?
     end
 
     # Placeholder for the resource path
