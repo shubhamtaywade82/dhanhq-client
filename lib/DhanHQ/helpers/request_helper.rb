@@ -2,7 +2,7 @@
 
 module DhanHQ
   module RequestHelper
-    # Build a resource object from an API response
+    # Builds a model object from API response
     #
     # @param response [Hash] API response
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
