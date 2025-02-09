@@ -54,7 +54,7 @@ RSpec.describe DhanHQ::TestResource do
 
     it "validates required attributes" do
       expect do
-        described_class.new(valid_attributes.except(:dhanClientId))
+        described_class.new(valid_attributes.except(:transactionType))
       end.to raise_error(DhanHQ::Error, /Validation Error/)
     end
   end

@@ -15,18 +15,11 @@ module DhanHQ
 
     # Validate instance attributes using the defined validation contract
     def validate!
-      return unless (contract = validation_contract)
+      return unless (contract = @validation_contract)
 
       result = contract.call(@attributes)
       @errors = result.errors.to_h unless result.success?
       raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
-    end
-
-    # Placeholder for the validation contract
-    #
-    # @raise [NotImplementedError] If not implemented in a subclass
-    def validation_contract
-      raise NotImplementedError, "#{self.class.name} must implement `validation_contract`."
     end
 
     # Checks if the current instance is valid
