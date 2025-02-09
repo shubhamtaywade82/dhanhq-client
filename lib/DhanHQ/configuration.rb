@@ -8,6 +8,7 @@ module DhanHQ
   #
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Configuration
+    BASE_URL = "https://api.dhan.co/v2"
     # The client ID for API authentication.
     # @return [String, nil] The client ID or `nil` if not set.
     attr_accessor :client_id
@@ -37,9 +38,7 @@ module DhanHQ
     def initialize
       @client_id = ENV.fetch("CLIENT_ID", nil)
       @access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      @base_url = "https://api.dhan.co/v2"
-      @compact_csv_url = "https://images.dhan.co/api-data/api-scrip-master.csv"
-      @detailed_csv_url = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+      @base_url = BASE_URL
     end
   end
 end
