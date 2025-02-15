@@ -45,5 +45,27 @@ module DhanHQ
       instance_vars = self.class.defined_attributes.map { |attr| "#{attr}: #{instance_variable_get(:"@#{attr}")}" }
       "#<#{self.class.name} #{instance_vars.join(", ")}>"
     end
+
+    # def format_params(path, params)
+    #   return params unless params.is_a?(Hash)
+
+    #   if optionchain_api?(path)
+    #     titleize_keys(params)
+    #   else
+    #     camelize_keys(params)
+    #   end
+    # end
+
+    # def camelize_keys(hash)
+    #   hash.transform_keys { |key| key.to_s.camelize(:lower) }
+    # end
+
+    # def titleize_keys(hash)
+    #   hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
+    # end
+
+    # def optionchain_api?(path)
+    #   path.include?("/optionchain")
+    # end
   end
 end

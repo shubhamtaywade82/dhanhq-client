@@ -48,10 +48,33 @@ module DhanHQ
       end
     end
 
-    # # Validations (Override in subclasses)
-    # def self.validation_contract
-    #   raise DhanHQ::Error, "#{name} must define `validation_contract`."
-    # end
+    # Every model must define its validation contract
+    #
+    # @return [Dry::Validation::Contract] The validation contract
+    def self.validation_contract
+      raise NotImplementedError, "#{name} must implement `validation_contract`"
+    end
+
+    # Validate attributes using contract
+    def valid?
+      contract = self.class.validation_contract
+      result = contract.call(@attributes)
+
+      if result.failure?
+        @errors = result.errors.to_h
+        return false
+      end
+
+      true
+    end
+
+    # Validate attributes before creating a new instance
+    def self.validate_attributes(attributes)
+      contract = validation_contract
+      result = contract.call(attributes)
+
+      raise ArgumentError, "Validation failed: #{result.errors.to_h}" if result.failure?
+    end
 
     # Class methods for resources
     class << self

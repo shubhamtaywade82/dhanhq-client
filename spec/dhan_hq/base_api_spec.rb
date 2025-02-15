@@ -5,14 +5,11 @@ require "json"
 
 RSpec.describe DhanHQ::BaseAPI do
   before do
-    VCR.turn_off!
     DhanHQ.configure do |config|
       config.access_token = "test_access_token"
       config.client_id = "test_client_id"
     end
   end
-
-  after { VCR.turn_on! }
 
   let(:api) { DhanHQ::TestAPI.new }
   let(:test_params) { { param1: "value1", param2: "value2" } }
