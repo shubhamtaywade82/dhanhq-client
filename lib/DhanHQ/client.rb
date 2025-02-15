@@ -74,57 +74,47 @@ module DhanHQ
       handle_response(response)
     end
 
-    # Sends a GET request to the API.
-    #
-    # @param path [String] The API endpoint path.
-    # @param params [Hash] The query parameters for the GET request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
-    def get(path, params = {})
-      request(:get, path, params)
-    end
+    # # Sends a GET request to the API.
+    # #
+    # # @param path [String] The API endpoint path.
+    # # @param params [Hash] The query parameters for the GET request.
+    # # @return [Hash, Array] The parsed JSON response.
+    # # @raise [DhanHQ::Error] If the response indicates an error.
+    # def get(path, params = {})
+    #   request(:get, path, params)
+    # end
 
-    # Sends a POST request to the API.
-    #
-    # @param path [String] The API endpoint path.
-    # @param body [Hash] The body of the POST request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
-    def post(path, body = {})
-      request(:post, path, body)
-    end
+    # # Sends a POST request to the API.
+    # #
+    # # @param path [String] The API endpoint path.
+    # # @param body [Hash] The body of the POST request.
+    # # @return [Hash, Array] The parsed JSON response.
+    # # @raise [DhanHQ::Error] If the response indicates an error.
+    # def post(path, body = {})
+    #   request(:post, path, body)
+    # end
 
-    # Sends a PUT request to the API.
-    #
-    # @param path [String] The API endpoint path.
-    # @param body [Hash] The body of the PUT request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
-    def put(path, body = {})
-      request(:put, path, body)
-    end
+    # # Sends a PUT request to the API.
+    # #
+    # # @param path [String] The API endpoint path.
+    # # @param body [Hash] The body of the PUT request.
+    # # @return [Hash, Array] The parsed JSON response.
+    # # @raise [DhanHQ::Error] If the response indicates an error.
+    # def put(path, body = {})
+    #   request(:put, path, body)
+    # end
 
-    # Sends a DELETE request to the API.
-    #
-    # @param path [String] The API endpoint path.
-    # @param params [Hash] The query parameters for the DELETE request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
-    def delete(path, params = {})
-      request(:delete, path, params)
-    end
+    # # Sends a DELETE request to the API.
+    # #
+    # # @param path [String] The API endpoint path.
+    # # @param params [Hash] The query parameters for the DELETE request.
+    # # @return [Hash, Array] The parsed JSON response.
+    # # @raise [DhanHQ::Error] If the response indicates an error.
+    # def delete(path, params = {})
+    #   request(:delete, path, params)
+    # end
 
     private
-
-    def format_params(path, params)
-      return params unless params.is_a?(Hash)
-
-      if optionchain_api?(path)
-        titleize_keys(params)
-      else
-        camelize_keys(params)
-      end
-    end
 
     # Dynamically builds headers for the request
     def build_headers(path)
@@ -140,6 +130,16 @@ module DhanHQ
       headers
     end
 
+    # def format_params(path, params)
+    #   return params unless params.is_a?(Hash)
+
+    #   if optionchain_api?(path)
+    #     titleize_keys(params)
+    #   else
+    #     camelize_keys(params)
+    #   end
+    # end
+
     # Check if the path belongs to a DATA API
     def data_api?(path)
       data_api_paths = [
@@ -152,28 +152,17 @@ module DhanHQ
       data_api_paths.any? { |data_path| path.start_with?(data_path) }
     end
 
-    def camelize_keys(hash)
-      hash.transform_keys { |key| key.to_s.camelize(:lower) }
-    end
+    # def camelize_keys(hash)
+    #   hash.transform_keys { |key| key.to_s.camelize(:lower) }
+    # end
 
-    def titleize_keys(hash)
-      hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
-    end
+    # def titleize_keys(hash)
+    #   hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
+    # end
 
-    def optionchain_api?(path)
-      path.include?("/optionchain")
-    end
-
-    # Sets headers for the request.
-    #
-    # @param req [Faraday::Request] The request object.
-    # @return [void]
-    def headers(req)
-      req.headers["access-token"] = DhanHQ.configuration.access_token
-      req.headers["client-id"] = DhanHQ.configuration.client_id
-      req.headers["Accept"] = "application/json"
-      req.headers["Content-Type"] = "application/json"
-    end
+    # def optionchain_api?(path)
+    #   path.include?("/optionchain")
+    # end
 
     # Prepares the request payload.
     #
@@ -185,23 +174,37 @@ module DhanHQ
       return if payload.nil? || payload.empty?
 
       unless payload.is_a?(Hash)
-        raise DhanHQ::InputExceptionError, "Invalid payload: Expected a Hash, got #{payload.class}"
+        raise DhanHQ::InputExceptionError,
+              "Invalid payload: Expected a Hash, got #{payload.class}"
       end
-
-      formatted_payload = format_params(req.path, payload)
 
       case method
-      when :delete
-        req.params = {}
-      when :get
-        req.params = formatted_payload
-      else
-        unless formatted_payload&.key?(:dhanClientId)
-          formatted_payload[:dhanClientId] ||= DhanHQ.configuration.client_id
-        end
-        req.body = formatted_payload.to_json
+      when :delete then req.params = {}
+      when :get then req.params = payload
+      else req.body = payload.to_json
       end
     end
+    # def prepare_payload(req, payload, method)
+    #   return if payload.nil? || payload.empty?
+
+    #   unless payload.is_a?(Hash)
+    #     raise DhanHQ::InputExceptionError, "Invalid payload: Expected a Hash, got #{payload.class}"
+    #   end
+
+    #   formatted_payload = format_params(req.path, payload)
+
+    #   case method
+    #   when :delete
+    #     req.params = {}
+    #   when :get
+    #     req.params = formatted_payload
+    #   else
+    #     unless formatted_payload&.key?(:dhanClientId)
+    #       formatted_payload[:dhanClientId] ||= DhanHQ.configuration.client_id
+    #     end
+    #     req.body = formatted_payload.to_json
+    #   end
+    # end
 
     # Handles the API response.
     #

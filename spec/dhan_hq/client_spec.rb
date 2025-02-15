@@ -65,6 +65,12 @@ RSpec.describe DhanHQ::Client do
     DhanHQ.configure_with_env
   end
 
+  describe "#initialize" do
+    it "creates a Faraday connection instance" do
+      expect(client.connection).to be_a(Faraday::Connection)
+    end
+  end
+
   # Centralized shared example for API requests
   shared_examples "a successful API request" do |method, endpoint, params_lambda, expected_status, cassette|
     it "sends request correctly for #{endpoint}", vcr: { cassette_name: cassette } do
