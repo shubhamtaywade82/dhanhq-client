@@ -28,3 +28,7 @@ gem "rubocop-performance"
 gem "vcr"
 
 gem "dotenv", groups: %i[development test]
+
+group :test do
+  gem "timecop"
+end

@@ -3,6 +3,7 @@
 require "debug"
 require "dotenv/load"
 require "DhanHQ"
+require "webmock/rspec"
 
 require_relative "support/vcr"
 Dir[File.join(__dir__, "support/**/*.rb")].each { |file| require file }
@@ -16,5 +17,23 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  # Block real HTTP connections by default (except for VCR tests)
+  WebMock.disable_net_connect!(allow_localhost: true)
+
+  # Enforce WebMock for all tests EXCEPT those tagged with `vcr: true`
+  config.before do |example|
+    if example.metadata[:vcr]
+      VCR.turn_on!
+      WebMock.allow_net_connect! # Allow real API calls ONLY for VCR-tagged specs
+    else
+      VCR.turn_off!
+      WebMock.disable_net_connect!(allow_localhost: true)
+    end
+  end
+
+  config.after do |example|
+    VCR.turn_on! if example.metadata[:vcr]
   end
 end
