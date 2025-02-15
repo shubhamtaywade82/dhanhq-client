@@ -4,52 +4,39 @@ require "faraday"
 require "json"
 require "active_support/core_ext/hash/indifferent_access"
 require_relative "errors"
+require_relative "rate_limiter"
 
 module DhanHQ
   # The `Client` class provides a wrapper for HTTP requests to interact with the DhanHQ API.
+  # Responsible for:
+  # - Establishing and managing the HTTP connection
+  # - Handling authentication and request headers
+  # - Sending raw HTTP requests (`GET`, `POST`, `PUT`, `DELETE`)
+  # - Parsing JSON responses into HashWithIndifferentAccess
+  # - Handling standard HTTP errors (400, 401, 403, etc.)
+  # - Implementing **Rate Limiting** to avoid hitting API limits.
   #
   # It supports `GET`, `POST`, `PUT`, and `DELETE` requests with JSON encoding/decoding.
   # Credentials (`access_token`, `client_id`) are automatically added to each request.
   #
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Client
-    ERROR_MAPPING = {
-      "DH-901" => DhanHQ::InvalidAuthenticationError,
-      "DH-902" => DhanHQ::InvalidAccessError,
-      "DH-903" => DhanHQ::UserAccountError,
-      "DH-904" => DhanHQ::RateLimitError,
-      "DH-905" => DhanHQ::InputExceptionError,
-      "DH-906" => DhanHQ::OrderError,
-      "DH-907" => DhanHQ::DataError,
-      "DH-908" => DhanHQ::InternalServerError,
-      "DH-909" => DhanHQ::NetworkError,
-      "DH-910" => DhanHQ::OtherError,
-      "800" => DhanHQ::InternalServerError,
-      "804" => DhanHQ::Error,                   # Too many instruments
-      "805" => DhanHQ::RateLimitError,          # Too many requests
-      "806" => DhanHQ::DataError, # Data API not subscribed
-      "807" => DhanHQ::InvalidTokenError, # Token expired
-      "808" => DhanHQ::AuthenticationFailedError, # Auth failed
-      "809" => DhanHQ::InvalidTokenError,       # Invalid token
-      "810" => DhanHQ::InvalidClientIDError,    # Invalid Client ID
-      "811" => DhanHQ::InvalidRequestError,     # Invalid expiry date
-      "812" => DhanHQ::InvalidRequestError,     # Invalid date format
-      "813" => DhanHQ::InvalidRequestError,     # Invalid security ID
-      "814" => DhanHQ::InvalidRequestError      # Invalid request
-    }.freeze
-
     # The Faraday connection object used for HTTP requests.
     #
     # @return [Faraday::Connection] The connection instance used for API requests.
     attr_reader :connection
 
-    # Initializes a new DhanHQ Client instance.
+    # Initializes a new DhanHQ Client instance with a Faraday connection.
     #
     # @example Create a new client:
-    #   client = DhanHQ::Client.new
+    #   client = DhanHQ::Client.new(api_type: :order_api)
     #
-    # @return [DhanHQ::Client] A new client instance configured for API requests.
-    def initialize
+    # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
+    # @return [DhanHQ::Client] A new client instance.
+    def initialize(api_type:)
+      @rate_limiter = RateLimiter.new(api_type)
+      raise "RateLimiter initialization failed" unless @rate_limiter
+
       @connection = Faraday.new(url: DhanHQ.configuration.base_url) do |conn|
         conn.request :json
         conn.response :json, content_type: /\bjson$/
@@ -60,63 +47,29 @@ module DhanHQ
 
     # Sends an HTTP request to the API.
     #
-    # @param method [Symbol] The HTTP method (e.g., :get, :post, :put, :delete).
+    # @param method [Symbol] The HTTP method (`:get`, `:post`, `:put`, `:delete`)
     # @param path [String] The API endpoint path.
-    # @param payload [Hash] The parameters or body for the request.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response indicates an error.
+    # @param payload [Hash] The request parameters or body.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
+    # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload)
+      @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
+
       response = connection.send(method) do |req|
         req.url path
         req.headers.merge!(build_headers(path))
         prepare_payload(req, payload, method)
       end
+
       handle_response(response)
     end
 
-    # # Sends a GET request to the API.
-    # #
-    # # @param path [String] The API endpoint path.
-    # # @param params [Hash] The query parameters for the GET request.
-    # # @return [Hash, Array] The parsed JSON response.
-    # # @raise [DhanHQ::Error] If the response indicates an error.
-    # def get(path, params = {})
-    #   request(:get, path, params)
-    # end
-
-    # # Sends a POST request to the API.
-    # #
-    # # @param path [String] The API endpoint path.
-    # # @param body [Hash] The body of the POST request.
-    # # @return [Hash, Array] The parsed JSON response.
-    # # @raise [DhanHQ::Error] If the response indicates an error.
-    # def post(path, body = {})
-    #   request(:post, path, body)
-    # end
-
-    # # Sends a PUT request to the API.
-    # #
-    # # @param path [String] The API endpoint path.
-    # # @param body [Hash] The body of the PUT request.
-    # # @return [Hash, Array] The parsed JSON response.
-    # # @raise [DhanHQ::Error] If the response indicates an error.
-    # def put(path, body = {})
-    #   request(:put, path, body)
-    # end
-
-    # # Sends a DELETE request to the API.
-    # #
-    # # @param path [String] The API endpoint path.
-    # # @param params [Hash] The query parameters for the DELETE request.
-    # # @return [Hash, Array] The parsed JSON response.
-    # # @raise [DhanHQ::Error] If the response indicates an error.
-    # def delete(path, params = {})
-    #   request(:delete, path, params)
-    # end
-
     private
 
-    # Dynamically builds headers for the request
+    # Dynamically builds headers for each request.
+    #
+    # @param path [String] The API endpoint path.
+    # @return [Hash] The request headers.
     def build_headers(path)
       headers = {
         "Content-Type" => "application/json",
@@ -130,17 +83,10 @@ module DhanHQ
       headers
     end
 
-    # def format_params(path, params)
-    #   return params unless params.is_a?(Hash)
-
-    #   if optionchain_api?(path)
-    #     titleize_keys(params)
-    #   else
-    #     camelize_keys(params)
-    #   end
-    # end
-
-    # Check if the path belongs to a DATA API
+    # Determines if the API path requires a `client-id` header.
+    #
+    # @param path [String] The API endpoint path.
+    # @return [Boolean] True if the path belongs to a DATA API.
     def data_api?(path)
       data_api_paths = [
         "/v2/marketfeed/ltp",
@@ -152,24 +98,11 @@ module DhanHQ
       data_api_paths.any? { |data_path| path.start_with?(data_path) }
     end
 
-    # def camelize_keys(hash)
-    #   hash.transform_keys { |key| key.to_s.camelize(:lower) }
-    # end
-
-    # def titleize_keys(hash)
-    #   hash.transform_keys { |key| key.to_s.titleize.delete(" ") }
-    # end
-
-    # def optionchain_api?(path)
-    #   path.include?("/optionchain")
-    # end
-
-    # Prepares the request payload.
+    # Prepares the request payload based on the HTTP method.
     #
     # @param req [Faraday::Request] The request object.
-    # @param payload [Hash] The payload for the request.
+    # @param payload [Hash] The request payload.
     # @param method [Symbol] The HTTP method.
-    # @return [void]
     def prepare_payload(req, payload, method)
       return if payload.nil? || payload.empty?
 
@@ -184,56 +117,28 @@ module DhanHQ
       else req.body = payload.to_json
       end
     end
-    # def prepare_payload(req, payload, method)
-    #   return if payload.nil? || payload.empty?
-
-    #   unless payload.is_a?(Hash)
-    #     raise DhanHQ::InputExceptionError, "Invalid payload: Expected a Hash, got #{payload.class}"
-    #   end
-
-    #   formatted_payload = format_params(req.path, payload)
-
-    #   case method
-    #   when :delete
-    #     req.params = {}
-    #   when :get
-    #     req.params = formatted_payload
-    #   else
-    #     unless formatted_payload&.key?(:dhanClientId)
-    #       formatted_payload[:dhanClientId] ||= DhanHQ.configuration.client_id
-    #     end
-    #     req.body = formatted_payload.to_json
-    #   end
-    # end
 
     # Handles the API response.
     #
-    # @param response [Faraday::Response] The response object.
-    # @return [Hash, Array] The parsed JSON response.
-    # @raise [DhanHQ::Error] If the response status indicates an error.
+    # @param response [Faraday::Response] The raw response object.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed response.
+    # @raise [DhanHQ::Error] If an HTTP error occurs.
     def handle_response(response)
       case response.status
       when 200..299
-        symbolize_keys(response.body)
+        parse_json(response.body)
       else
         handle_error(response)
       end
     end
 
-    # Handles errors in the API response.
+    # Handles standard HTTP errors.
     #
-    # @param response [Faraday::Response] The response object.
-    # @return [void]
-    # @raise [DhanHQ::Error] The specific error based on the response status or error code.
+    # @param response [Faraday::Response] The raw response object.
+    # @raise [DhanHQ::Error] The specific error based on response status.
     def handle_error(response)
-      body = symbolize_keys(response.body)
-      error_code = body[:errorCode] || response.status
+      body = parse_json(response.body)
       error_message = "#{response.status}: #{body[:error] || body[:message] || response.body}"
-
-      if ERROR_MAPPING.key?(error_code)
-        raise ERROR_MAPPING[error_code],
-              "#{ERROR_MAPPING[error_code].name.split("::").last.gsub("Error", "")}: #{error_message}"
-      end
 
       case response.status
       when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
@@ -247,29 +152,22 @@ module DhanHQ
       end
     end
 
-    # Converts response body to a hash or array with indifferent access.
+    # Parses JSON response safely.
     #
-    # @param body [String, Hash, Array] The response body.
-    # @return [Hash, Array] The response body as a hash/array with indifferent access.
-    def symbolize_keys(body)
-      parsed_body =
-        if body.is_a?(String)
-          begin
-            JSON.parse(body, symbolize_names: true)
-          rescue JSON::ParserError
-            {} # Return an empty hash if the string is not valid JSON
-          end
-        else
-          body
-        end
+    # @param body [String, Hash] The response body.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
+    def parse_json(body)
+      return {} unless body.is_a?(String) && body.strip.start_with?("{", "[")
 
-      if parsed_body.is_a?(Hash)
-        parsed_body.with_indifferent_access
-      elsif parsed_body.is_a?(Array)
-        parsed_body.map(&:with_indifferent_access)
-      else
-        parsed_body
+      parsed = JSON.parse(body, symbolize_names: true)
+
+      case parsed
+      when Hash then parsed.with_indifferent_access
+      when Array then parsed.map(&:with_indifferent_access)
+      else parsed
       end
+    rescue JSON::ParserError
+      {}
     end
   end
 end
