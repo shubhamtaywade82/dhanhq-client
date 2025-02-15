@@ -4,8 +4,9 @@ require "dotenv/load"
 require_relative "DhanHQ/version"
 require_relative "DhanHQ/errors"
 
-require_relative "DhanHQ/configuration"
 require_relative "DhanHQ/client"
+require_relative "DhanHQ/configuration"
+require_relative "DhanHQ/rate_limiter"
 require_relative "DhanHQ/base_api"
 require_relative "DhanHQ/base_model"
 
