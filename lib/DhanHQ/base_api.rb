@@ -41,8 +41,11 @@ module DhanHQ
 
     attr_reader :client
 
-    def initialize
-      @client = DhanHQ::Client.new
+    # Initializes the BaseAPI with the appropriate Client instance
+    #
+    # @param api_type [Symbol] API type (`:order_api`, `:data_api`, `:non_trading_api`)
+    def initialize(api_type: :order_api)
+      @client = DhanHQ::Client.new(api_type: api_type)
     end
 
     # Performs an API request.
@@ -54,7 +57,11 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an API error occurs.
     def request(method, endpoint = "", params: {})
       formatted_params = format_params(endpoint, params)
-      client.send(method, build_path(endpoint), formatted_params)
+      response = client.request(method, build_path(endpoint), formatted_params)
+
+      handle_response(response)
+    rescue DhanHQ::Error => e
+      handle_error({ errorCode: e.class::CODE, message: e.message })
     end
 
     # Perform a GET request via `Client`
@@ -103,10 +110,10 @@ module DhanHQ
     end
 
     # Format parameters based on API endpoint
-    def format_params(_endpoint, params)
+    def format_params(endpoint, params)
       return params if params.empty?
 
-      optionchain_api? ? titleize_keys(params) : camelize_keys(params)
+      optionchain_api?(endpoint) ? titleize_keys(params) : camelize_keys(params)
     end
 
     # Determines if the API endpoint is for Option Chain

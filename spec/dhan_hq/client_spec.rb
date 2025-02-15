@@ -11,7 +11,7 @@ RSpec.describe DhanHQ::Client do
     allow(DhanHQ::RateLimiter).to receive(:new).with(api_type).and_return(rate_limiter)
 
     DhanHQ.configure do |config|
-      config.base_url = "https://api.example.com"
+      config.base_url = "https://api.dhan.co/v2"
       config.access_token  = "test_access_token"
       config.client_id     = "test_client_id"
     end
@@ -47,7 +47,7 @@ RSpec.describe DhanHQ::Client do
     end
 
     before do
-      stub_request(:post, "https://api.example.com#{path}")
+      stub_request(:post, "https://api.dhan.co#{path}")
         .with(body: payload.to_json, headers: headers)
         .to_return(status: response_status, body: response_body.to_json)
     end
@@ -69,13 +69,13 @@ RSpec.describe DhanHQ::Client do
 
       it "sends the correct HTTP method and path" do
         client.request(:post, path, payload)
-        expect(WebMock).to have_requested(:post, "https://api.example.com#{path}")
+        expect(WebMock).to have_requested(:post, "https://api.dhan.co#{path}")
       end
     end
 
     context "when response is not valid JSON" do
       let(:response_status) { 200 }
-      let(:response_body) { '<html>Invalid Response</html>' }
+      let(:response_body) { "<html>Invalid Response</html>" }
 
       it "returns an empty hash" do
         response = client.request(:post, path, payload)
