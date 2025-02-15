@@ -48,10 +48,10 @@ module DhanHQ
       end
     end
 
-    # Validations (Override in subclasses)
-    def validation_contract
-      self.class.validation_contract
-    end
+    # # Validations (Override in subclasses)
+    # def self.validation_contract
+    #   raise DhanHQ::Error, "#{name} must define `validation_contract`."
+    # end
 
     # Class methods for resources
     class << self
@@ -85,7 +85,7 @@ module DhanHQ
       # @param attributes [Hash] The attributes of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def create(attributes)
-        validate_params!(attributes, validation_contract)
+        # validate_params!(attributes, validation_contract)
 
         response = api_client.post(resource_path, attributes)
         build_from_response(response)

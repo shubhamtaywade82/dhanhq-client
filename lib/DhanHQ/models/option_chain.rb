@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "../resources/option_chain"
 require_relative "../contracts/option_chain_contract"
 
 module DhanHQ

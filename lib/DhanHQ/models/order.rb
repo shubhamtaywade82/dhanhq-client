@@ -19,26 +19,26 @@ module DhanHQ
                  :remaining_quantity, :average_traded_price, :filled_qty
 
       class << self
-        # Fetch all orders for the day
-        #
-        # @return [Array<Order>]
-        def all
-          response = resource.list_orders
-          return [] unless response.is_a?(Array)
+        # # Fetch all orders for the day
+        # #
+        # # @return [Array<Order>]
+        # def all
+        #   response = resource.list_orders
+        #   return [] unless response.is_a?(Array)
 
-          response.map { |order| new(order, skip_validation: true) }
-        end
+        #   response.map { |order| new(order, skip_validation: true) }
+        # end
 
-        # Fetch a specific order by ID
-        #
-        # @param order_id [String]
-        # @return [Order, nil]
-        def find(order_id)
-          response = resource.get_order(order_id)
-          return nil unless response.is_a?(Hash) && response.any?
+        # # Fetch a specific order by ID
+        # #
+        # # @param order_id [String]
+        # # @return [Order, nil]
+        # def find(order_id)
+        #   response = resource.get_order(order_id)
+        #   return nil unless response.is_a?(Hash) && response.any?
 
-          new(response, skip_validation: true)
-        end
+        #   new(response, skip_validation: true)
+        # end
 
         # Fetch a specific order by correlation ID
         #
@@ -65,12 +65,12 @@ module DhanHQ
           find(response["orderId"])
         end
 
-        # Access the API resource for orders
-        #
-        # @return [DhanHQ::Resources::Orders]
-        def resource
-          @resource ||= DhanHQ::Resources::Orders.new
-        end
+        # # Access the API resource for orders
+        # #
+        # # @return [DhanHQ::Resources::Orders]
+        # def resource
+        #   @resource ||= DhanHQ::Resources::Orders.new
+        # end
       end
 
       # Modify the order while preserving existing attributes
