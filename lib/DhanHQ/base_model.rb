@@ -4,25 +4,22 @@ require "dry-validation"
 require "active_support/core_ext/hash/indifferent_access"
 require "active_support/inflector"
 
-require_relative "helpers/api_helper"
-require_relative "helpers/attribute_helper"
-require_relative "helpers/validation_helper"
-require_relative "helpers/request_helper"
-
 module DhanHQ
   # Base class for resource objects
   # Handles validation, attribute mapping, and response parsing
-  class BaseModel
+  class BaseModel < BaseAPI
     # Extend & Include Modules
     extend DhanHQ::APIHelper
     extend DhanHQ::AttributeHelper
     extend DhanHQ::ValidationHelper
     extend DhanHQ::RequestHelper
+    extend ResponseHelper
 
     include DhanHQ::APIHelper
     include DhanHQ::AttributeHelper
     include DhanHQ::ValidationHelper
     include DhanHQ::RequestHelper
+    include DhanHQ::ResponseHelper
 
     # Attribute Accessors
     attr_reader :attributes, :errors
@@ -31,6 +28,7 @@ module DhanHQ
     #
     # @param attributes [Hash] The attributes of the resource
     def initialize(attributes = {}, skip_validation: false)
+      super(api_type: :order_api) # Calls BaseAPI's initialize
       @attributes = normalize_keys(attributes)
       @errors = {}
 
@@ -46,34 +44,21 @@ module DhanHQ
         @defined_attributes ||= []
         @defined_attributes.concat(args.map(&:to_s))
       end
-    end
 
-    # Every model must define its validation contract
-    #
-    # @return [Dry::Validation::Contract] The validation contract
-    def self.validation_contract
-      raise NotImplementedError, "#{name} must implement `validation_contract`"
-    end
-
-    # Validate attributes using contract
-    def valid?
-      contract = self.class.validation_contract
-      result = contract.call(@attributes)
-
-      if result.failure?
-        @errors = result.errors.to_h
-        return false
+      # Every model must define its validation contract
+      #
+      # @return [Dry::Validation::Contract] The validation contract
+      def validation_contract
+        raise NotImplementedError, "#{name} must implement `validation_contract`"
       end
 
-      true
-    end
+      # Validate attributes before creating a new instance
+      def self.validate_attributes(attributes)
+        contract = validation_contract
+        result = contract.call(attributes)
 
-    # Validate attributes before creating a new instance
-    def self.validate_attributes(attributes)
-      contract = validation_contract
-      result = contract.call(attributes)
-
-      raise ArgumentError, "Validation failed: #{result.errors.to_h}" if result.failure?
+        raise ArgumentError, "Validation failed: #{result.errors.to_h}" if result.failure?
+      end
     end
 
     # Class methods for resources
@@ -189,6 +174,19 @@ module DhanHQ
 
     def optionchain_api?
       self.class.name.include?("OptionChain")
+    end
+
+    # Validate attributes using contract
+    def valid?
+      contract = self.class.validation_contract
+      result = contract.call(@attributes)
+
+      if result.failure?
+        @errors = result.errors.to_h
+        return false
+      end
+
+      true
     end
   end
 

@@ -34,10 +34,20 @@ module DhanHQ
     #
     # @param response [Hash] API response
     # @return [Hash, Array] Parsed response data
-    def handle_response(response)
-      return response[:data] if success_response?(response)
+    # def handle_response(response)
+    #   return response[:data] if success_response?(response)
 
-      raise DhanHQ::Error, response[:message] || "API request failed"
+    #   raise DhanHQ::Error, response[:message] || "API request failed"
+    # end
+
+    # Handles API responses and raises errors if necessary
+    #
+    # @param response [Hash] API response
+    # @return [Hash, Array] Parsed API response
+    def handle_response(response)
+      return response if response.is_a?(Array) || response.is_a?(Hash)
+
+      raise DhanHQ::Error, "Unexpected API response format"
     end
   end
 end

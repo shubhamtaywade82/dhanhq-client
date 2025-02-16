@@ -1,10 +1,10 @@
 ---
 http_interactions:
 - request:
-    method: delete
+    method: put
     uri: https://api.dhan.co/v2/orders/112111182198
     body:
-      encoding: US-ASCII
+      encoding: UTF-8
       string: ''
     headers:
       User-Agent:
@@ -15,15 +15,17 @@ http_interactions:
       - application/json
       Access-Token:
       - "<ACCESS_TOKEN>"
+      Content-Length:
+      - '0'
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
     status:
-      code: 200
-      message: 'OK'
+      code: 400
+      message: ''
     headers:
       Date:
-      - Sat, 15 Feb 2025 16:22:41 GMT
+      - Sun, 16 Feb 2025 07:25:53 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,6 +38,7 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"orderId": "112111182198", "orderStatus": "CANCELLED"}'
-  recorded_at: Sat, 15 Feb 2025 16:22:41 GMT
+      string: '{"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"Missing
+        required fields, bad values for parameters etc."}'
+  recorded_at: Sun, 16 Feb 2025 07:25:53 GMT
 recorded_with: VCR 6.3.1

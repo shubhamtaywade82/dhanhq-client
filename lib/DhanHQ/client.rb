@@ -86,18 +86,28 @@ module DhanHQ
     # @raise [DhanHQ::Error] The specific error based on response status.
     def handle_error(response)
       body = parse_json(response.body)
-      error_message = "#{response.status}: #{body[:error] || body[:message] || response.body}"
+      error_code = body[:errorCode] || response.status.to_s
+      error_message = body[:errorMessage] || body[:message] || "Unknown error"
 
-      case response.status
-      when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
-      when 401 then raise DhanHQ::InvalidAuthenticationError, "Unauthorized: #{error_message}"
-      when 403 then raise DhanHQ::InvalidAccessError, "Forbidden: #{error_message}"
-      when 404 then raise DhanHQ::NotFoundError, "Not Found: #{error_message}"
-      when 429 then raise DhanHQ::RateLimitError, "Rate Limit Exceeded: #{error_message}"
-      when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
-      else
-        raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
-      end
+      debugger
+      raise DhanHQ::Constants::DHAN_ERROR_MAPPING.fetch(error_code, DhanHQ::Error), "#{error_code}: #{error_message}"
     end
+    # def handle_error(response)
+    #   body = parse_json(response.body)
+    #   error_code = body[:errorCode] || response.status.to_s
+    #   error_message = body[:errorMessage] || body[:message] || "Unknown error"
+
+    #   debugger
+    #   case response.status
+    #   when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
+    #   when 401 then raise DhanHQ::InvalidAuthenticationError, "Unauthorized: #{error_message}"
+    #   when 403 then raise DhanHQ::InvalidAccessError, "Forbidden: #{error_message}"
+    #   when 404 then raise DhanHQ::NotFoundError, "Not Found: #{error_message}"
+    #   when 429 then raise DhanHQ::RateLimitError, "Rate Limit Exceeded: #{error_message}"
+    #   when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
+    #   else
+    #     raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
+    #   end
+    # end
   end
 end

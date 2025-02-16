@@ -1,11 +1,11 @@
 ---
 http_interactions:
 - request:
-    method: delete
+    method: put
     uri: https://api.dhan.co/v2/orders/112111182198
     body:
-      encoding: US-ASCII
-      string: ''
+      encoding: UTF-8
+      string: '{"quantity":10,"price":1200.5}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -19,11 +19,11 @@ http_interactions:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
     status:
-      code: 200
-      message: 'OK'
+      code: 201
+      message: 'Created'
     headers:
       Date:
-      - Sat, 15 Feb 2025 16:22:41 GMT
+      - Sun, 16 Feb 2025 06:23:37 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,6 +36,6 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"orderId": "112111182198", "orderStatus": "CANCELLED"}'
-  recorded_at: Sat, 15 Feb 2025 16:22:41 GMT
+      string: '{"orderId": "112111182198", "orderStatus": "PENDING"}'
+  recorded_at: Sun, 16 Feb 2025 06:23:37 GMT
 recorded_with: VCR 6.3.1

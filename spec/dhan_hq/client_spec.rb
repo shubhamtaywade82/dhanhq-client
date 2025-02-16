@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Client do
   let(:api_type) { :order_api }
   let(:client) { described_class.new(api_type: api_type) }
   # let(:rate_limiter) { instance_spy(DhanHQ::RateLimiter, throttle!: true) }
-
+  let(:order_id) { "112111182198" }
   let(:order_payload) do
     {
       dhanClientId: "1000000003",
@@ -39,7 +39,7 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#request" do
-    let(:order_id) { "112111182198" }
+
 
     context "when making a GET request", vcr: { cassette_name: "client/get_request" } do
       let(:endpoint) { "/v2/orders/#{order_id}" }
@@ -125,13 +125,17 @@ RSpec.describe DhanHQ::Client do
       end
     end
 
-    context "when response has an error status", vcr: { cassette_name: "client/error_response" } do
+    context "when response has an error status" do
       let(:response_status) { 400 }
-      let(:response_body) { { error: "Bad Request" } }
+      let(:endpoint) { "/v2/orders/#{order_id}" }
+      let(:error_response) do
+        { errorType: "Input_Exception", errorCode: "DH-905",
+          errorMessage: "Missing required fields, bad values for parameters etc." }
+      end
 
-      it "raises the correct error" do
-        expect { client.send(:handle_response, response) }
-          .to raise_error(DhanHQ::InputExceptionError, /Bad Request/)
+      it "raises InputExceptionError for invalid request", vcr: { cassette_name: "client/error_response" } do
+        expect { client.request(:put, endpoint, {}) }
+          .to raise_error(DhanHQ::InputExceptionError, /Missing required fields, bad values for parameters/i)
       end
     end
   end

@@ -2,9 +2,8 @@
 
 module DhanHQ
   module ResponseHelper
-
     private
-    
+
     # Parses JSON response safely. Converts response body to a hash or array with indifferent access.
     #
     # @param body [String, Hash] The response body.
