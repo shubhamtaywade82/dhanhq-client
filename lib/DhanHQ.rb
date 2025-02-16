@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 require "dotenv/load"
+
+# Helper Methods
+require_relative "DhanHQ/helpers/api_helper"
+require_relative "DhanHQ/helpers/attribute_helper"
+require_relative "DhanHQ/helpers/validation_helper"
+require_relative "DhanHQ/helpers/request_helper"
+require_relative "DhanHQ/helpers/response_helper"
+
 require_relative "DhanHQ/version"
 require_relative "DhanHQ/errors"
 

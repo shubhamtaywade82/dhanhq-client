@@ -21,6 +21,8 @@ module DhanHQ
   #
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Client
+    include DhanHQ::RequestHelper
+    include DhanHQ::ResponseHelper
     # The Faraday connection object used for HTTP requests.
     #
     # @return [Faraday::Connection] The connection instance used for API requests.
@@ -66,51 +68,6 @@ module DhanHQ
 
     private
 
-    # Dynamically builds headers for each request.
-    #
-    # @param path [String] The API endpoint path.
-    # @return [Hash] The request headers.
-    def build_headers(path)
-      headers = {
-        "Content-Type" => "application/json",
-        "Accept" => "application/json",
-        "access-token" => DhanHQ.configuration.access_token
-      }
-
-      # Add client-id for DATA APIs
-      headers["client-id"] = DhanHQ.configuration.client_id if data_api?(path)
-
-      headers
-    end
-
-    # Determines if the API path requires a `client-id` header.
-    #
-    # @param path [String] The API endpoint path.
-    # @return [Boolean] True if the path belongs to a DATA API.
-    def data_api?(path)
-      DhanHQ::Constants::DATA_API_PATHS.include?(path)
-    end
-
-    # Prepares the request payload based on the HTTP method.
-    #
-    # @param req [Faraday::Request] The request object.
-    # @param payload [Hash] The request payload.
-    # @param method [Symbol] The HTTP method.
-    def prepare_payload(req, payload, method)
-      return if payload.nil? || payload.empty?
-
-      unless payload.is_a?(Hash)
-        raise DhanHQ::InputExceptionError,
-              "Invalid payload: Expected a Hash, got #{payload.class}"
-      end
-
-      case method
-      when :delete then req.params = {}
-      when :get then req.params = payload
-      else req.body = payload.to_json
-      end
-    end
-
     # Handles the API response.
     #
     # @param response [Faraday::Response] The raw response object.
@@ -140,31 +97,6 @@ module DhanHQ
       when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
       else
         raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
-      end
-    end
-
-    # Parses JSON response safely.
-    #
-    # @param body [String, Hash] The response body.
-    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
-    def parse_json(body)
-      parsed_body =
-        if body.is_a?(String)
-          begin
-            JSON.parse(body, symbolize_names: true)
-          rescue JSON::ParserError
-            {} # Return an empty hash if the string is not valid JSON
-          end
-        else
-          body
-        end
-
-      if parsed_body.is_a?(Hash)
-        parsed_body.with_indifferent_access
-      elsif parsed_body.is_a?(Array)
-        parsed_body.map(&:with_indifferent_access)
-      else
-        parsed_body
       end
     end
   end

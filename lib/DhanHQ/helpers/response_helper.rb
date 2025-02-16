@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  module RequestHelper
-    # Converts response body to a hash or array with indifferent access.
+  module ResponseHelper
+
+    private
+    
+    # Parses JSON response safely. Converts response body to a hash or array with indifferent access.
     #
-    # @param body [String, Hash, Array] The response body.
-    # @return [Hash, Array] The response body as a hash/array with indifferent access.
-    def symbolize_keys(body)
+    # @param body [String, Hash] The response body.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
+    def parse_json(body)
       parsed_body =
         if body.is_a?(String)
           begin
