@@ -25,15 +25,20 @@ RSpec.configure do |config|
   # Enforce WebMock for all tests EXCEPT those tagged with `vcr: true`
   config.before do |example|
     if example.metadata[:vcr]
+      # Ensure VCR is active for tests using `vcr:`
       VCR.turn_on!
       WebMock.allow_net_connect! # Allow real API calls ONLY for VCR-tagged specs
     else
+      # Ensure all other tests use WebMock instead of VCR
+      VCR.eject_cassette if VCR.current_cassette
       VCR.turn_off!
       WebMock.disable_net_connect!(allow_localhost: true)
     end
   end
 
   config.after do |example|
-    VCR.turn_on! if example.metadata[:vcr]
+    # Reset VCR state after running any `vcr:` test
+    VCR.eject_cassette if example.metadata[:vcr]
+    VCR.turn_on!
   end
 end

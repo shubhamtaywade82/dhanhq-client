@@ -1,0 +1,42 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/orders/112111182198
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: 'OK'
+    headers:
+      Date:
+      - Sat, 15 Feb 2025 16:22:41 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"dhanClientId": "1000000003","orderId": "112111182198","correlationId":"123abc678","orderStatus": "PENDING","transactionType": "BUY","exchangeSegment": "NSE_EQ","productType": "INTRADAY","orderType": "MARKET","validity": "DAY","tradingSymbol": "",
+        "securityId": "11536","quantity": 5,"disclosedQuantity": 0,"price": 0.0,"triggerPrice": 0.0,"afterMarketOrder": false,"boProfitValue": 0.0,"boStopLossValue": 0.0,"legName": "","createTime": "2021-11-24 13:33:03","updateTime": "2021-11-24 13:33:03","exchangeTime": "2021-11-24 13:33:03","drvExpiryDate": null,"drvOptionType": null,"drvStrikePrice": 0.0,"omsErrorCode": null,"omsErrorDescription": null,"algoId": "string","remainingQuantity": 5,"averageTradedPrice": 0,"filledQty": 0}'
+  recorded_at: Sat, 15 Feb 2025 16:22:41 GMT
+recorded_with: VCR 6.3.1

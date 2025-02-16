@@ -1,104 +1,192 @@
 # frozen_string_literal: true
 
-require "webmock/rspec"
-require "json"
+require "spec_helper"
 
 RSpec.describe DhanHQ::BaseAPI do
+  let(:api_type) { :order_api }
+  let(:client) { DhanHQ::Client.new(api_type: api_type) }
+  let(:base_api) { described_class.new(api_type: api_type) }
+  let(:endpoint) { "/test_endpoint" }
+  let(:params) { { key: "value" } }
+  let(:formatted_params) { { "key" => "value" } }
+
   before do
     DhanHQ.configure do |config|
+      config.base_url = "https://api.dhan.co/v2"
       config.access_token = "test_access_token"
-      config.client_id = "test_client_id"
+      config.client_id = "client123"
     end
   end
 
-  let(:api) { DhanHQ::TestAPI.new }
-  let(:test_params) { { param1: "value1", param2: "value2" } }
-  let(:expected_request_body) { test_params.merge(dhanClientId: "test_client_id") }
-  let(:base_url) { DhanHQ.configuration.base_url.chomp("/") }
-  let(:headers) do
-    {
-      "Content-Type" => "application/json",
-      "Accept" => "application/json",
-      "access-token" => "test_access_token",
-      "User-Agent" => "Faraday v1.10.4",
-      "Accept-Encoding" => "gzip;q=1.0,deflate;q=0.6,identity;q=0.3" # Include this
-    }
-  end
-
-  def stub_response(file_name, status, method, endpoint)
-    response = File.read(File.join("spec/support/stubs", file_name))
-
-    stub_request(method, "#{base_url}#{endpoint}")
-      .with(headers: headers)
-      .to_return(status: status, body: response, headers: {})
-  end
-
-  describe "GET requests" do
-    it "sends a GET request and returns the response" do
-      stub_response("get_success.json", 200, :get, "/test/123")
-
-      response = api.get("/123")
-      expect(response).to include("status" => "success")
-      expect(response["data"]).to include("id" => 123)
-    end
-
-    it "handles errors for GET requests" do
-      stub_response("error_response.json", 404, :get, "/test/123")
-
-      expect { api.get("/123") }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
+  describe "#initialize" do
+    it "initializes with the correct API type" do
+      expect(base_api.client).to be_a(DhanHQ::Client)
     end
   end
 
-  describe "POST requests" do
-    it "sends a POST request and returns the response" do
-      stub_response("post_success.json", 200, :post, "/test")
-
-      response = api.fetch(test_params)
-      expect(response).to include("status" => "success")
+  describe "#request" do
+    before do
+      DhanHQ.configure_with_env
     end
 
-    it "handles errors for POST requests" do
-      stub_response("error_response.json", 404, :post, "/test")
+    context "when making a GET request", vcr: { cassette_name: "base_api/get_request" } do
+      let(:order_id) { "112111182198" }
+      let(:endpoint) { "/v2/orders/#{order_id}" }
+      let(:params) { {} } # No params needed for order lookup
 
-      expect { api.fetch(test_params) }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
+      it "sends a GET request with query parameters" do
+        response = base_api.request(:get, endpoint, params: params)
+
+        expect(response).to be_a(Hash)
+        expect(response).to include(
+          "orderId" => "112111182198",
+          "orderStatus" => "PENDING",
+          "transactionType" => "BUY",
+          "exchangeSegment" => "NSE_EQ"
+        )
+      end
+    end
+
+    context "when making a POST request", vcr: { cassette_name: "base_api/post_request" } do
+      let(:endpoint) { "/v2/orders" }
+      let(:params) do
+        {
+          dhanClientId: "1000000003",
+          transactionType: "BUY",
+          exchangeSegment: "NSE_EQ",
+          productType: "INTRADAY",
+          orderType: "MARKET",
+          validity: "DAY",
+          securityId: "11536",
+          quantity: 5
+        }
+      end
+
+      it "sends a POST request with body parameters" do
+        response = base_api.request(:post, endpoint, params: params)
+        expect(response).to be_a(Hash)
+        expect(response).to have_key("orderId")
+      end
+    end
+
+    context "when making a DELETE request with path parameter", vcr: { cassette_name: "base_api/delete_request" } do
+      let(:order_id) { "112111182198" }
+      let(:endpoint) { "/v2/orders/#{order_id}" }
+
+      it "sends a DELETE request to delete an order" do
+        response = base_api.request(:delete, endpoint)
+        expect(response).to be_a(Hash)
+        expect(response["orderStatus"]).to eq("CANCELLED")
+      end
+    end
+
+    context "when the API returns an error", vcr: { cassette_name: "client/error_dh_905" } do
+      let(:endpoint) { "/v2/orders" }
+      let(:params) { { invalid_param: true } }
+
+      it "raises an error when the API response contains an error" do
+        expect { base_api.request(:post, endpoint, params: params) }
+          .to raise_error(DhanHQ::InputExceptionError, /Invalid Input/)
+      end
+    end
+
+    # it "makes an actual API request and returns a parsed response" do
+    #   response = base_api.request(:get, endpoint, params: params)
+    #   expect(response).to eq({ "status" => "success" })
+    # end
+
+    # # it "raises an error when the API returns an error" do
+    # #   stub_request(:get, "https://api.dhan.co#{endpoint}?key=value")
+    # #     .to_return(status: 400, body: { "errorCode" => "DH-905", "message" => "Invalid Input" }.to_json)
+
+    # #   expect { base_api.request(:get, endpoint, params: params) }
+    # #     .to raise_error(DhanHQ::InputExceptionError, /Invalid Input/)
+    # # end
+    # it "raises an error when the API returns an error", vcr: { cassette_name: "client/error_dh_905" } do
+    #   expect { base_api.request(:get, endpoint, params: params) }
+    #     .to raise_error(DhanHQ::InputExceptionError, /Invalid Input/)
+    # end
+  end
+
+  describe "#get" do
+    before do
+      stub_request(:get, "https://api.dhan.co#{endpoint}?key=value")
+        .to_return(status: 200, body: { "data" => "test" }.to_json)
+    end
+
+    it "performs a GET request and returns parsed response" do
+      response = base_api.get(endpoint, params: params)
+      expect(response).to eq({ "data" => "test" })
     end
   end
 
-  describe "PUT requests" do
-    it "sends a PUT request and returns the response" do
-      stub_response("put_success.json", 200, :put, "/test/123")
-
-      response = api.update("123", test_params)
-      expect(response).to include("status" => "success")
+  describe "#post" do
+    before do
+      stub_request(:post, "https://api.dhan.co#{endpoint}")
+        .with(body: params.to_json)
+        .to_return(status: 201, body: { "created" => true }.to_json)
     end
 
-    it "handles errors for PUT requests" do
-      stub_response("error_response.json", 400, :put, "/test/123")
-
-      expect { api.update("123", test_params) }.to raise_error(DhanHQ::InputExceptionError, /Not Found/)
+    it "performs a POST request and returns parsed response" do
+      response = base_api.post(endpoint, params: params)
+      expect(response).to eq({ "created" => true })
     end
   end
 
-  describe "DELETE requests" do
-    it "sends a DELETE request and returns the response" do
-      stub_response("delete_success.json", 202, :delete, "/test/123")
-
-      response = api.delete("/123")
-      expect(response).to include("message" => "Resource deleted successfully.", "status" => "success")
+  describe "#put" do
+    before do
+      stub_request(:put, "https://api.dhan.co#{endpoint}")
+        .with(body: params.to_json)
+        .to_return(status: 200, body: { "updated" => true }.to_json)
     end
 
-    it "handles errors for DELETE requests" do
-      stub_response("error_response.json", 404, :delete, "/test/123")
-
-      expect { api.delete("/123") }.to raise_error(DhanHQ::NotFoundError, /Not Found/)
+    it "performs a PUT request and returns parsed response" do
+      response = base_api.put(endpoint, params: params)
+      expect(response).to eq({ "updated" => true })
     end
   end
 
-  describe "Error handling" do
-    it "raises an error for unexpected server errors" do
-      stub_response("internal_error_response.json", 500, :get, "/test/123")
+  describe "#delete" do
+    before do
+      stub_request(:delete, "https://api.dhan.co#{endpoint}")
+        .to_return(status: 200, body: { "deleted" => true }.to_json)
+    end
 
-      expect { api.get("/123") }.to raise_error(DhanHQ::InternalServerError, /Internal Server Error/)
+    it "performs a DELETE request and returns parsed response" do
+      response = base_api.delete(endpoint)
+      expect(response).to eq({ "deleted" => true })
+    end
+  end
+
+  describe "#handle_response" do
+    it "returns response when it's a valid Hash" do
+      response = base_api.send(:handle_response, { success: true })
+      expect(response).to eq({ success: true })
+    end
+
+    it "returns response when it's a valid Array" do
+      response = base_api.send(:handle_response, [{ success: true }])
+      expect(response).to eq([{ success: true }])
+    end
+
+    it "raises an error for invalid response format" do
+      expect { base_api.send(:handle_response, "invalid response") }
+        .to raise_error(DhanHQ::Error, "Unexpected API response format")
+    end
+  end
+
+  describe "#handle_error" do
+    let(:error_response) { { errorCode: "DH-905", message: "Invalid Input" } }
+
+    it "raises mapped error for known API error codes" do
+      expect { base_api.send(:handle_error, error_response) }
+        .to raise_error(DhanHQ::InputExceptionError, /Invalid Input/)
+    end
+
+    it "raises a generic error for unknown error codes" do
+      error_response[:errorCode] = "999"
+      expect { base_api.send(:handle_error, error_response) }
+        .to raise_error(DhanHQ::Error, "Unknown API error: Invalid Input")
     end
   end
 end

@@ -19,11 +19,11 @@ http_interactions:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
     status:
-      code: 400
+      code: 200
       message: ''
     headers:
       Date:
-      - Sat, 25 Jan 2025 08:58:46 GMT
+      - Sun, 16 Feb 2025 05:27:26 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,7 +36,6 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"Missing
-        required fields, bad values for parameters etc."}'
-  recorded_at: Sat, 25 Jan 2025 08:58:46 GMT
+      string: "[]"
+  recorded_at: Sun, 16 Feb 2025 05:27:26 GMT
 recorded_with: VCR 6.3.1

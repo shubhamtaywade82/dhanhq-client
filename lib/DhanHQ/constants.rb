@@ -89,5 +89,40 @@ module DhanHQ
     # CSV URLs for Security ID List
     COMPACT_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
     DETAILED_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+
+    # Paths that require `client-id` in headers
+    DATA_API_PATHS = %w[
+      /v2/marketfeed/ltp
+      /v2/marketfeed/ohlc
+      /v2/marketfeed/quote
+      /v2/optionchain
+      /v2/optionchain/expirylist
+    ].freeze
+
+    # DHANHQ API Error Mapping
+    DHAN_ERROR_MAPPING = {
+      "DH-901" => DhanHQ::InvalidAuthenticationError,
+      "DH-902" => DhanHQ::InvalidAccessError,
+      "DH-903" => DhanHQ::UserAccountError,
+      "DH-904" => DhanHQ::RateLimitError,
+      "DH-905" => DhanHQ::InputExceptionError,
+      "DH-906" => DhanHQ::OrderError,
+      "DH-907" => DhanHQ::DataError,
+      "DH-908" => DhanHQ::InternalServerError,
+      "DH-909" => DhanHQ::NetworkError,
+      "DH-910" => DhanHQ::OtherError,
+      "800" => DhanHQ::InternalServerError,
+      "804" => DhanHQ::Error, # Too many instruments
+      "805" => DhanHQ::RateLimitError, # Too many requests
+      "806" => DhanHQ::DataError, # Data API not subscribed
+      "807" => DhanHQ::InvalidTokenError, # Token expired
+      "808" => DhanHQ::AuthenticationFailedError, # Auth failed
+      "809" => DhanHQ::InvalidTokenError, # Invalid token
+      "810" => DhanHQ::InvalidClientIDError, # Invalid Client ID
+      "811" => DhanHQ::InvalidRequestError,  # Invalid expiry date
+      "812" => DhanHQ::InvalidRequestError,  # Invalid date format
+      "813" => DhanHQ::InvalidRequestError,  # Invalid security ID
+      "814" => DhanHQ::InvalidRequestError # Invalid request
+    }.freeze
   end
 end

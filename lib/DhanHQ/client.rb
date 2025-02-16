@@ -38,7 +38,7 @@ module DhanHQ
       raise "RateLimiter initialization failed" unless @rate_limiter
 
       @connection = Faraday.new(url: DhanHQ.configuration.base_url) do |conn|
-        conn.request :json
+        conn.request :json, parser_options: { symbolize_names: true }
         conn.response :json, content_type: /\bjson$/
         conn.response :logger if ENV["DHAN_DEBUG"] == "true"
         conn.adapter Faraday.default_adapter
@@ -88,14 +88,7 @@ module DhanHQ
     # @param path [String] The API endpoint path.
     # @return [Boolean] True if the path belongs to a DATA API.
     def data_api?(path)
-      data_api_paths = [
-        "/v2/marketfeed/ltp",
-        "/v2/marketfeed/ohlc",
-        "/v2/marketfeed/quote",
-        "/v2/optionchain",
-        "/v2/optionchain/expirylist"
-      ]
-      data_api_paths.any? { |data_path| path.start_with?(data_path) }
+      DhanHQ::Constants::DATA_API_PATHS.include?(path)
     end
 
     # Prepares the request payload based on the HTTP method.
@@ -125,10 +118,8 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def handle_response(response)
       case response.status
-      when 200..299
-        parse_json(response.body)
-      else
-        handle_error(response)
+      when 200..299 then parse_json(response.body)
+      else handle_error(response)
       end
     end
 
@@ -157,17 +148,24 @@ module DhanHQ
     # @param body [String, Hash] The response body.
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
     def parse_json(body)
-      return {} unless body.is_a?(String) && body.strip.start_with?("{", "[")
+      parsed_body =
+        if body.is_a?(String)
+          begin
+            JSON.parse(body, symbolize_names: true)
+          rescue JSON::ParserError
+            {} # Return an empty hash if the string is not valid JSON
+          end
+        else
+          body
+        end
 
-      parsed = JSON.parse(body, symbolize_names: true)
-
-      case parsed
-      when Hash then parsed.with_indifferent_access
-      when Array then parsed.map(&:with_indifferent_access)
-      else parsed
+      if parsed_body.is_a?(Hash)
+        parsed_body.with_indifferent_access
+      elsif parsed_body.is_a?(Array)
+        parsed_body.map(&:with_indifferent_access)
+      else
+        parsed_body
       end
-    rescue JSON::ParserError
-      {}
     end
   end
 end

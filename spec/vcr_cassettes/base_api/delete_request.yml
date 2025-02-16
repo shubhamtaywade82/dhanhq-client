@@ -1,7 +1,7 @@
 ---
 http_interactions:
 - request:
-    method: get
+    method: delete
     uri: https://api.dhan.co/v2/orders/112111182198
     body:
       encoding: US-ASCII
@@ -23,7 +23,7 @@ http_interactions:
       message: ''
     headers:
       Date:
-      - Sat, 25 Jan 2025 08:58:46 GMT
+      - Sat, 15 Feb 2025 16:22:41 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -38,5 +38,5 @@ http_interactions:
       encoding: UTF-8
       string: '{"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"Missing
         required fields, bad values for parameters etc."}'
-  recorded_at: Sat, 25 Jan 2025 08:58:46 GMT
+  recorded_at: Sat, 15 Feb 2025 16:22:41 GMT
 recorded_with: VCR 6.3.1

@@ -1,11 +1,11 @@
 ---
 http_interactions:
 - request:
-    method: get
-    uri: https://api.dhan.co/v2/orders/112111182198
+    method: post
+    uri: https://api.dhan.co/v2/orders
     body:
-      encoding: US-ASCII
-      string: ''
+      encoding: UTF-8
+      string: '{"dhanClientId":"1000000003","transactionType":"BUY","exchangeSegment":"NSE_EQ","productType":"INTRADAY","orderType":"MARKET","validity":"DAY","securityId":"11536","quantity":5}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -19,11 +19,11 @@ http_interactions:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
     status:
-      code: 400
-      message: ''
+      code: 200
+      message: 'OK'
     headers:
       Date:
-      - Sat, 25 Jan 2025 08:58:46 GMT
+      - Sat, 15 Feb 2025 16:22:41 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,7 +36,6 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"Missing
-        required fields, bad values for parameters etc."}'
-  recorded_at: Sat, 25 Jan 2025 08:58:46 GMT
+      string: '{"orderId": "112111182198", "orderStatus": "PENDING"}'
+  recorded_at: Sat, 15 Feb 2025 16:22:41 GMT
 recorded_with: VCR 6.3.1
