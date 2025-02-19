@@ -89,7 +89,6 @@ module DhanHQ
       error_code = body[:errorCode] || response.status.to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
 
-      debugger
       raise DhanHQ::Constants::DHAN_ERROR_MAPPING.fetch(error_code, DhanHQ::Error), "#{error_code}: #{error_message}"
     end
     # def handle_error(response)

@@ -7,7 +7,7 @@ require "active_support/inflector"
 module DhanHQ
   # Base class for resource objects
   # Handles validation, attribute mapping, and response parsing
-  class BaseModel < BaseAPI
+  class BaseModel
     # Extend & Include Modules
     extend DhanHQ::APIHelper
     extend DhanHQ::AttributeHelper
@@ -28,7 +28,6 @@ module DhanHQ
     #
     # @param attributes [Hash] The attributes of the resource
     def initialize(attributes = {}, skip_validation: false)
-      super(api_type: :order_api) # Calls BaseAPI's initialize
       @attributes = normalize_keys(attributes)
       @errors = {}
 
@@ -37,15 +36,42 @@ module DhanHQ
     end
 
     # Class Methods
+    # Attributes set by child classes
     class << self
       attr_reader :defined_attributes
 
+      # Registers the set of attributes for this model
+      #
+      # @param args [Array<Symbol, String>] A list of attribute names
       def attributes(*args)
         @defined_attributes ||= []
         @defined_attributes.concat(args.map(&:to_s))
       end
 
-      # Every model must define its validation contract
+      # Provide a default API type, can be overridden by child classes
+      #
+      # e.g., def self.api_type; :data_api; end
+      #
+      # or override the `api` method entirely
+      def api_type
+        :order_api
+      end
+
+      # Provide a shared BaseAPI instance for this model
+      #
+      # For child classes, override `api_type` or `api` if needed
+      def api
+        @api ||= BaseAPI.new(api_type: api_type)
+      end
+
+      # Retrieve the resource path for the API
+      #
+      # @return [String] The resource path
+      def resource_path
+        self::HTTP_PATH
+      end
+
+      # Every model must either override this or set a Dry::Validation contract if they need validation
       #
       # @return [Dry::Validation::Contract] The validation contract
       def validation_contract
@@ -59,32 +85,30 @@ module DhanHQ
 
         raise ArgumentError, "Validation failed: #{result.errors.to_h}" if result.failure?
       end
-    end
 
-    # Class methods for resources
-    class << self
-      # Find a resource by ID
-      #
-      # @param id [String] The ID of the resource
-      # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
-      def find(id)
-        response = api_client.get("#{resource_path}/#{id}")
-
-        build_from_response(response)
-      end
+      # == CRUD / Collection Methods
 
       # Find all resources
       #
       # @return [Array<DhanHQ::BaseModel>, DhanHQ::ErrorObject] An array of resources or error object
       def all
-        response = api_client.get(resource_path)
-        return ErrorObject.new(response) unless success_response?(response)
+        response = api.get(resource_path)
 
-        response[:data].map { |attributes| new(attributes) }
+        parse_collection_response(response)
+      end
+
+      # Find a resource by ID
+      #
+      # @param id [String] The ID of the resource
+      # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
+      def find(id)
+        response = api.get("#{resource_path}/#{id}")
+
+        build_from_response(response.first)
       end
 
       def where(params)
-        response = api_client.get(resource_path, params)
+        response = api.get(resource_path, params)
         success_response?(response) ? response[:data].map { |attr| new(attr) } : []
       end
 
@@ -95,15 +119,20 @@ module DhanHQ
       def create(attributes)
         # validate_params!(attributes, validation_contract)
 
-        response = api_client.post(resource_path, attributes)
+        response = api.post(resource_path, params: attributes)
         build_from_response(response)
       end
 
-      # Retrieve the resource path for the API
+      # Helper method to parse a collection response into model instances
       #
-      # @return [String] The resource path
-      def resource_path
-        self::HTTP_PATH
+      # @param response [Object] The raw response from the API
+      # @return [Array<BaseModel>]
+      def parse_collection_response(response)
+        # Some endpoints return arrays, others might return a `[:data]` structure
+        return [] unless response.is_a?(Array) || (response.is_a?(Hash) && response[:data].is_a?(Array))
+
+        collection = response.is_a?(Array) ? response : response[:data]
+        collection.map { |record| new(record) }
       end
     end
 
@@ -114,7 +143,7 @@ module DhanHQ
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
-      response = self.class.api_client.put("#{self.class.resource_path}/#{id}", params: attributes)
+      response = self.class.api.put("#{self.class.resource_path}/#{id}", params: attributes)
 
       success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
     end
@@ -131,14 +160,14 @@ module DhanHQ
     #
     # @return [Boolean] True if deletion was successful
     def delete
-      response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.api.delete("#{self.class.resource_path}/#{id}")
       success_response?(response)
     rescue StandardError
       false
     end
 
     def destroy
-      response = self.class.api_client.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.api.delete("#{self.class.resource_path}/#{id}")
       success_response?(response)
     rescue StandardError
       false

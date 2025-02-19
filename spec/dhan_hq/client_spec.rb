@@ -39,8 +39,6 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#request" do
-
-
     context "when making a GET request", vcr: { cassette_name: "client/get_request" } do
       let(:endpoint) { "/v2/orders/#{order_id}" }
 

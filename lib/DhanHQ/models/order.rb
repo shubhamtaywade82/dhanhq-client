@@ -6,6 +6,8 @@ require_relative "../contracts/modify_order_contract"
 module DhanHQ
   module Models
     class Order < BaseModel
+      HTTP_PATH = "/v2/orders"
+
       attr_reader :order_id, :order_status
 
       # Define attributes that are part of an order
@@ -86,8 +88,8 @@ module DhanHQ
         # Validate with ModifyOrderContract
         validate_params!(updated_params, DhanHQ::Contracts::ModifyOrderContract)
 
-        response = self.class.resource.modify_order(id, updated_params)
-
+        # response = self.class.api.put("#{self.class.resource_path}/#{id}", params: attributes)
+        update(attributes)
         # Fetch the latest order details
         return self.class.find(id) if response[:orderStatus] == "TRANSIT"
 

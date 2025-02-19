@@ -1,0 +1,41 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/orders
+    body:
+      encoding: UTF-8
+      string: '{"correlationId":"correl-amo-1739720360","transactionType":"BUY","exchangeSegment":"BSE_EQ","productType":"CNC","orderType":"MARKET","validity":"DAY","securityId":"539310","quantity":5,"disclosedQuantity":"","triggerPrice":"","afterMarketOrder":true,"amoTime":"OPEN","boProfitValue":"","boStopLossValue":""}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sun, 16 Feb 2025 15:39:26 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"orderId":"752502167405","orderStatus":"TRANSIT"}'
+  recorded_at: Sun, 16 Feb 2025 15:39:26 GMT
+recorded_with: VCR 6.3.1
