@@ -13,7 +13,7 @@ module DhanHQ
     extend DhanHQ::AttributeHelper
     extend DhanHQ::ValidationHelper
     extend DhanHQ::RequestHelper
-    extend ResponseHelper
+    extend DhanHQ::ResponseHelper
 
     include DhanHQ::APIHelper
     include DhanHQ::AttributeHelper
@@ -79,7 +79,7 @@ module DhanHQ
       end
 
       # Validate attributes before creating a new instance
-      def self.validate_attributes(attributes)
+      def validate_attributes(attributes)
         contract = validation_contract
         result = contract.call(attributes)
 
@@ -92,7 +92,7 @@ module DhanHQ
       #
       # @return [Array<DhanHQ::BaseModel>, DhanHQ::ErrorObject] An array of resources or error object
       def all
-        response = api.get(resource_path)
+        response = resource.get(resource_path)
 
         parse_collection_response(response)
       end
@@ -102,13 +102,13 @@ module DhanHQ
       # @param id [String] The ID of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def find(id)
-        response = api.get("#{resource_path}/#{id}")
+        response = resource.get("#{resource_path}/#{id}")
 
         build_from_response(response.first)
       end
 
       def where(params)
-        response = api.get(resource_path, params)
+        response = resource.get(resource_path, params)
         success_response?(response) ? response[:data].map { |attr| new(attr) } : []
       end
 
@@ -119,7 +119,7 @@ module DhanHQ
       def create(attributes)
         # validate_params!(attributes, validation_contract)
 
-        response = api.post(resource_path, params: attributes)
+        response = resource.post(resource_path, params: attributes)
         build_from_response(response)
       end
 
@@ -216,26 +216,6 @@ module DhanHQ
       end
 
       true
-    end
-  end
-
-  # Helper class for encapsulating API error responses
-  class ErrorObject
-    attr_reader :message, :errors
-
-    # Initialize an error object
-    #
-    # @param response [Hash] The API response
-    def initialize(response)
-      @message = response[:message] || "An error occurred"
-      @errors = response[:errors] || {}
-    end
-
-    # Check if the response is successful
-    #
-    # @return [Boolean] False for errors
-    def success?
-      false
     end
   end
 end

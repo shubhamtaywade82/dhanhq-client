@@ -38,7 +38,7 @@ module DhanHQ
     def initialize
       @client_id = ENV.fetch("CLIENT_ID", nil)
       @access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      @base_url = BASE_URL
+      @base_url     = "https://api.dhan.co/v2"
     end
   end
 end

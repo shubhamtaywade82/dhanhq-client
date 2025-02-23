@@ -8,6 +8,12 @@ require_relative "DhanHQ/helpers/attribute_helper"
 require_relative "DhanHQ/helpers/validation_helper"
 require_relative "DhanHQ/helpers/request_helper"
 require_relative "DhanHQ/helpers/response_helper"
+require_relative "DhanHQ/json_loader"
+
+require_relative "DhanHQ/core/base_api"
+require_relative "DhanHQ/core/base_resource"
+require_relative "DhanHQ/core/base_model"
+require_relative "DhanHQ/core/error_handler"
 
 require_relative "DhanHQ/version"
 require_relative "DhanHQ/errors"
@@ -15,11 +21,15 @@ require_relative "DhanHQ/errors"
 require_relative "DhanHQ/client"
 require_relative "DhanHQ/configuration"
 require_relative "DhanHQ/rate_limiter"
-require_relative "DhanHQ/base_api"
-require_relative "DhanHQ/base_model"
 
 # Contracts
 require_relative "DhanHQ/contracts/base_contract"
+
+# Resources
+require_relative "DhanHQ/resources/option_chain"
+require_relative "DhanHQ/resources/orders"
+require_relative "DhanHQ/resources/funds"
+# require_relative "DhanHQ/resources/forever_orders"
 
 # Models
 require_relative "DhanHQ/models/order"
@@ -31,8 +41,6 @@ require_relative "DhanHQ/models/market_feed"
 require_relative "DhanHQ/models/portfolio"
 require_relative "DhanHQ/models/trade"
 
-require_relative "DhanHQ/error_handler"
-
 require_relative "DhanHQ/constants"
 
 # The top-level module for the DhanHQ client library.
@@ -42,6 +50,7 @@ module DhanHQ
   class Error < StandardError; end
 
   class << self
+    BASE_URL = "https://api.dhan.co/v2"
     # The current configuration instance.
     #
     # @return [DhanHQ::Configuration, nil] The current configuration or `nil` if not set.
@@ -72,6 +81,7 @@ module DhanHQ
       self.configuration ||= Configuration.new
       configuration.access_token = ENV.fetch("ACCESS_TOKEN", nil)
       configuration.client_id = ENV.fetch("CLIENT_ID", nil)
+      configuration.base_url = BASE_URL
     end
   end
 end

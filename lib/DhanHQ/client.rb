@@ -65,48 +65,5 @@ module DhanHQ
 
       handle_response(response)
     end
-
-    private
-
-    # Handles the API response.
-    #
-    # @param response [Faraday::Response] The raw response object.
-    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed response.
-    # @raise [DhanHQ::Error] If an HTTP error occurs.
-    def handle_response(response)
-      case response.status
-      when 200..299 then parse_json(response.body)
-      else handle_error(response)
-      end
-    end
-
-    # Handles standard HTTP errors.
-    #
-    # @param response [Faraday::Response] The raw response object.
-    # @raise [DhanHQ::Error] The specific error based on response status.
-    def handle_error(response)
-      body = parse_json(response.body)
-      error_code = body[:errorCode] || response.status.to_s
-      error_message = body[:errorMessage] || body[:message] || "Unknown error"
-
-      raise DhanHQ::Constants::DHAN_ERROR_MAPPING.fetch(error_code, DhanHQ::Error), "#{error_code}: #{error_message}"
-    end
-    # def handle_error(response)
-    #   body = parse_json(response.body)
-    #   error_code = body[:errorCode] || response.status.to_s
-    #   error_message = body[:errorMessage] || body[:message] || "Unknown error"
-
-    #   debugger
-    #   case response.status
-    #   when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
-    #   when 401 then raise DhanHQ::InvalidAuthenticationError, "Unauthorized: #{error_message}"
-    #   when 403 then raise DhanHQ::InvalidAccessError, "Forbidden: #{error_message}"
-    #   when 404 then raise DhanHQ::NotFoundError, "Not Found: #{error_message}"
-    #   when 429 then raise DhanHQ::RateLimitError, "Rate Limit Exceeded: #{error_message}"
-    #   when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
-    #   else
-    #     raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
-    #   end
-    # end
   end
 end

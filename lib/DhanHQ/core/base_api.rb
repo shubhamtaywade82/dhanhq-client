@@ -6,9 +6,8 @@ module DhanHQ
   class BaseAPI
     include DhanHQ::APIHelper
     include DhanHQ::AttributeHelper
-    include DhanHQ::RequestHelper
-    include DhanHQ::ResponseHelper
 
+    API_TYPE = :non_trading_api
     HTTP_PATH = ""
 
     attr_reader :client
@@ -16,8 +15,8 @@ module DhanHQ
     # Initializes the BaseAPI with the appropriate Client instance
     #
     # @param api_type [Symbol] API type (`:order_api`, `:data_api`, `:non_trading_api`)
-    def initialize(api_type: :order_api)
-      @client = DhanHQ::Client.new(api_type: api_type)
+    def initialize
+      @client = DhanHQ::Client.new(api_type: self.class::API_TYPE)
     end
 
     # Perform a GET request via `Client`
@@ -68,6 +67,7 @@ module DhanHQ
       formatted_params = format_params(endpoint, params)
       response = client.request(method, build_path(endpoint), formatted_params)
 
+      pp response
       handle_response(response)
     end
 
@@ -90,29 +90,5 @@ module DhanHQ
     def optionchain_api?(endpoint)
       endpoint.include?("/optionchain")
     end
-
-    # # Handles API responses and raises errors if necessary
-    # #
-    # # @param response [Hash] API response
-    # # @return [Hash, Array] Parsed API response
-    # def handle_response(response)
-    #   return response if response.is_a?(Array) || response.is_a?(Hash)
-
-    #   raise DhanHQ::Error, "Unexpected API response format"
-    # end
-
-    # # Handles DhanHQ API-specific errors
-    # #
-    # # @param response [Hash] API response
-    # # @raise [DhanHQ::Error] if an error is encountered
-    # def handle_error(response)
-    #   pp response
-    #   error_code = response[:errorCode] || response[:status]
-    #   error_message = response[:error] || response[:message] || response.to_s
-
-    #   raise DhanHQ::Error, "API Error: #{error_message}" unless DhanHQ::Constants::DHAN_ERROR_MAPPING.key?(error_code)
-
-    #   raise DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code], "#{error_code}: #{error_message}"
-    # end
   end
 end

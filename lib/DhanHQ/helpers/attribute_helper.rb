@@ -22,8 +22,8 @@ module DhanHQ
     #
     # @param key [String] The key to convert
     # @return [Symbol] The snake_cased key
-    def snake_case(key)
-      key.to_s.underscore.to_sym
+    def snake_case(hash)
+      hash.transform_keys { |key| key.to_s.underscore.to_sym }
     end
 
     # Normalize attribute keys to be accessible as both snake_case and camelCase

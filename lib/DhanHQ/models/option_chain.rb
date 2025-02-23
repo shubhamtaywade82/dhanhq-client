@@ -8,6 +8,10 @@ module DhanHQ
       attr_reader :underlying_scrip, :underlying_seg, :expiry, :last_price, :option_data
 
       class << self
+        def resource
+          @resource ||= DhanHQ::Resources::OptionChain.new
+        end
+
         # Fetch the entire option chain for an instrument
         #
         # @param params [Hash] The request parameters (snake_case format)
@@ -15,7 +19,7 @@ module DhanHQ
         def fetch(params)
           validate_params!(params, DhanHQ::Contracts::OptionChainContract)
 
-          response = resource.fetch_option_chain(params)
+          response = resource.fetch(params)
           return {}.with_indifferent_access unless response[:status] == "success"
 
           filter_valid_strikes(response[:data]).with_indifferent_access
@@ -26,15 +30,8 @@ module DhanHQ
         # @param params [Hash] The request parameters (snake_case format)
         # @return [Array<String>] The list of expiry dates
         def fetch_expiry_list(params)
-          response = resource.fetch_expiry_list(params)
+          response = resource.expirylist(params)
           response[:status] == "success" ? response[:data] : []
-        end
-
-        # Access the API resource for option chain
-        #
-        # @return [DhanHQ::Resources::OptionChain]
-        def resource
-          @resource ||= DhanHQ::Resources::OptionChain.new
         end
 
         private
