@@ -3,7 +3,7 @@
 module DhanHQ
   module Resources
     class OptionChain < BaseAPI
-      API_TYPE = :data_api
+      API_TYPE = :option_chain
       HTTP_PATH = "/v2/optionchain"
 
       ##

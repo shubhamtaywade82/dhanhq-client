@@ -67,7 +67,6 @@ module DhanHQ
       formatted_params = format_params(endpoint, params)
       response = client.request(method, build_path(endpoint), formatted_params)
 
-      pp response
       handle_response(response)
     end
 

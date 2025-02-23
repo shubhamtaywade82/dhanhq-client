@@ -9,3 +9,5 @@ require "DhanHQ"
 
 require "irb"
 IRB.start(__FILE__)
+
+DhanHQ.configure_with_env

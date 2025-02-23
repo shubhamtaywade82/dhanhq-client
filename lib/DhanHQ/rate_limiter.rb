@@ -7,6 +7,7 @@ module DhanHQ
     RATE_LIMITS = {
       order_api: { per_second: 25, per_minute: 250, per_hour: 1000, per_day: 7000 },
       data_api: { per_second: 10, per_minute: 1000, per_hour: 5000, per_day: 10_000 },
+      option_chain: { per_second: 1.0 / 3, per_minute: 20, per_hour: 600, per_day: 4800 },
       non_trading_api: { per_second: 20, per_minute: Float::INFINITY, per_hour: Float::INFINITY,
                          per_day: Float::INFINITY }
     }.freeze
@@ -14,44 +15,53 @@ module DhanHQ
     def initialize(api_type)
       @api_type = api_type
       @buckets = Concurrent::Hash.new
+      @buckets[:last_request_time] = Time.at(0) if api_type == :option_chain
       initialize_buckets
       start_cleanup_threads
     end
 
-    # 🌟 **Throttle before making a request**
     def throttle!
+      if @api_type == :option_chain
+        last_request_time = @buckets[:last_request_time]
+
+        sleep_time = 4 - (Time.now - last_request_time)
+        if sleep_time.positive?
+          puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit"
+          sleep(sleep_time)
+        end
+
+        @buckets[:last_request_time] = Time.now
+        return
+      end
+
       loop do
         break if allow_request?
 
-        sleep(0.1) # Wait for a small time before retrying
+        sleep(0.1)
       end
       record_request
     end
 
     private
 
-    # Initialize rate limit counters
     def initialize_buckets
       RATE_LIMITS[@api_type].each_key do |interval|
         @buckets[interval] = Concurrent::AtomicFixnum.new(0)
       end
     end
 
-    # 🌟 **Check if a request can be allowed**
     def allow_request?
       RATE_LIMITS[@api_type].all? do |interval, limit|
         @buckets[interval].value < limit
       end
     end
 
-    # 🌟 **Record the API request usage**
     def record_request
       RATE_LIMITS[@api_type].each_key do |interval|
         @buckets[interval].increment
       end
     end
 
-    # 🌟 **Reset buckets at specific intervals**
     def start_cleanup_threads
       Thread.new do
         loop do
