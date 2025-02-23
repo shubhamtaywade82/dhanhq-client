@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 module DhanHQ
   module Models
     class Holding < BaseModel
       HTTP_PATH = "/v2/holdings"
 
       attributes :exchange, :trading_symbol, :security_id, :isin, :total_qty,
-                  :dp_qty, :t1_qty, :available_qty, :collateral_qty, :avg_cost_price
+                 :dp_qty, :t1_qty, :available_qty, :collateral_qty, :avg_cost_price
 
       class << self
         ##

@@ -30,7 +30,7 @@ require_relative "DhanHQ/resources/option_chain"
 require_relative "DhanHQ/resources/orders"
 require_relative "DhanHQ/resources/funds"
 require_relative "DhanHQ/resources/holdings"
-# require_relative "DhanHQ/resources/forever_orders"
+require_relative "DhanHQ/resources/positions"
 
 # Models
 require_relative "DhanHQ/models/order"
@@ -39,7 +39,7 @@ require_relative "DhanHQ/models/option_chain"
 require_relative "DhanHQ/models/forever_order"
 require_relative "DhanHQ/models/historical_data"
 require_relative "DhanHQ/models/market_feed"
-require_relative "DhanHQ/models/portfolio"
+require_relative "DhanHQ/models/position"
 require_relative "DhanHQ/models/trade"
 require_relative "DhanHQ/models/holding"
 
