@@ -36,7 +36,7 @@ module DhanHQ
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
     # @return [DhanHQ::Client] A new client instance.
     def initialize(api_type:)
-      DhanHQ.configure_with_env
+      DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
       @rate_limiter = RateLimiter.new(api_type)
 
       raise "RateLimiter initialization failed" unless @rate_limiter
@@ -57,8 +57,6 @@ module DhanHQ
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload)
-      pp "-----------------------------------------------------------------------------"
-      pp @rate_limiter
       @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
 
       response = connection.send(method) do |req|
