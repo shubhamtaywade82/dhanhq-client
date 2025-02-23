@@ -90,6 +90,7 @@ Below are several suggestions and improvements you can consider to further enhan
 
 - **Separation of Concerns:**
   Keep your gem’s responsibilities clear:
+
   - **Client:** Low-level HTTP calls with error handling and rate limiting.
   - **Resources:** Form URLs and endpoint-specific logic.
   - **Models:** Map resource data to business objects and provide CRUD operations with validation.
@@ -131,3 +132,7 @@ end
 Implementing these improvements will result in a more robust, testable, and maintainable gem. Enhancing error handling, validations, and separation of concerns not only eases future modifications but also improves the overall developer experience when using the gem.
 
 Feel free to ask if you’d like more details or examples on any of these suggestions!
+
+PROGRESS:
+
+1. OptionChain working
