@@ -45,17 +45,6 @@ module DhanHQ
         end
       end
 
-      # e.g. #to_h override if desired
-      def to_h
-        {
-          order_id: order_id,
-          exchange_order_id: exchange_order_id,
-          traded_quantity: traded_quantity,
-          traded_price: traded_price
-          # ... etc.
-        }
-      end
-
       # If you want custom validations, you'd set a contract or skip for read-only
       def validation_contract
         nil
