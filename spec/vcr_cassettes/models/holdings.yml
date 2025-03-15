@@ -1,0 +1,41 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/holdings
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sat, 15 Mar 2025 09:54:36 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '[{"exchange":"ALL","tradingSymbol":"NIFTYBEES","securityId":"10576","isin":"INF204KB14I2","totalQty":2,"dpQty":1,"t1Qty":1,"availableQty":2,"collateralQty":0,"avgCostPrice":252.05,"lastTradedPrice":251.06}]'
+  recorded_at: Sat, 15 Mar 2025 09:54:36 GMT
+recorded_with: VCR 6.3.1
