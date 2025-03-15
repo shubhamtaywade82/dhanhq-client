@@ -1,0 +1,82 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/ledger?from-date=2023-01-01&to-date=2023-01-31
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sat, 15 Mar 2025 10:38:12 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '[{"dhanClientId":"<CLIENT_ID>","narration":"CLOSING BALANCE","voucherdate":"Jan
+        01, 1970","exchange":"NSE_CASH","voucherdesc":"CLOSING BALANCE","vouchernumber":"","debit":"0.00","credit":"0.0","runbal":"0"},{"dhanClientId":"<CLIENT_ID>","narration":"OPENING
+        BALANCE","voucherdate":"Jan 01, 1970","exchange":"NSE_CASH","voucherdesc":"OPENING
+        BALANCE","vouchernumber":"","debit":"0.00","credit":"0.0","runbal":"0"}]'
+  recorded_at: Sat, 15 Mar 2025 10:38:12 GMT
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/trades/2023-01-01/2023-01-31/0
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sat, 15 Mar 2025 10:38:38 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: "[]"
+  recorded_at: Sat, 15 Mar 2025 10:38:38 GMT
+recorded_with: VCR 6.3.1
