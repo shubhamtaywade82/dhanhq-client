@@ -34,6 +34,7 @@ require_relative "DhanHQ/resources/holdings"
 require_relative "DhanHQ/resources/positions"
 require_relative "DhanHQ/resources/statements"
 require_relative "DhanHQ/resources/historical_data"
+require_relative "DhanHQ/resources/margin_calculator"
 
 # Models
 require_relative "DhanHQ/models/order"
@@ -46,6 +47,7 @@ require_relative "DhanHQ/models/position"
 require_relative "DhanHQ/models/holding"
 require_relative "DhanHQ/models/ledger_entry"
 require_relative "DhanHQ/models/trade"
+require_relative "DhanHQ/models/margin"
 
 require_relative "DhanHQ/constants"
 

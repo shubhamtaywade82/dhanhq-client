@@ -1,0 +1,41 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/margincalculator
+    body:
+      encoding: UTF-8
+      string: '{"dhanClientId":"<CLIENT_ID>","exchangeSegment":"NSE_EQ","transactionType":"BUY","productType":"CNC","securityId":"11536","quantity":10,"price":100.0}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sat, 15 Mar 2025 10:02:13 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+    body:
+      encoding: UTF-8
+      string: '{"totalMargin":1000.0,"spanMargin":0.0,"exposureMargin":0.0,"availableBalance":0.0,"variableMargin":0.0,"insufficientBalance":0.0,"brokerage":0.0,"leverage":"1X"}'
+  recorded_at: Sat, 15 Mar 2025 10:02:13 GMT
+recorded_with: VCR 6.3.1

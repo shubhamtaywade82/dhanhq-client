@@ -2,7 +2,7 @@
 
 module DhanHQ
   module Resources
-    class MarginCalculator < BaseResource
+    class MarginCalculator < BaseAPI
       API_TYPE = :order_api
       HTTP_PATH = "/v2/margincalculator"
 
