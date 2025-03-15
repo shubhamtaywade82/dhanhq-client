@@ -207,7 +207,7 @@ module DhanHQ
 
     # Validate attributes using contract
     def valid?
-      contract = self.class.validation_contract
+      contract = validation_contract
       result = contract.call(@attributes)
 
       if result.failure?

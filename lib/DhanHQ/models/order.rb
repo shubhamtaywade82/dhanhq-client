@@ -6,8 +6,6 @@ require_relative "../contracts/modify_order_contract"
 module DhanHQ
   module Models
     class Order < BaseModel
-      HTTP_PATH = "/v2/orders"
-
       attr_reader :order_id, :order_status
 
       # Define attributes that are part of an order
@@ -21,36 +19,47 @@ module DhanHQ
                  :remaining_quantity, :average_traded_price, :filled_qty
 
       class << self
-        # # Fetch all orders for the day
-        # #
-        # # @return [Array<Order>]
-        # def all
-        #   response = resource.list_orders
-        #   return [] unless response.is_a?(Array)
+        ##
+        # Provides a **shared instance** of the `Orders` resource
+        #
+        # @return [DhanHQ::Resources::Orders]
+        def resource
+          @resource ||= DhanHQ::Resources::Orders.new
+        end
 
-        #   response.map { |order| new(order, skip_validation: true) }
-        # end
+        ##
+        # Fetch all orders for the day.
+        #
+        # @return [Array<Order>]
+        def all
+          response = resource.all
+          return [] unless response.is_a?(Array)
 
-        # # Fetch a specific order by ID
-        # #
-        # # @param order_id [String]
-        # # @return [Order, nil]
-        # def find(order_id)
-        #   response = resource.get_order(order_id)
-        #   return nil unless response.is_a?(Hash) && response.any?
+          response.map { |order| new(order, skip_validation: true) }
+        end
 
-        #   new(response, skip_validation: true)
-        # end
+        ##
+        # Fetch a specific order by ID.
+        #
+        # @param order_id [String]
+        # @return [Order, nil]
+        def find(order_id)
+          response = resource.find(order_id)
+          return nil unless response.is_a?(Hash) && response.any?
 
-        # Fetch a specific order by correlation ID
+          new(response, skip_validation: true)
+        end
+
+        ##
+        # Fetch a specific order by correlation ID.
         #
         # @param correlation_id [String]
         # @return [Order, nil]
         def find_by_correlation(correlation_id)
-          response = resource.get_order_by_correlation(correlation_id)
+          response = resource.by_correlation(correlation_id)
           return nil unless response[:status] == "success"
 
-          new(response[:data], skip_validation: true)
+          new(response, skip_validation: true)
         end
 
         # Place a new order
@@ -67,12 +76,19 @@ module DhanHQ
           find(response["orderId"])
         end
 
-        # # Access the API resource for orders
-        # #
-        # # @return [DhanHQ::Resources::Orders]
-        # def resource
-        #   @resource ||= DhanHQ::Resources::Orders.new
-        # end
+        ##
+        # AR-like create: new => valid? => save => resource.create
+        # But we can also define a class method if we want direct:
+        #   Order.create(order_params)
+        #
+        # For the typical usage "Order.new(...).save", we rely on #save below.
+        def create(params)
+          order = new(params) # build it
+          return order unless order.valid? # run place order contract?
+
+          order.save # calls resource create or update
+          order
+        end
       end
 
       # Modify the order while preserving existing attributes
@@ -115,13 +131,75 @@ module DhanHQ
         self.class.find(id)
       end
 
-      private
+      ##
+      # This is how we figure out if it's an existing record or not:
+      def new_record?
+        order_id.nil? || order_id.to_s.empty?
+      end
 
-      # Validation contract for order placement
-      #
-      # @return [DhanHQ::Contracts::PlaceOrderContract]
+      ##
+      # The ID used for resource calls
+      def id
+        order_id
+      end
+
+      ##
+      # Save: If new_record?, do resource.create
+      # else resource.update
+      def save
+        return false unless valid?
+
+        if new_record?
+          # PLACE ORDER
+          response = self.class.resource.create(to_request_params)
+          if success_response?(response) && response["orderId"]
+            @attributes.merge!(normalize_keys(response))
+            assign_attributes
+            true
+          else
+            # maybe store errors?
+            false
+          end
+        else
+          # MODIFY ORDER
+          response = self.class.resource.update(id, to_request_params)
+          if success_response?(response) && response["orderStatus"]
+            @attributes.merge!(normalize_keys(response))
+            assign_attributes
+            true
+          else
+            false
+          end
+        end
+      end
+
+      ##
+      # Cancel => calls resource.delete
+      def destroy
+        return false if new_record?
+
+        response = self.class.resource.delete(id)
+        if success_response?(response) && response["orderStatus"] == "CANCELLED"
+          @attributes[:order_status] = "CANCELLED"
+          true
+        else
+          false
+        end
+      end
+      alias delete destroy
+
+      ##
+      # Slicing (optional)
+      # If you want an AR approach:
+      def slice_order(params)
+        self.class.resource.slicing(params.merge(order_id: id))
+      end
+
+      ##
+      # Because we have two separate contracts: place vs. modify
+      # We can do something like:
       def validation_contract
-        DhanHQ::Contracts::PlaceOrderContract.new
+        new_record? ? DhanHQ::Contracts::PlaceOrderContract.new : DhanHQ::Contracts::ModifyOrderContract.new
       end
     end
   end
