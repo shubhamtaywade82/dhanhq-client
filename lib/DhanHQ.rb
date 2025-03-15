@@ -31,6 +31,7 @@ require_relative "DhanHQ/resources/orders"
 require_relative "DhanHQ/resources/funds"
 require_relative "DhanHQ/resources/holdings"
 require_relative "DhanHQ/resources/positions"
+require_relative "DhanHQ/resources/statements"
 
 # Models
 require_relative "DhanHQ/models/order"
@@ -40,8 +41,9 @@ require_relative "DhanHQ/models/forever_order"
 require_relative "DhanHQ/models/historical_data"
 require_relative "DhanHQ/models/market_feed"
 require_relative "DhanHQ/models/position"
-require_relative "DhanHQ/models/trade"
 require_relative "DhanHQ/models/holding"
+require_relative "DhanHQ/models/ledger_entry"
+require_relative "DhanHQ/models/trade"
 
 require_relative "DhanHQ/constants"
 
