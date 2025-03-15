@@ -24,6 +24,7 @@ require_relative "DhanHQ/rate_limiter"
 
 # Contracts
 require_relative "DhanHQ/contracts/base_contract"
+require_relative "DhanHQ/contracts/historical_data_contract"
 
 # Resources
 require_relative "DhanHQ/resources/option_chain"
@@ -32,6 +33,7 @@ require_relative "DhanHQ/resources/funds"
 require_relative "DhanHQ/resources/holdings"
 require_relative "DhanHQ/resources/positions"
 require_relative "DhanHQ/resources/statements"
+require_relative "DhanHQ/resources/historical_data"
 
 # Models
 require_relative "DhanHQ/models/order"
