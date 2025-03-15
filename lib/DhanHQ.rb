@@ -35,6 +35,7 @@ require_relative "DhanHQ/resources/positions"
 require_relative "DhanHQ/resources/statements"
 require_relative "DhanHQ/resources/historical_data"
 require_relative "DhanHQ/resources/margin_calculator"
+require_relative "DhanHQ/resources/market_feed"
 
 # Models
 require_relative "DhanHQ/models/order"

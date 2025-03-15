@@ -2,7 +2,7 @@
 
 RSpec.describe DhanHQ::Models::LedgerEntry, vcr: {
   cassette_name: "models/ledger_entry",
-  record: :once  # or :new_episodes, or whichever mode you prefer
+  record: :once # or :new_episodes, or whichever mode you prefer
 } do
   before do
     # Ensure DhanHQ gem is configured with valid credentials.

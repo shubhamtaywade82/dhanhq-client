@@ -65,6 +65,7 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an API error occurs.
     def request(method, endpoint, params: {})
       formatted_params = format_params(endpoint, params)
+
       response = client.request(method, build_path(endpoint), formatted_params)
 
       handle_response(response)
@@ -80,7 +81,7 @@ module DhanHQ
 
     # Format parameters based on API endpoint
     def format_params(endpoint, params)
-      return params if params.empty?
+      return params if marketfeed_api?(endpoint) || params.empty?
 
       optionchain_api?(endpoint) ? titleize_keys(params) : camelize_keys(params)
     end
@@ -88,6 +89,10 @@ module DhanHQ
     # Determines if the API endpoint is for Option Chain
     def optionchain_api?(endpoint)
       endpoint.include?("/optionchain")
+    end
+
+    def marketfeed_api?(endpoint)
+      endpoint.include?("/marketfeed")
     end
   end
 end

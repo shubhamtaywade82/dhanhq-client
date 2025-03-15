@@ -2,7 +2,7 @@
 
 RSpec.describe DhanHQ::Models::Margin, vcr: {
   cassette_name: "models/margin",
-  record: :once  # or :new_episodes, whichever mode suits your workflow
+  record: :once # or :new_episodes, whichever mode suits your workflow
 } do
   before do
     # Ensure the DhanHQ gem is configured with valid credentials from ENV
@@ -17,7 +17,7 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
         exchangeSegment: "NSE_EQ",
         transactionType: "BUY",
         productType: "CNC",
-        securityId: "11536",       # Example Security ID (e.g. TCS)
+        securityId: "11536", # Example Security ID (e.g. TCS)
         quantity: 10,
         price: 100.0
         # triggerPrice:  ... # only needed for STOP_LOSS orders
