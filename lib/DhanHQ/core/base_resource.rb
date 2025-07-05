@@ -2,7 +2,7 @@
 
 module DhanHQ
   class BaseResource < BaseAPI
-    def initialize(api_type: :order_api)
+    def initialize(api_type: self.class::API_TYPE)
       super(api_type: api_type) # rubocop:disable Style/SuperArguments
     end
 

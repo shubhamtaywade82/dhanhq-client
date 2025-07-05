@@ -64,6 +64,15 @@ module DhanHQ
         @api ||= BaseAPI.new(api_type: api_type)
       end
 
+      ##
+      # Returns the API resource used by collection methods.
+      #
+      # Subclasses may override this to return a specialized API class.
+      # By default it simply returns {#api}.
+      def resource
+        api
+      end
+
       # Retrieve the resource path for the API
       #
       # @return [String] The resource path
@@ -143,7 +152,7 @@ module DhanHQ
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
-      response = self.class.api.put("#{self.class.resource_path}/#{id}", params: attributes)
+      response = self.class.resource.put("#{self.class.resource_path}/#{id}", params: attributes)
 
       success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
     end
@@ -160,14 +169,14 @@ module DhanHQ
     #
     # @return [Boolean] True if deletion was successful
     def delete
-      response = self.class.api.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.resource.delete("#{self.class.resource_path}/#{id}")
       success_response?(response)
     rescue StandardError
       false
     end
 
     def destroy
-      response = self.class.api.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.resource.delete("#{self.class.resource_path}/#{id}")
       success_response?(response)
     rescue StandardError
       false
