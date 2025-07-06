@@ -30,6 +30,7 @@ require_relative "DhanHQ/contracts/historical_data_contract"
 # Resources
 require_relative "DhanHQ/resources/option_chain"
 require_relative "DhanHQ/resources/orders"
+require_relative "DhanHQ/resources/forever_orders"
 require_relative "DhanHQ/resources/funds"
 require_relative "DhanHQ/resources/holdings"
 require_relative "DhanHQ/resources/positions"
