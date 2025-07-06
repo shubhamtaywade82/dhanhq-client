@@ -45,9 +45,10 @@ module DhanHQ
         # @return [Order, nil]
         def find(order_id)
           response = resource.find(order_id)
-          return nil unless response.is_a?(Hash) && response.any?
+          return nil unless response.is_a?(Hash) || (response.is_a?(Array) && response.any?)
 
-          new(response, skip_validation: true)
+          order_data = response.is_a?(Array) ? response.first : response
+          new(order_data, skip_validation: true)
         end
 
         ##

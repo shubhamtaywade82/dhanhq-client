@@ -54,7 +54,8 @@ module DhanHQ
     # @param endpoint [String] API endpoint
     # @return [Hash, Array] The parsed API response
     def delete(endpoint)
-      request(:delete, endpoint)
+      formatted_params = format_params(endpoint, {})
+      handle_response(client.delete(build_path(endpoint), formatted_params))
     end
 
     private

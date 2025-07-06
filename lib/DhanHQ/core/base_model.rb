@@ -113,7 +113,8 @@ module DhanHQ
       def find(id)
         response = resource.get("#{resource_path}/#{id}")
 
-        build_from_response(response.first)
+        payload = response.is_a?(Array) ? response.first : response
+        build_from_response(payload)
       end
 
       def where(params)

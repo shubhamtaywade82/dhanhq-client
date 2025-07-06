@@ -6,10 +6,19 @@ module DhanHQ
 
     # Determines if the API response indicates success.
     #
+    # Treat responses missing a `:status` key but containing
+    # an `orderId` or `orderStatus` as successful. This aligns with
+    # certain Dhan APIs which return only order details on success.
+    #
     # @param response [Hash] Parsed API response
-    # @return [Boolean] True when response[:status] == "success"
+    # @return [Boolean] True when the response signifies success
     def success_response?(response)
-      response.is_a?(Hash) && response[:status] == "success"
+      return false unless response.is_a?(Hash)
+
+      return true if response[:status] == "success"
+      return true if response[:status].nil? && (response.key?(:orderId) || response.key?(:orderStatus))
+
+      false
     end
 
     # Handles the API response.
@@ -34,18 +43,20 @@ module DhanHQ
       error_code = body[:errorCode] || response.status.to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
 
-      case response.status
-      when 400 then raise DhanHQ::InputExceptionError, "Bad Request: #{error_message}"
-      when 401 then raise DhanHQ::InvalidAuthenticationError, "Unauthorized: #{error_message}"
-      when 403 then raise DhanHQ::InvalidAccessError, "Forbidden: #{error_message}"
-      when 404 then raise DhanHQ::NotFoundError, "Not Found: #{error_message}"
-      when 429 then raise DhanHQ::RateLimitError, "Rate Limit Exceeded: #{error_message}"
-      when 500..599 then raise DhanHQ::InternalServerError, "Server Error: #{error_message}"
-      else
-        raise DhanHQ::OtherError, "Unknown Error: #{error_message}"
-      end
+      error_class = DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code]
 
-      raise DhanHQ::Constants::DHAN_ERROR_MAPPING.fetch(error_code, DhanHQ::Error), "#{error_code}: #{error_message}"
+      error_class ||=
+        case response.status
+        when 400 then DhanHQ::InputExceptionError
+        when 401 then DhanHQ::InvalidAuthenticationError
+        when 403 then DhanHQ::InvalidAccessError
+        when 404 then DhanHQ::NotFoundError
+        when 429 then DhanHQ::RateLimitError
+        when 500..599 then DhanHQ::InternalServerError
+        else DhanHQ::OtherError
+        end
+
+      raise error_class, "#{error_code}: #{error_message}"
     end
 
     # Parses JSON response safely. Converts response body to a hash or array with indifferent access.
