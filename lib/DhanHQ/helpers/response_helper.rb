@@ -4,6 +4,14 @@ module DhanHQ
   module ResponseHelper
     private
 
+    # Determines if the API response indicates success.
+    #
+    # @param response [Hash] Parsed API response
+    # @return [Boolean] True when response[:status] == "success"
+    def success_response?(response)
+      response.is_a?(Hash) && response[:status] == "success"
+    end
+
     # Handles the API response.
     #
     # @param response [Faraday::Response] The raw response object.
