@@ -118,7 +118,7 @@ module DhanHQ
 
       def where(params)
         response = resource.get(resource_path, params)
-        success_response?(response) ? response[:data].map { |attr| new(attr) } : []
+        self.class.build_from_response(response)
       end
 
       # Create a new resource
@@ -216,7 +216,10 @@ module DhanHQ
 
     # Validate attributes using contract
     def valid?
-      contract = validation_contract
+      contract_class = respond_to?(:validation_contract) ? validation_contract : self.class.validation_contract
+      return true unless contract_class
+
+      contract = contract_class.is_a?(Class) ? contract_class.new : contract_class
       result = contract.call(@attributes)
 
       if result.failure?

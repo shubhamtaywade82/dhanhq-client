@@ -25,7 +25,8 @@ module DhanHQ
     # @param params [Hash] Query parameters
     # @return [Hash, Array] The parsed API response
     def get(endpoint, params: {})
-      request(:get, endpoint, params: params)
+      formatted_params = format_params(endpoint, params)
+      handle_response(client.get(build_path(endpoint), formatted_params))
     end
 
     # Perform a POST request via `Client`
@@ -34,7 +35,8 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def post(endpoint, params: {})
-      request(:post, endpoint, params: params)
+      formatted_params = format_params(endpoint, params)
+      handle_response(client.post(build_path(endpoint), formatted_params))
     end
 
     # Perform a PUT request via `Client`
@@ -43,7 +45,8 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def put(endpoint, params: {})
-      request(:put, endpoint, params: params)
+      formatted_params = format_params(endpoint, params)
+      handle_response(client.put(build_path(endpoint), formatted_params))
     end
 
     # Perform a DELETE request via `Client`

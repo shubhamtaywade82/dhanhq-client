@@ -17,6 +17,7 @@ require_relative "DhanHQ/core/error_handler"
 
 require_relative "DhanHQ/version"
 require_relative "DhanHQ/errors"
+require_relative "DhanHQ/error_object"
 
 require_relative "DhanHQ/client"
 require_relative "DhanHQ/configuration"

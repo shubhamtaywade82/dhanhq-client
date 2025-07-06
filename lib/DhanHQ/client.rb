@@ -67,5 +67,23 @@ module DhanHQ
 
       handle_response(response)
     end
+
+    # Convenience wrappers for common HTTP methods. These make it easier to stub
+    # network calls in tests where `request` is invoked internally.
+    def get(path, params = {})
+      request(:get, path, params)
+    end
+
+    def post(path, params = {})
+      request(:post, path, params)
+    end
+
+    def put(path, params = {})
+      request(:put, path, params)
+    end
+
+    def delete(path, params = {})
+      request(:delete, path, params)
+    end
   end
 end

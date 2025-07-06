@@ -7,7 +7,15 @@ module DhanHQ
     # @param response [Hash] API response
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def build_from_response(response)
-      new(response, skip_validation: true)
+      return DhanHQ::ErrorObject.new(response) unless success_response?(response)
+
+      attributes = if response.is_a?(Hash) && response[:data].is_a?(Hash)
+                     response[:data]
+                   else
+                     response
+                   end
+
+      new(attributes, skip_validation: true)
     end
 
     private
