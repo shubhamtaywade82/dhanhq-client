@@ -95,7 +95,7 @@ module DhanHQ
 
       # Custom validation for trigger price when the order type is STOP_LOSS or STOP_LOSS_MARKET.
       rule(:trigger_price, :order_type) do
-        if values[:order_type] =~ (/^STOP_LOSS/) && !values[:trigger_price]
+        if values[:order_type] =~ /^STOP_LOSS/ && !values[:trigger_price]
           key(:trigger_price).failure("is required for order_type STOP_LOSS or STOP_LOSS_MARKET")
         end
       end

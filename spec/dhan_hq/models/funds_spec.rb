@@ -17,12 +17,11 @@ RSpec.describe DhanHQ::Models::Funds, vcr: { cassette_name: "models/funds" } do
       expect(result).to be_a(described_class)
 
       # Check that certain attributes exist and are numeric
-      expect(result.availabel_balance).to be_a(Float)
-      expect(result.utilized_amount).to be_a(Float)
+      expect(result.available_balance).to be_a(Float)
       # etc...
 
       # Optionally, check that the numeric values are not negative, etc.
-      expect(result.availabel_balance).to be >= 0
+      expect(result.available_balance).to be >= 0
     end
   end
 

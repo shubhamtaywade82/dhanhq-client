@@ -5,8 +5,18 @@ module DhanHQ
     class Funds < BaseModel
       HTTP_PATH = "/v2/fundlimit"
 
-      attributes :availabel_balance, :sod_limit, :collateral_amount, :receiveable_amount, :utilized_amount,
+      attributes :available_balance, :sod_limit, :collateral_amount, :receiveable_amount, :utilized_amount,
                  :blocked_payout_amount, :withdrawable_balance
+
+      # The API currently returns the key `availabelBalance` (note the typo).
+      # To maintain backwards compatibility while exposing a correctly
+      # spelled attribute, map the API response to `available_balance`.
+      def assign_attributes
+        if @attributes.key?(:availabel_balance) && !@attributes.key?(:available_balance)
+          @attributes[:available_balance] = @attributes[:availabel_balance]
+        end
+        super
+      end
       class << self
         ##
         # Provides a **shared instance** of the `Funds` resource.
@@ -30,7 +40,7 @@ module DhanHQ
         #
         # @return [Float] Available balance in the trading account.
         def balance
-          fetch.availabel_balance
+          fetch.available_balance
         end
       end
     end
