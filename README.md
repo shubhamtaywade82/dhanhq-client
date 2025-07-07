@@ -40,8 +40,12 @@ Set your DhanHQ API credentials:
 DhanHQ.configure do |config|
   config.client_id = "your_client_id"
   config.access_token = "your_access_token"
+  # Optional: override the default API endpoint
+  config.base_url = "https://api.dhan.co/v2"
 end
 ```
+
+Use `config.base_url` to point the client at a different API URL (for example, a sandbox).
 
 Alternatively, set credentials from environment variables:
 
@@ -128,6 +132,12 @@ position.exit!
 
 ## 📌 Development
 
+Set `DHAN_DEBUG=true` to log HTTP requests during development:
+
+```bash
+export DHAN_DEBUG=true
+```
+
 Running Tests
 
 ```bash
@@ -149,14 +159,14 @@ bundle exec rake release
 ## 📌 Contributing
 
 Bug reports and pull requests are welcome on GitHub at:
-🔗 https://github.com/shubhamtaywade82/dhanhq
+🔗 <https://github.com/shubhamtaywade82/dhanhq>
 
 This project follows a code of conduct to maintain a safe and welcoming community.
 
 ## 📌 License
 
 This gem is available under the MIT License.
-🔗 https://opensource.org/licenses/MIT
+🔗 <https://opensource.org/licenses/MIT>
 
 ## 📌 Code of Conduct
 
