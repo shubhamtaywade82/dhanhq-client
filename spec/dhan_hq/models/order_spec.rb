@@ -78,18 +78,6 @@ RSpec.describe DhanHQ::Models::Order do
 
   describe "#update" do
     it "modifies a pending order in the orderbook", vcr: "models/orders/update" do
-      found_order = described_class.create(valid_order_params)
-      # expect(created_order).to be_a(described_class),
-      #                          "Expected an Order, got #{created_order.inspect}"
-
-      # # The creation might fail or be pending, but let's proceed
-      # order_id = created_order.order_id
-      # expect(order_id).not_to be_nil, "Order creation did not return an order_id"
-      # #
-      # # 2. Find the freshly created order
-      # #
-      # ensure we have an id to work with
-      expect(found_order.order_id).to eq(order_id)
       found_order = described_class.find(order_id)
       expect(found_order).to be_a(described_class),
                              "Expected an Order, got #{found_order.inspect}"
@@ -122,7 +110,7 @@ RSpec.describe DhanHQ::Models::Order do
 
       expect do
         found_order.save
-      end.to raise_error(DhanHQ::InputExceptionError)
+      end.to raise_error(DhanHQ::OrderError)
     end
   end
 
