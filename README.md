@@ -53,6 +53,20 @@ Alternatively, set credentials from environment variables:
 DhanHQ.configure_with_env
 ```
 
+`configure_with_env` expects the following environment variables:
+
+* `CLIENT_ID`
+* `ACCESS_TOKEN`
+
+Create a `.env` file in your project root to supply these values:
+
+```dotenv
+CLIENT_ID=your_client_id
+ACCESS_TOKEN=your_access_token
+```
+
+The gem requires `dotenv/load`, so these variables are loaded automatically when you require `dhanhq`.
+
 ## 🚀 Usage
 
 ✅ Placing an Order
@@ -113,6 +127,69 @@ puts pending_orders.first.order_id
 positions = DhanHQ::Position.all
 position = positions.first
 position.exit!
+```
+
+### Orders
+
+#### Place
+
+```ruby
+order = DhanHQ::Order.new(transaction_type: "BUY", security_id: "123", quantity: 1)
+order.save
+```
+
+#### Modify
+
+```ruby
+order.modify(price: 102.5)
+```
+
+#### Cancel
+
+```ruby
+order.cancel
+```
+
+### Trades
+
+```ruby
+DhanHQ::Trade.today
+DhanHQ::Trade.find_by_order_id("452501297117")
+```
+
+### Positions
+
+```ruby
+positions = DhanHQ::Position.all
+active = DhanHQ::Position.active
+DhanHQ::Position.convert(position_id: "1", product_type: "CNC")
+```
+
+### Holdings
+
+```ruby
+DhanHQ::Holding.all
+```
+
+### Funds
+
+```ruby
+DhanHQ::Funds.fetch
+balance = DhanHQ::Funds.balance
+```
+
+### Option Chain
+
+```ruby
+DhanHQ::OptionChain.fetch(security_id: "1333", expiry_date: "2024-06-30")
+DhanHQ::OptionChain.fetch_expiry_list(security_id: "1333")
+```
+
+### Historical Data
+
+```ruby
+DhanHQ::HistoricalData.daily(security_id: "1333", from_date: "2024-01-01", to_date: "2024-01-31")
+DhanHQ::HistoricalData.intraday(security_id: "1333", interval: "15")
 ```
 
 ## 🔹 Available Resources
