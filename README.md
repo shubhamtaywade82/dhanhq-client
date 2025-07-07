@@ -72,7 +72,7 @@ The gem requires `dotenv/load`, so these variables are loaded automatically when
 ✅ Placing an Order
 
 ```ruby
-order = DhanHQ::Order.new(
+order = DhanHQ::Models::Order.new(
   transaction_type: "BUY",
   exchange_segment: "NSE_FNO",
   product_type: "MARGIN",
@@ -90,7 +90,7 @@ puts order.persisted? # true
 ✅ Fetching an Order
 
 ```ruby
-order = DhanHQ::Order.find("452501297117")
+order = DhanHQ::Models::Order.find("452501297117")
 puts order.price # Current price of the order
 ```
 
@@ -110,21 +110,21 @@ order.cancel
 ✅ Fetching All Orders
 
 ```ruby
-orders = DhanHQ::Order.all
+orders = DhanHQ::Models::Order.all
 puts orders.count
 ```
 
 ✅ Querying Orders
 
 ```ruby
-pending_orders = DhanHQ::Order.where(status: "PENDING")
+pending_orders = DhanHQ::Models::Order.where(status: "PENDING")
 puts pending_orders.first.order_id
 ```
 
 ✅ Exiting Positions
 
 ```ruby
-positions = DhanHQ::Position.all
+positions = DhanHQ::Models::Position.all
 position = positions.first
 position.exit!
 ```
@@ -134,7 +134,7 @@ position.exit!
 #### Place
 
 ```ruby
-order = DhanHQ::Order.new(transaction_type: "BUY", security_id: "123", quantity: 1)
+order = DhanHQ::Models::Order.new(transaction_type: "BUY", security_id: "123", quantity: 1)
 order.save
 ```
 
@@ -153,59 +153,59 @@ order.cancel
 ### Trades
 
 ```ruby
-DhanHQ::Trade.today
-DhanHQ::Trade.find_by_order_id("452501297117")
+DhanHQ::Models::Trade.today
+DhanHQ::Models::Trade.find_by_order_id("452501297117")
 ```
 
 ### Positions
 
 ```ruby
-positions = DhanHQ::Position.all
-active = DhanHQ::Position.active
-DhanHQ::Position.convert(position_id: "1", product_type: "CNC")
+positions = DhanHQ::Models::Position.all
+active = DhanHQ::Models::Position.active
+DhanHQ::Models::Position.convert(position_id: "1", product_type: "CNC")
 ```
 
 ### Holdings
 
 ```ruby
-DhanHQ::Holding.all
+DhanHQ::Models::Holding.all
 ```
 
 ### Funds
 
 ```ruby
-DhanHQ::Funds.fetch
-balance = DhanHQ::Funds.balance
+DhanHQ::Models::Funds.fetch
+balance = DhanHQ::Models::Funds.balance
 ```
 
 ### Option Chain
 
 ```ruby
-DhanHQ::OptionChain.fetch(security_id: "1333", expiry_date: "2024-06-30")
-DhanHQ::OptionChain.fetch_expiry_list(security_id: "1333")
+DhanHQ::Models::OptionChain.fetch(security_id: "1333", expiry_date: "2024-06-30")
+DhanHQ::Models::OptionChain.fetch_expiry_list(security_id: "1333")
 ```
 
 ### Historical Data
 
 ```ruby
-DhanHQ::HistoricalData.daily(security_id: "1333", from_date: "2024-01-01", to_date: "2024-01-31")
-DhanHQ::HistoricalData.intraday(security_id: "1333", interval: "15")
+DhanHQ::Models::HistoricalData.daily(security_id: "1333", from_date: "2024-01-01", to_date: "2024-01-31")
+DhanHQ::Models::HistoricalData.intraday(security_id: "1333", interval: "15")
 ```
 
 ## 🔹 Available Resources
 
 | Resource                 | Model                            | Actions                                             |
 | ------------------------ | -------------------------------- | --------------------------------------------------- |
-| Orders                   | `DhanHQ::Models::Order`          | `find`, `all`, `where`, `place`, `update`, `cancel` |
-| Trades                   | `DhanHQ::Models::Trade`          | `all`, `find_by_order_id`                           |
-| Forever Orders           | `DhanHQ::Models::ForeverOrder`   | `create`, `find`, `modify`, `cancel`, `all`         |
-| Holdings                 | `DhanHQ::Models::Holding`        | `all`                                               |
-| Positions                | `DhanHQ::Models::Position`       | `all`, `find`, `exit!`                              |
-| Funds & Margin           | `DhanHQ::Models::Funds`          | `fund_limit`, `margin_calculator`                   |
-| Ledger                   | `DhanHQ::Models::Ledger`         | `all`                                               |
-| Market Feeds             | `DhanHQ::Models::MarketFeed`     | `ltp, ohlc`, `quote`                                |
-| Historical Data (Charts) | `DhanHQ::Models::HistoricalData` | `daily`, `intraday`                                 |
-| Option Chain             | `DhanHQ::Models::OptionChain`    | `fetch`, `fetch_expiry_list`                        |
+| Orders                   | `DhanHQ::Models::Models::Order`          | `find`, `all`, `where`, `place`, `update`, `cancel` |
+| Trades                   | `DhanHQ::Models::Models::Trade`          | `all`, `find_by_order_id`                           |
+| Forever Orders           | `DhanHQ::Models::Models::ForeverOrder`   | `create`, `find`, `modify`, `cancel`, `all`         |
+| Holdings                 | `DhanHQ::Models::Models::Holding`        | `all`                                               |
+| Positions                | `DhanHQ::Models::Models::Position`       | `all`, `find`, `exit!`                              |
+| Funds & Margin           | `DhanHQ::Models::Models::Funds`          | `fund_limit`, `margin_calculator`                   |
+| Ledger                   | `DhanHQ::Models::Models::Ledger`         | `all`                                               |
+| Market Feeds             | `DhanHQ::Models::Models::MarketFeed`     | `ltp, ohlc`, `quote`                                |
+| Historical Data (Charts) | `DhanHQ::Models::Models::HistoricalData` | `daily`, `intraday`                                 |
+| Option Chain             | `DhanHQ::Models::Models::OptionChain`    | `fetch`, `fetch_expiry_list`                        |
 
 ## 📌 Development
 
