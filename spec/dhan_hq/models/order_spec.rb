@@ -78,7 +78,7 @@ RSpec.describe DhanHQ::Models::Order do
 
   describe "#update" do
     it "modifies a pending order in the orderbook", vcr: "models/orders/update" do
-      # created_order = described_class.create(valid_order_params)
+      found_order = described_class.create(valid_order_params)
       # expect(created_order).to be_a(described_class),
       #                          "Expected an Order, got #{created_order.inspect}"
 
