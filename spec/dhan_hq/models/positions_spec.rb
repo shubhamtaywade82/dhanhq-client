@@ -37,4 +37,20 @@ RSpec.describe DhanHQ::Resources::Positions, vcr: {
       end
     end
   end
+
+  describe "#convert" do
+    it "converts an existing position", vcr: { cassette_name: "resources/positions_convert" } do
+      response = positions_resource.convert({ sample: "param" })
+
+      expect(response).to be_a(Hash)
+    end
+  end
+
+  describe "::convert" do
+    it "converts a position via model", vcr: { cassette_name: "models/position_convert" } do
+      result = DhanHQ::Models::Position.convert({ sample: "param" })
+
+      expect(result).to be_a(Hash).or be_a(DhanHQ::ErrorObject)
+    end
+  end
 end

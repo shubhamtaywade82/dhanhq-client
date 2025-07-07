@@ -13,6 +13,11 @@ module DhanHQ
       def all
         get("")
       end
+
+      # POST /v2/positions/convert
+      def convert(params)
+        post("/convert", params: params)
+      end
     end
   end
 end

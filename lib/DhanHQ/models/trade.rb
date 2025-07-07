@@ -22,8 +22,15 @@ module DhanHQ
         ##
         # Provide a **shared instance** of the `Statements` resource,
         # where we have `trade_history(from_date:, to_date:, page:)`.
+        # used for fetching historical trades.
         def resource
           @resource ||= DhanHQ::Resources::Statements.new
+        end
+
+        ##
+        # Resource for current day tradebook APIs
+        def tradebook_resource
+          @tradebook_resource ||= DhanHQ::Resources::Trades.new
         end
 
         ##
@@ -34,14 +41,32 @@ module DhanHQ
         # @param to_date   [String]
         # @param page      [Integer] Default 0
         # @return [Array<Trade>]
-        def all(from_date:, to_date:, page: 0)
+        # Retrieve historical trades
+        def history(from_date:, to_date:, page: 0)
           # The resource call returns an Array<Hash>.
           response = resource.trade_history(from_date: from_date, to_date: to_date, page: page)
           return [] unless response.is_a?(Array)
 
-          response.map do |t|
-            new(t, skip_validation: true)
-          end
+          response.map { |t| new(t, skip_validation: true) }
+        end
+
+        alias all history
+
+        # Retrieve current day trades
+        def today
+          response = tradebook_resource.all
+          return [] unless response.is_a?(Array)
+
+          response.map { |t| new(t, skip_validation: true) }
+        end
+
+        # Fetch trades for a specific order id for the current day
+        def find_by_order_id(order_id)
+          response = tradebook_resource.find(order_id)
+          return nil unless response.is_a?(Hash) || (response.is_a?(Array) && response.any?)
+
+          data = response.is_a?(Array) ? response.first : response
+          new(data, skip_validation: true)
         end
       end
 

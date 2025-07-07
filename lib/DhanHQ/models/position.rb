@@ -38,6 +38,14 @@ module DhanHQ
         def active
           all.reject { |position| position.position_type == "CLOSED" }
         end
+
+        # Convert an existing position (intraday <-> delivery)
+        # @param params [Hash] parameters as required by the API
+        # @return [Hash, DhanHQ::ErrorObject]
+        def convert(params)
+          response = resource.convert(params)
+          success_response?(response) ? response : DhanHQ::ErrorObject.new(response)
+        end
       end
     end
   end

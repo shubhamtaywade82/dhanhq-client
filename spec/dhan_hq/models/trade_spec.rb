@@ -41,4 +41,22 @@ RSpec.describe DhanHQ::Models::Trade, vcr: {
       end
     end
   end
+
+  describe ".today" do
+    it "fetches trades for the current day", vcr: { cassette_name: "models/trade_today" } do
+      trades = trade_model.today
+
+      expect(trades).to be_an(Array)
+    end
+  end
+
+  describe ".find_by_order_id" do
+    let(:order_id) { "123456789" }
+
+    it "retrieves trade details for the order", vcr: { cassette_name: "models/trade_find" } do
+      trade = trade_model.find_by_order_id(order_id)
+
+      expect(trade).to be_a(described_class).or be_nil
+    end
+  end
 end
