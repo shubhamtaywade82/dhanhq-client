@@ -15,6 +15,19 @@ module DhanHQ
       IDX_I
     ].freeze
 
+    INSTRUMENTS = %w[
+      INDEX
+      FUTIDX
+      OPTIDX
+      EQUITY
+      FUTSTK
+      OPTSTK
+      FUTCOM
+      OPTFUT
+      FUTCUR
+      OPTCUR
+    ].freeze
+
     PRODUCT_TYPES = %w[
       CNC
       INTRADAY

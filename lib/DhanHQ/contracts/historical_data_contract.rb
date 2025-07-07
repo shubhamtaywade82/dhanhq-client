@@ -3,11 +3,12 @@
 module DhanHQ
   module Contracts
     class HistoricalDataContract < Dry::Validation::Contract
+      include DhanHQ::Constants
       params do
         # Common required fields
         required(:security_id).filled(:string)
-        required(:exchange_segment).filled(:string, included_in?: %w[NSE_EQ NSE_FNO BSE_EQ])
-        required(:instrument).filled(:string, included_in?: %w[EQUITY FUTIDX OPTIDX])
+        required(:exchange_segment).filled(:string, included_in?: EXCHANGE_SEGMENTS)
+        required(:instrument).filled(:string, included_in?: INSTRUMENTS)
 
         # Date range required for both Daily & Intraday
         required(:from_date).filled(:string, format?: /\A\d{4}-\d{2}-\d{2}\z/)
