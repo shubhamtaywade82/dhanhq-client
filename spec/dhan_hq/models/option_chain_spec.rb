@@ -21,8 +21,8 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
     expect(response).to be_a(Hash)
     expect(response[:last_price]).to be > 0
 
-    # Ensure strike prices are integers
-    expect(response[:oc].keys).to all(be_a(Integer))
+    # Ensure strike prices retain their original format (strings)
+    expect(response[:oc].keys).to all(be_a(String))
 
     # Ensure only valid strikes with last_price > 0 are included
     response[:oc].each_value do |strike_data|
