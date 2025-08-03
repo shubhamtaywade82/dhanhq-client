@@ -36,10 +36,10 @@ module DhanHQ
 
         private
 
-        # **Filters valid strikes where `ce` or `pe` has `last_price > 0` and converts strike prices to integers**
+        # **Filters valid strikes where `ce` or `pe` has `last_price > 0` and keeps strike prices as-is**
         #
         # @param data [Hash] The API response data
-        # @return [Hash] The filtered option chain data with integer strike prices
+        # @return [Hash] The filtered option chain data with original strike price keys
         def filter_valid_strikes(data)
           return {} unless data.is_a?(Hash) && data.key?(:oc)
 
@@ -48,10 +48,7 @@ module DhanHQ
             pe_last_price = strike_data.dig("pe", "last_price").to_f
 
             # Only keep strikes where at least one of CE or PE has a valid last_price
-            if ce_last_price.positive? || pe_last_price.positive?
-              # Convert strike price to integer and store in result
-              result[strike_price.to_f.to_i] = strike_data
-            end
+            result[strike_price] = strike_data if ce_last_price.positive? || pe_last_price.positive?
           end
 
           data.merge(oc: filtered_oc)
