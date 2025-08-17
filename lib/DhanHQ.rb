@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "dotenv/load"
+require "logger"
 
 # Helper Methods
 require_relative "DhanHQ/helpers/api_helper"
@@ -56,6 +57,8 @@ require_relative "DhanHQ/models/trade"
 require_relative "DhanHQ/models/margin"
 
 require_relative "DhanHQ/constants"
+require_relative "DhanHQ/ws"
+require_relative "DhanHQ/ws/singleton_lock"
 
 # The top-level module for the DhanHQ client library.
 #
@@ -70,6 +73,8 @@ module DhanHQ
     # @return [DhanHQ::Configuration, nil] The current configuration or `nil` if not set.
     attr_accessor :configuration
 
+    attr_writer :logger
+
     # Configures the DhanHQ client with user-defined settings.
     #
     # @example
@@ -83,6 +88,12 @@ module DhanHQ
     def configure
       self.configuration ||= Configuration.new
       yield(configuration)
+      self.logger ||= Logger.new($stdout, level: Logger::INFO)
+    end
+
+    # default logger so calls like DhanHQ.logger&.info never explode
+    def logger
+      @logger ||= Logger.new($stdout, level: Logger::INFO)
     end
 
     # Configures the DhanHQ client with user-defined settings.

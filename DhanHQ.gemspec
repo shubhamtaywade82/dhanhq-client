@@ -37,9 +37,12 @@ Gem::Specification.new do |spec|
   spec.add_dependency "activesupport"
   spec.add_dependency "base64"
   spec.add_dependency "bindata"
+  spec.add_dependency "concurrent-ruby"
   spec.add_dependency "dry-validation"
+  spec.add_dependency "eventmachine"
   spec.add_dependency "faraday"
   spec.add_dependency "faraday_middleware"
+  spec.add_dependency "faye-websocket"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
