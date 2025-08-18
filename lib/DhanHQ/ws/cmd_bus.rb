@@ -14,7 +14,7 @@ module DhanHQ
 
       def drain
         out = []
-        out << @q.pop(true) while true
+        loop { out << @q.pop(true) }
       rescue ThreadError
         out
       end

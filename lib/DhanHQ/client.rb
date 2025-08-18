@@ -23,6 +23,7 @@ module DhanHQ
   class Client
     include DhanHQ::RequestHelper
     include DhanHQ::ResponseHelper
+
     # The Faraday connection object used for HTTP requests.
     #
     # @return [Faraday::Connection] The connection instance used for API requests.

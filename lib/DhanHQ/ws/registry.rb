@@ -4,12 +4,11 @@ require "concurrent"
 
 module DhanHQ
   module WS
-    module Registry
-      @clients = Concurrent::Array.new
-
+    class Registry
+      @clients = []
       class << self
         def register(client)
-          @clients << client
+          @clients << client unless @clients.include?(client)
         end
 
         def unregister(client)
@@ -17,18 +16,18 @@ module DhanHQ
         end
 
         def stop_all
-          @clients.each do |c|
+          @clients.dup.each do |c|
             c.stop
           rescue StandardError
-            nil
           end
           @clients.clear
         end
-
-        def list
-          @clients.dup
-        end
       end
+    end
+
+    # convenience API
+    def self.disconnect_all_local!
+      Registry.stop_all
     end
   end
 end

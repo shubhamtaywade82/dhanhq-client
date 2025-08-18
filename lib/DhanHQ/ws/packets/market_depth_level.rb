@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # lib/dhanhq/ws/packets/market_depth_level.rb
 require "bindata"
 module DhanHQ

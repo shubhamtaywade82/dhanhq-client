@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # lib/dhanhq/ws/packets/full_packet.rb
 require "bindata"
 require_relative "market_depth_level"

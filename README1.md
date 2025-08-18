@@ -1,74 +1,77 @@
-# DhanHQ — Ruby Client for DhanHQ API (v2)
+# DhanHQ - Ruby Client for DhanHQ API
 
-A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions, Holdings, etc.) **and** a robust **WebSocket market feed** (ticker/quote/full) built on EventMachine + Faye.
+DhanHQ is a **Ruby client** for interacting with **Dhan API v2.0**. It provides **ActiveRecord-like** behavior, **RESTful resource management**, and **ActiveModel validation** for seamless integration into **algorithmic trading applications**.
 
-* ActiveRecord-style models: `find`, `all`, `where`, `save`, `update`, `cancel`
-* Validations & errors exposed via ActiveModel-like interfaces
-* REST coverage: Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed
-* **WebSocket**: subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
+## ⚡ Features
+
+✅ **ORM-like Interface** (`find`, `all`, `where`, `save`, `update`, `destroy`)
+✅ **ActiveModel Integration** (`validations`, `errors`, `serialization`)
+✅ **Resource Objects for Trading** (`Orders`, `Positions`, `Holdings`, etc.)
+✅ **Supports WebSockets for Market Feeds**
+✅ **Error Handling & Validations** (`ActiveModel::Errors`)
+✅ **DRY & Modular Code** (`Helpers`, `Contracts`, `Request Handling`)
 
 ---
 
-## Installation
+## 📌 Installation
 
-Add to your Gemfile:
-
-```ruby
-gem "dhanhq"
-```
-
-Install:
+Add this line to your application's Gemfile:
 
 ```bash
+gem 'dhanhq'
+```
+
+Then execute:
+
+```
 bundle install
 ```
 
-Or:
+Or install it manually:
 
-```bash
+```
 gem install dhanhq
 ```
 
----
-
-## Configuration
-
-### Programmatic
+🔹 Configuration
+Set your DhanHQ API credentials:
 
 ```ruby
-require "dhanhq"
-
 DhanHQ.configure do |config|
-  config.client_id    = ENV["CLIENT_ID"]    # e.g. "1001234567"
-  config.access_token = ENV["ACCESS_TOKEN"] # e.g. "eyJhbGciOi..."
-  # Optional REST base
-  config.base_url     = "https://api.dhan.co/v2"
-  # Optional WS version (default: 2)
-  config.ws_version   = 2
+  config.client_id = "your_client_id"
+  config.access_token = "your_access_token"
+  # Optional: override the default API endpoint
+  config.base_url = "https://api.dhan.co/v2"
 end
 ```
 
-### From ENV / .env
+Use `config.base_url` to point the client at a different API URL (for example, a sandbox).
+
+Alternatively, set credentials from environment variables:
 
 ```ruby
 DhanHQ.configure_with_env
-# expects:
-#   CLIENT_ID=...
-#   ACCESS_TOKEN=...
 ```
 
-### Logging
+`configure_with_env` expects the following environment variables:
 
-```ruby
-DhanHQ.logger.level = Logger::INFO  # or DEBUG for verbose
+* `CLIENT_ID`
+* `ACCESS_TOKEN`
+
+Create a `.env` file in your project root to supply these values:
+
+```dotenv
+CLIENT_ID=your_client_id
+ACCESS_TOKEN=your_access_token
 ```
 
----
+The gem requires `dotenv/load`, so these variables are loaded automatically when you require `dhanhq`.
 
-## Quick Start (REST)
+## 🚀 Usage
+
+✅ Placing an Order
 
 ```ruby
-# Place an order
 order = DhanHQ::Models::Order.new(
   transaction_type: "BUY",
   exchange_segment: "NSE_FNO",
@@ -76,37 +79,159 @@ order = DhanHQ::Models::Order.new(
   order_type: "LIMIT",
   validity: "DAY",
   security_id: "43492",
-  quantity: 50,
+  quantity: 125,
   price: 100.0
 )
+
 order.save
-
-# Modify / Cancel
-order.modify(price: 101.5)
-order.cancel
-
-# Positions / Holdings
-positions = DhanHQ::Models::Position.all
-holdings  = DhanHQ::Models::Holding.all
-
-# Historical Data (Intraday)
-bars = DhanHQ::Models::HistoricalData.intraday(
-  security_id: "13",             # NIFTY index value
-  exchange_segment: "IDX_I",
-  instrument: "INDEX",
-  interval: "5",                 # minutes
-  from_date: "2025-08-14",
-  to_date: "2025-08-18"
-)
-
-# Option Chain (example)
-oc = DhanHQ::Models::OptionChain.fetch(
-  underlying_scrip: 1333,        # example underlying ID
-  underlying_seg: "NSE_FNO",
-  expiry: "2025-08-21"
-)
+puts order.persisted? # true
 ```
 
+✅ Fetching an Order
+
+```ruby
+order = DhanHQ::Models::Order.find("452501297117")
+puts order.price # Current price of the order
+```
+
+✅ Updating an Order
+
+```ruby
+order.update(price: 105.0)
+puts order.price # 105.0
+```
+
+✅ Canceling an Order
+
+```ruby
+order.cancel
+```
+
+✅ Fetching All Orders
+
+```ruby
+orders = DhanHQ::Models::Order.all
+puts orders.count
+```
+
+✅ Querying Orders
+
+```ruby
+pending_orders = DhanHQ::Models::Order.where(status: "PENDING")
+puts pending_orders.first.order_id
+```
+
+✅ Exiting Positions
+
+```ruby
+positions = DhanHQ::Models::Position.all
+position = positions.first
+position.exit!
+```
+
+### Orders
+
+#### Place
+
+```ruby
+order = DhanHQ::Models::Order.new(transaction_type: "BUY", security_id: "123", quantity: 1)
+order.save
+```
+
+#### Modify
+
+```ruby
+order.modify(price: 102.5)
+```
+
+#### Cancel
+
+```ruby
+order.cancel
+```
+
+### Trades
+
+```ruby
+DhanHQ::Models::Trade.today
+DhanHQ::Models::Trade.find_by_order_id("452501297117")
+```
+
+### Positions
+
+```ruby
+positions = DhanHQ::Models::Position.all
+active = DhanHQ::Models::Position.active
+DhanHQ::Models::Position.convert(position_id: "1", product_type: "CNC")
+```
+
+### Holdings
+
+```ruby
+DhanHQ::Models::Holding.all
+```
+
+### Funds
+
+```ruby
+DhanHQ::Models::Funds.fetch
+balance = DhanHQ::Models::Funds.balance
+```
+
+### Option Chain
+
+```ruby
+DhanHQ::Models::OptionChain.fetch(security_id: "1333", expiry_date: "2024-06-30")
+DhanHQ::Models::OptionChain.fetch_expiry_list(security_id: "1333")
+```
+
+### Historical Data
+
+```ruby
+DhanHQ::Models::HistoricalData.daily(security_id: "1333", from_date: "2024-01-01", to_date: "2024-01-31")
+DhanHQ::Models::HistoricalData.intraday(security_id: "1333", interval: "15")
+```
+
+## 🔹 Available Resources
+
+| Resource                 | Model                            | Actions                                             |
+| ------------------------ | -------------------------------- | --------------------------------------------------- |
+| Orders                   | `DhanHQ::Models::Models::Order`          | `find`, `all`, `where`, `place`, `update`, `cancel` |
+| Trades                   | `DhanHQ::Models::Models::Trade`          | `all`, `find_by_order_id`                           |
+| Forever Orders           | `DhanHQ::Models::Models::ForeverOrder`   | `create`, `find`, `modify`, `cancel`, `all`         |
+| Holdings                 | `DhanHQ::Models::Models::Holding`        | `all`                                               |
+| Positions                | `DhanHQ::Models::Models::Position`       | `all`, `find`, `exit!`                              |
+| Funds & Margin           | `DhanHQ::Models::Models::Funds`          | `fund_limit`, `margin_calculator`                   |
+| Ledger                   | `DhanHQ::Models::Models::Ledger`         | `all`                                               |
+| Market Feeds             | `DhanHQ::Models::Models::MarketFeed`     | `ltp, ohlc`, `quote`                                |
+| Historical Data (Charts) | `DhanHQ::Models::Models::HistoricalData` | `daily`, `intraday`                                 |
+| Option Chain             | `DhanHQ::Models::Models::OptionChain`    | `fetch`, `fetch_expiry_list`                        |
+
+## 📌 Development
+
+Set `DHAN_DEBUG=true` to log HTTP requests during development:
+
+```bash
+export DHAN_DEBUG=true
+```
+
+Running Tests
+
+```bash
+bundle exec rspec
+```
+
+Installing Locally
+
+```bash
+bundle exec rake install
+```
+
+Releasing a New Version
+
+```bash
+bundle exec rake release
+```
 ---
 
 ## WebSocket Market Feed (NEW)
@@ -365,12 +490,24 @@ DhanHQ::Models::SuperOrder.modify(
 
 ---
 
-## Contributing
 
-PRs welcome! Please include tests for new packet decoders and WS behaviors (chunking, reconnect, cool-off).
+## 📌 Contributing
 
----
+Bug reports and pull requests are welcome on GitHub at:
+🔗 <https://github.com/shubhamtaywade82/dhanhq>
 
-## License
+This project follows a code of conduct to maintain a safe and welcoming community.
 
-MIT.
+## 📌 License
+
+This gem is available under the MIT License.
+🔗 <https://opensource.org/licenses/MIT>
+
+## 📌 Code of Conduct
+
+Everyone interacting in the DhanHQ project is expected to follow the
+🔗 Code of Conduct.
+
+```markdown
+This **README.md** file is structured and formatted for **GitHub** or any **Markdown-compatible** documentation system. 🚀
+```

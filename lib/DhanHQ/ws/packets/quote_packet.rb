@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # lib/dhanhq/ws/packets/quote_packet.rb
 require "bindata"
 module DhanHQ

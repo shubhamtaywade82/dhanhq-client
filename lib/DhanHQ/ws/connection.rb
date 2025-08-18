@@ -13,34 +13,54 @@ module DhanHQ
       COOL_OFF_429 = 60  # seconds to cool off on 429
       MAX_BACKOFF  = 90  # cap exponential backoff
 
+      attr_reader :stopping
+
       def initialize(url:, mode:, bus:, state:, &on_binary)
         @url = url
         @mode = mode
         @bus = bus
         @state = state
         @on_binary = on_binary
-        @stop   = false
+        @stop = false
+        @stopping = false
         @ws     = nil
         @timer  = nil
         @cooloff_until = nil
+        @thr = nil
       end
 
       def start
-        Thread.new { loop_run }
+        return self if @thr&.alive?
+
+        @thr = Thread.new { loop_run }
+        self
+      end
+
+      # Hard stop: no graceful packet, just close and never reconnect
+      def stop
+        @stop = true
+        @stopping = true
+        if @ws
+          begin
+            @ws.close
+          rescue StandardError
+          end
+        end
         self
       end
 
       # Public API: explicit disconnect (send RequestCode 12) and close socket
+      # Graceful broker disconnect (RequestCode 12), then no reconnect
       def disconnect!
-        send_disconnect
-        @ws&.close
-      rescue StandardError => e
-        DhanHQ.logger&.warn("[DhanHQ::WS] disconnect! failed #{e.class}: #{e.message}")
-      end
-
-      def stop
         @stop = true
-        disconnect!
+        @stopping = true
+        begin
+          send_disconnect
+        rescue StandardError
+        ensure
+          @ws&.close
+        end
+        self
       end
 
       # Is underlying socket open?
@@ -51,16 +71,6 @@ module DhanHQ
       end
 
       private
-
-      def send_disconnect
-        return unless @ws
-
-        payload = { RequestCode: 12 } # per Dhan: Disconnect Feed
-        DhanHQ.logger&.info("[DhanHQ::WS] DISCONNECT -> #{payload}")
-        @ws.send(payload.to_json)
-      rescue StandardError => e
-        DhanHQ.logger&.debug("[DhanHQ::WS] send_disconnect error #{e.class}: #{e.message}")
-      end
 
       def loop_run
         backoff = 2.0
@@ -91,12 +101,18 @@ module DhanHQ
               end
 
               @ws.on :close do |ev|
-                # handshake failure -> Faye reports 1002 with text mentioning 429
+                # If we initiated stop/disconnect, DO NOT reconnect regardless of code.
+                EM.cancel_timer(@timer) if @timer
+                @timer = nil
                 msg = "[DhanHQ::WS] close #{ev.code} #{ev.reason}"
                 DhanHQ.logger&.warn(msg)
-                failed = (ev.code != 1000)
-                got_429 = ev.reason.to_s.include?("429") # rubocop:disable Naming/VariableNumber
-                EM.cancel_timer(@timer) if @timer
+
+                if @stopping
+                  failed = false
+                else
+                  failed  = (ev.code != 1000)
+                  got_429 = ev.reason.to_s.include?("429")
+                end
                 EM.stop
               end
 
@@ -177,6 +193,16 @@ module DhanHQ
           DhanHQ.logger&.info("[DhanHQ::WS] UNSUB -> -#{chunk.size} (total=#{list.size})")
           @ws.send(payload.to_json)
         end
+      end
+
+      def send_disconnect
+        return unless @ws
+
+        payload = { RequestCode: 12 } # per Dhan: Disconnect Feed
+        DhanHQ.logger&.info("[DhanHQ::WS] DISCONNECT -> #{payload}")
+        @ws.send(payload.to_json)
+      rescue StandardError => e
+        DhanHQ.logger&.debug("[DhanHQ::WS] send_disconnect error #{e.class}: #{e.message}")
       end
 
       def flatten(a) = a.flatten

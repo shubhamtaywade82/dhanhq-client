@@ -4,6 +4,7 @@ module DhanHQ
   module Contracts
     class HistoricalDataContract < Dry::Validation::Contract
       include DhanHQ::Constants
+
       params do
         # Common required fields
         required(:security_id).filled(:string)

@@ -33,9 +33,9 @@ module DhanHQ
           tick = Decoder.decode(binary)
           emit(:tick, tick) if tick
         end
-        @conn.start
         Registry.register(self)
-        self.class.install_at_exit_hook!
+        install_at_exit_once!
+        @conn.start
         self
       end
 
@@ -46,16 +46,17 @@ module DhanHQ
         @conn&.stop
         Registry.unregister(self)
         emit(:close, true)
+        self
       end
 
       # Manual “disconnect feed now” (sends RequestCode 12)
       def disconnect!
-        @conn&.disconnect!
-      end
+        return self unless @started.true?
 
-      # events: :tick, :open, :close, :error
-      def on(event, &blk)
-        @callbacks[event] << blk
+        @started.make_false
+        @conn&.disconnect!
+        Registry.unregister(self)
+        emit(:close, true)
         self
       end
 
@@ -102,7 +103,15 @@ module DhanHQ
         end
       end
 
+      # events: :tick, :open, :close, :error
+      def on(event, &blk)
+        @callbacks[event] << blk
+        self
+      end
+
       private
+
+      def prune(h) = { ExchangeSegment: h[:ExchangeSegment], SecurityId: h[:SecurityId] }
 
       def emit(event, payload)
         begin
@@ -112,7 +121,12 @@ module DhanHQ
         end.each { |cb| cb.call(payload) }
       end
 
-      def prune(h) = { ExchangeSegment: h[:ExchangeSegment], SecurityId: h[:SecurityId] }
+      def install_at_exit_once!
+        return if defined?(@at_exit_installed) && @at_exit_installed
+
+        @at_exit_installed = true
+        at_exit { Registry.stop_all }
+      end
     end
   end
 end

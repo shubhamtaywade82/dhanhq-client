@@ -18,7 +18,7 @@ module DhanHQ
         segstr = Segments.from_code(pkt[:exchange_segment])
         sid    = pkt[:security_id].to_s
 
-        pp pkt
+        # pp pkt
         case kind
         when :ticker
           {
