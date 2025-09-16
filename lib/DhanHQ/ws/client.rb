@@ -60,6 +60,12 @@ module DhanHQ
         self
       end
 
+      def connected?
+        return false unless @started.true?
+
+        @conn&.open? || false
+      end
+
       # subscriptions (accept either one or an array)
       def subscribe_one(segment:, security_id:)
         norm = Segments.normalize_instrument(ExchangeSegment: segment, SecurityId: security_id)
