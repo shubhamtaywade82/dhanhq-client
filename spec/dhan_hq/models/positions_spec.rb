@@ -38,9 +38,21 @@ RSpec.describe DhanHQ::Resources::Positions, vcr: {
     end
   end
 
+  let(:conversion_params) do
+    {
+      dhan_client_id: "1100003626",
+      from_product_type: "INTRADAY",
+      exchange_segment: "NSE_EQ",
+      position_type: "LONG",
+      security_id: "1333",
+      convert_qty: 1,
+      to_product_type: "CNC"
+    }
+  end
+
   describe "#convert" do
     it "converts an existing position", vcr: { cassette_name: "resources/positions_convert" } do
-      response = positions_resource.convert({ sample: "param" })
+      response = positions_resource.convert(conversion_params)
 
       expect(response).to be_a(Hash)
     end
@@ -48,7 +60,7 @@ RSpec.describe DhanHQ::Resources::Positions, vcr: {
 
   describe "::convert" do
     it "converts a position via model", vcr: { cassette_name: "models/position_convert" } do
-      result = DhanHQ::Models::Position.convert({ sample: "param" })
+      result = DhanHQ::Models::Position.convert(conversion_params)
 
       expect(result).to be_a(Hash).or be_a(DhanHQ::ErrorObject)
     end

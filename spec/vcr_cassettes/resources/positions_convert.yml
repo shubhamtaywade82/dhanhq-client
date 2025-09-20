@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/positions/convert
     body:
       encoding: UTF-8
-      string: '{"sample":"param"}'
+      string: '{"dhanClientId":"1100003626","fromProductType":"INTRADAY","exchangeSegment":"NSE_EQ","positionType":"LONG","securityId":"1333","convertQty":1,"toProductType":"CNC"}'
     headers:
       User-Agent:
       - Faraday v1.10.4

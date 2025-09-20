@@ -43,7 +43,10 @@ module DhanHQ
         # @param params [Hash] parameters as required by the API
         # @return [Hash, DhanHQ::ErrorObject]
         def convert(params)
-          response = resource.convert(params)
+          formatted_params = camelize_keys(params)
+          validate_params!(formatted_params, DhanHQ::Contracts::PositionConversionContract)
+
+          response = resource.convert(formatted_params)
           success_response?(response) ? response : DhanHQ::ErrorObject.new(response)
         end
       end
