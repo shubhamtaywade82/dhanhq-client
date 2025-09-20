@@ -1,0 +1,37 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://api.dhan.co/v2/profile
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v1.10.4
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 200
+      message: ''
+    headers:
+      Date:
+      - Sat, 15 Mar 2025 10:36:51 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+    body:
+      encoding: UTF-8
+      string: '{"dhanClientId":"1100003626","tokenValidity":"30/03/2025 15:37","activeSegment":"Equity, Derivative, Currency, Commodity","ddpi":"Active","mtf":"Active","dataPlan":"Active","dataValidity":"2024-12-05 09:37:52.0"}'
+  recorded_at: Sat, 15 Mar 2025 10:36:51 GMT
+recorded_with: VCR 6.3.1

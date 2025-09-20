@@ -7,3 +7,8 @@
 - [x] Make `BaseModel#save!` raise a real exception type (e.g. `DhanHQ::Error`) to avoid the current `TypeError` (`lib/DhanHQ/core/base_model.rb:165`).
 - [x] Strip read-only attributes before posting modify requests to pass API validation (`lib/DhanHQ/models/order.rb:166`, `lib/DhanHQ/core/base_model.rb:197`).
 - [x] Require `fileutils` in the WebSocket singleton lock so acquiring the lock no longer raises (`lib/DhanHQ/ws/singleton_lock.rb:11`).
+- [ ] Implement EDIS and kill-switch endpoints surfaced in the OpenAPI spec so the client can call `/edis/bulkform`, `/edis/form`, `/edis/inquire/{isin}`, `/edis/tpin`, and `/killswitch` (`/home/nemesis/dhanhq-bundled.json:827`, `/home/nemesis/dhanhq-bundled.json:873`, `/home/nemesis/dhanhq-bundled.json:949`).
+- [ ] Correct `ForeverOrders#all` to hit `/v2/forever/orders` instead of the undocumented `/v2/forever/all` path (`lib/DhanHQ/resources/forever_orders.rb:9`, `/home/nemesis/dhanhq-bundled.json:578`).
+- [ ] Run the existing `MarginCalculatorContract` before posting to `/margincalculator` so required fields like `transactionType` and `productType` are enforced client-side (`lib/DhanHQ/models/margin.rb:23`, `lib/DhanHQ/contracts/margin_calculator_contract.rb:5`).
+- [ ] Validate slice-order payloads with `SliceOrderContract` to uphold STOP_LOSS requirements before calling `/orders/slicing` (`lib/DhanHQ/models/order.rb:217`, `lib/DhanHQ/contracts/slice_order_contract.rb:30`, `/home/nemesis/dhanhq-bundled.json:234`).
+- [ ] Add a contract-backed validation for `Position.convert` so `PositionConversionRequest` fields like `fromProductType` and `convertQty` are checked prior to hitting `/positions/convert` (`lib/DhanHQ/models/position.rb:39`, `/home/nemesis/dhanhq-bundled.json:1391`).
