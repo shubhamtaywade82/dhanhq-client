@@ -165,6 +165,16 @@ RSpec.describe DhanHQ::BaseModel do
     end
   end
 
+  describe "#save!" do
+    it "raises DhanHQ::Error when persistence fails" do
+      resource = described_class.new(valid_attributes)
+      error_object = DhanHQ::ErrorObject.new({ errorCode: "DH-999", errorMessage: "failed" })
+      allow(resource).to receive(:save).and_return(error_object)
+
+      expect { resource.save! }.to raise_error(DhanHQ::Error, /failed/)
+    end
+  end
+
   describe "#to_request_params" do
     it "converts snake_case keys to camelCase" do
       resource = described_class.new(valid_attributes)

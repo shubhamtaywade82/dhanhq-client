@@ -101,7 +101,7 @@ module DhanHQ
       #
       # @return [Array<DhanHQ::BaseModel>, DhanHQ::ErrorObject] An array of resources or error object
       def all
-        response = resource.get(resource_path)
+        response = resource.get("")
 
         parse_collection_response(response)
       end
@@ -111,15 +111,15 @@ module DhanHQ
       # @param id [String] The ID of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def find(id)
-        response = resource.get("#{resource_path}/#{id}")
+        response = resource.get("/#{id}")
 
         payload = response.is_a?(Array) ? response.first : response
         build_from_response(payload)
       end
 
       def where(params)
-        response = resource.get(resource_path, params)
-        self.class.build_from_response(response)
+        response = resource.get("", params: params)
+        build_from_response(response)
       end
 
       # Create a new resource
@@ -129,7 +129,7 @@ module DhanHQ
       def create(attributes)
         # validate_params!(attributes, validation_contract)
 
-        response = resource.post(resource_path, params: attributes)
+        response = resource.post("", params: attributes)
         build_from_response(response)
       end
 
@@ -153,7 +153,7 @@ module DhanHQ
     # @param attributes [Hash] Attributes to update
     # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
     def update(attributes = {})
-      response = self.class.resource.put("#{self.class.resource_path}/#{id}", params: attributes)
+      response = self.class.resource.put("/#{id}", params: attributes)
 
       success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
     end
@@ -163,21 +163,33 @@ module DhanHQ
     end
 
     def save!
-      raise DhanHQ::ErrorObject, "Failed to save the record" unless save
+      result = save
+      return result unless result == false || result.nil? || result.is_a?(DhanHQ::ErrorObject)
+
+      error_details =
+        if result.is_a?(DhanHQ::ErrorObject)
+          result.errors
+        elsif @errors && !@errors.empty?
+          @errors
+        else
+          "Unknown error"
+        end
+
+      raise DhanHQ::Error, "Failed to save the record: #{error_details}"
     end
 
     # Delete the resource
     #
     # @return [Boolean] True if deletion was successful
     def delete
-      response = self.class.resource.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.resource.delete("/#{id}")
       success_response?(response)
     rescue StandardError
       false
     end
 
     def destroy
-      response = self.class.resource.delete("#{self.class.resource_path}/#{id}")
+      response = self.class.resource.delete("/#{id}")
       success_response?(response)
     rescue StandardError
       false

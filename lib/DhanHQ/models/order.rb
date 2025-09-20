@@ -6,6 +6,18 @@ require_relative "../contracts/modify_order_contract"
 module DhanHQ
   module Models
     class Order < BaseModel
+      MODIFIABLE_FIELDS = %i[
+        dhan_client_id
+        order_id
+        order_type
+        quantity
+        price
+        trigger_price
+        disclosed_quantity
+        validity
+        leg_name
+      ].freeze
+
       attr_reader :order_id, :order_status
 
       # Define attributes that are part of an order
@@ -68,9 +80,10 @@ module DhanHQ
         # @param params [Hash] Order parameters
         # @return [Order]
         def place(params)
-          validate_params!(params, DhanHQ::Contracts::PlaceOrderContract)
+          normalized_params = snake_case(params)
+          validate_params!(normalized_params, DhanHQ::Contracts::PlaceOrderContract)
 
-          response = resource.place_order(params)
+          response = resource.create(camelize_keys(normalized_params))
           return nil unless response.is_a?(Hash) && response["orderId"]
 
           # Fetch the complete order details
@@ -99,18 +112,27 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
 
-        # Merge current order attributes with new parameters
-        updated_params = attributes.merge(new_params)
+        base_payload = attributes.merge(new_params)
+        normalized_payload = snake_case(base_payload).merge(order_id: id)
+        filtered_payload = normalized_payload.each_with_object({}) do |(key, value), memo|
+          symbolized_key = key.respond_to?(:to_sym) ? key.to_sym : key
+          memo[symbolized_key] = value if MODIFIABLE_FIELDS.include?(symbolized_key)
+        end
+        filtered_payload[:order_id] ||= id
+        filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id]
 
-        # Validate with ModifyOrderContract
-        validate_params!(updated_params, DhanHQ::Contracts::ModifyOrderContract)
+        cleaned_payload = filtered_payload.compact
+        formatted_payload = camelize_keys(cleaned_payload)
+        validate_params!(formatted_payload, DhanHQ::Contracts::ModifyOrderContract)
 
-        # response = self.class.api.put("#{self.class.resource_path}/#{id}", params: attributes)
-        update(attributes)
-        # Fetch the latest order details
-        return self.class.find(id) if response[:orderStatus] == "TRANSIT"
+        response = self.class.resource.update(id, formatted_payload)
+        response = response.with_indifferent_access if response.respond_to?(:with_indifferent_access)
 
-        nil
+        return DhanHQ::ErrorObject.new(response) unless success_response?(response)
+
+        @attributes.merge!(normalize_keys(response))
+        assign_attributes
+        self
       end
 
       # Cancel the order
@@ -119,7 +141,7 @@ module DhanHQ
       def cancel
         raise "Order ID is required to cancel an order" unless id
 
-        response = self.class.resource.cancel_order(id)
+        response = self.class.resource.cancel(id)
         response["orderStatus"] == "CANCELLED"
       end
 

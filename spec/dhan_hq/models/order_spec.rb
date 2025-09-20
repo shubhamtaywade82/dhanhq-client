@@ -66,6 +66,47 @@ RSpec.describe DhanHQ::Models::Order do
   #   end
   # end
 
+  describe ".place" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
+    let(:place_params) do
+      {
+        transaction_type: "BUY",
+        exchange_segment: "NSE_EQ",
+        product_type: "CNC",
+        order_type: "MARKET",
+        validity: "DAY",
+        security_id: "1333",
+        quantity: 1
+      }
+    end
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(resource_double).to receive(:find).with("OID123")
+                                              .and_return({ "orderId" => "OID123", "orderStatus" => "PENDING" })
+    end
+
+    it "validates, formats payload and delegates to resource create" do
+      expect(resource_double).to receive(:create).with(
+        hash_including(
+          "transactionType" => "BUY",
+          "exchangeSegment" => "NSE_EQ",
+          "productType" => "CNC",
+          "orderType" => "MARKET",
+          "validity" => "DAY",
+          "securityId" => "1333",
+          "quantity" => 1
+        )
+      ).and_return({ "orderId" => "OID123" })
+
+      order = described_class.place(place_params)
+
+      expect(order).to be_a(described_class)
+      expect(order.order_id).to eq("OID123")
+      expect(order.order_status).to eq("PENDING")
+    end
+  end
+
   describe ".find" do
     it "retrieves an order by ID", vcr: "models/orders/order" do
       order = order_model.find(order_id)
@@ -137,4 +178,59 @@ RSpec.describe DhanHQ::Models::Order do
   #     expect(response).to be_truthy
   #   end
   # end
+
+  describe "#cancel" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
+    let(:order) { described_class.new({ orderId: "OID123" }, skip_validation: true) }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "delegates to resource.cancel and returns true on success" do
+      expect(resource_double).to receive(:cancel).with("OID123")
+                                                .and_return({ "orderStatus" => "CANCELLED" })
+
+      expect(order.cancel).to be(true)
+    end
+  end
+
+  describe "#modify" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
+    let(:order) do
+      described_class.new(
+        {
+          orderId: "OID123",
+          dhanClientId: "CID",
+          quantity: 5,
+          orderStatus: "PENDING",
+          createTime: "2025-01-01T00:00:00"
+        },
+        skip_validation: true
+      )
+    end
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "validates payload, delegates to resource update and refreshes attributes" do
+      expect(resource_double).to receive(:update) do |id, payload|
+        expect(id).to eq("OID123")
+        expect(payload).to include(
+          "orderId" => "OID123",
+          "dhanClientId" => "CID",
+          "quantity" => 10
+        )
+        expect(payload).not_to have_key("orderStatus")
+        expect(payload).not_to have_key("createTime")
+        { "status" => "success", "orderId" => "OID123", "quantity" => 10 }
+      end
+
+      result = order.modify(quantity: 10)
+
+      expect(result).to be(order)
+      expect(order.quantity).to eq(10)
+    end
+  end
 end

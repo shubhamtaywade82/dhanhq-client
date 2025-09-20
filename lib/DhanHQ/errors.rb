@@ -33,6 +33,8 @@ module DhanHQ
   # Server and network-related errors
   # DH-908, 800
   class InternalServerError < Error; end
+  # DH-1111
+  class NoHoldingsError < Error; end
   # DH-909
   class NetworkError < Error; end
   # DH-910

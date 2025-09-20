@@ -26,6 +26,8 @@ module DhanHQ
           return [] unless response.is_a?(Array)
 
           response.map { |holding| new(holding, skip_validation: true) }
+        rescue DhanHQ::NoHoldingsError
+          []
         end
       end
 

@@ -42,6 +42,7 @@ module DhanHQ
 
       error_code = body[:errorCode] || response.status.to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
+      error_message = "No holdings found for this account. Add holdings or wait for them to settle before retrying." if error_code == "DH-1111"
 
       error_class = DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code]
 
@@ -56,7 +57,14 @@ module DhanHQ
         else DhanHQ::OtherError
         end
 
-      raise error_class, "#{error_code}: #{error_message}"
+      error_text =
+        if error_code == "DH-1111"
+          "#{error_message} (error code: #{error_code})"
+        else
+          "#{error_code}: #{error_message}"
+        end
+
+      raise error_class, error_text
     end
 
     # Parses JSON response safely. Converts response body to a hash or array with indifferent access.

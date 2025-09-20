@@ -122,6 +122,7 @@ module DhanHQ
       "DH-906" => DhanHQ::OrderError,
       "DH-907" => DhanHQ::DataError,
       "DH-908" => DhanHQ::InternalServerError,
+      "DH-1111" => DhanHQ::NoHoldingsError,
       "DH-909" => DhanHQ::NetworkError,
       "DH-910" => DhanHQ::OtherError,
       "800" => DhanHQ::InternalServerError,

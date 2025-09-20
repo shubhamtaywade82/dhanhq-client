@@ -1,137 +1,128 @@
 # DhanHQ Client API Guide
 
-This comprehensive guide provides detailed information about each model and their required parameters for making API requests without errors.
+Use this guide as the companion to the official Dhan API v2 documentation. It maps the public DhanHQ Ruby client classes to the REST and WebSocket endpoints, highlights the validations enforced by the gem, and shows how to compose end-to-end flows without tripping over common pitfalls.
 
 ## Table of Contents
 
-1. [Order Management Models](#order-management-models)
-   - [Order Model](#order-model)
-   - [Place Order Contract](#place-order-contract)
-   - [Modify Order Contract](#modify-order-contract)
-   - [Slice Order Contract](#slice-order-contract)
-2. [Data Models](#data-models)
-   - [Historical Data Model](#historical-data-model)
-   - [Option Chain Model](#option-chain-model)
-   - [Margin Calculator Model](#margin-calculator-model)
-3. [Constants and Enums](#constants-and-enums)
-4. [Validation Rules](#validation-rules)
-5. [Error Handling](#error-handling)
+1. [Getting Started](#getting-started)
+2. [Working With Models](#working-with-models)
+3. [Orders](#orders)
+4. [Super & Forever Orders](#super--forever-orders)
+5. [Portfolio & Funds](#portfolio--funds)
+6. [Trade & Ledger Data](#trade--ledger-data)
+7. [Data & Market Services](#data--market-services)
+8. [Constants & Enums](#constants--enums)
+9. [Error Handling](#error-handling)
+10. [Best Practices](#best-practices)
 
 ---
 
-## Order Management Models
+## Getting Started
 
-### Order Model
+```ruby
+# Gemfile
+gem "dhanhq"
+```
 
-The `Order` model represents trading orders in the DhanHQ system.
+```bash
+bundle install
+```
 
-#### Available Methods
+Configure the client (directly or via ENV variables):
 
-- `Order.all` - Fetch all orders for the day
-- `Order.find(order_id)` - Fetch a specific order by ID
-- `Order.find_by_correlation(correlation_id)` - Fetch order by correlation ID
-- `Order.place(params)` - Place a new order
-- `Order.create(params)` - Create and save a new order
+```ruby
+require "dhanhq"
 
-#### Instance Methods
+DhanHQ.configure do |config|
+  config.client_id    = ENV.fetch("CLIENT_ID")
+  config.access_token = ENV.fetch("ACCESS_TOKEN")
+  config.base_url     = "https://api.dhan.co/v2"   # optional override
+  config.ws_version   = 2                           # optional, defaults to 2
+end
 
-- `order.modify(new_params)` - Modify an existing order
-- `order.cancel` - Cancel the order
-- `order.refresh` - Fetch latest order details
-- `order.save` - Save the order
-- `order.destroy` - Cancel the order
+DhanHQ.logger.level = Logger::INFO  # switch to DEBUG while integrating
+```
+
+Or, bootstrap from environment variables:
+
+```ruby
+# expects CLIENT_ID and ACCESS_TOKEN to be present
+DhanHQ.configure_with_env
+```
 
 ---
 
-### Place Order Contract
+## Working With Models
 
-Used for placing new orders. Validates all required parameters before order placement.
+All models inherit from `DhanHQ::BaseModel` and expose a consistent API:
 
-#### Required Parameters
+- **Class helpers**: `.all`, `.find`, `.create`, and, where available, `.where`, `.history`, `.today`
+- **Instance helpers**: `#save`, `#modify`, `#cancel`, `#refresh`, `#destroy`
+- **Validation**: the gem wraps Dry::Validation contracts. Validation errors raise `DhanHQ::Error`.
+- **Parameter naming**:
+  - Ruby-facing APIs (e.g. `Order.place`, `Order#modify`) accept snake_case keys and symbols. The client handles camelCase conversion before hitting the REST API.
+  - Lower-level helpers that proxy the REST API (e.g. `Margin.calculate`, `MarketFeed.ltp`) expect exactly what the HTTP endpoint receives—stick to the casing from the official documentation when you call them directly.
+- **Responses**: model constructors normalise keys to snake_case and expose attribute reader methods. Raw API hashes are wrapped in `HashWithIndifferentAccess` for easy lookup.
 
-| Parameter          | Type    | Description         | Validation                                                                                           |
-| ------------------ | ------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `transaction_type` | String  | BUY or SELL         | Must be one of: `BUY`, `SELL`                                                                        |
-| `exchange_segment` | String  | Exchange segment    | Must be one of: `NSE_EQ`, `NSE_FNO`, `NSE_CURRENCY`, `BSE_EQ`, `BSE_FNO`, `BSE_CURRENCY`, `MCX_COMM` |
-| `product_type`     | String  | Product type        | Must be one of: `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO`                                       |
-| `order_type`       | String  | Order type          | Must be one of: `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET`                                   |
-| `validity`         | String  | Order validity      | Must be one of: `DAY`, `IOC`                                                                         |
-| `security_id`      | String  | Security identifier | Required string                                                                                      |
-| `quantity`         | Integer | Order quantity      | Must be greater than 0                                                                               |
+---
 
-#### Optional Parameters
+## Orders
 
-| Parameter            | Type    | Description                   | Validation                                                                               |
-| -------------------- | ------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `correlation_id`     | String  | Tracking identifier           | Max 25 characters                                                                        |
-| `disclosed_quantity` | Integer | Disclosed quantity            | Must be >= 0, cannot exceed 30% of total quantity                                        |
-| `trading_symbol`     | String  | Trading symbol                | Optional string                                                                          |
-| `price`              | Float   | Order price                   | Must be > 0, **Required for LIMIT orders**                                               |
-| `trigger_price`      | Float   | Trigger price                 | Must be > 0, **Required for STOP_LOSS orders**                                           |
-| `after_market_order` | Boolean | After market order flag       | Optional boolean                                                                         |
-| `amo_time`           | String  | AMO timing                    | Must be one of: `OPEN`, `OPEN_30`, `OPEN_60`, **Required if after_market_order is true** |
-| `bo_profit_value`    | Float   | Bracket order profit value    | Must be > 0, **Required for BO product type**                                            |
-| `bo_stop_loss_value` | Float   | Bracket order stop loss value | Must be > 0, **Required for BO product type**                                            |
-| `drv_expiry_date`    | String  | Derivative expiry date        | Optional string                                                                          |
-| `drv_option_type`    | String  | Option type                   | Must be one of: `CALL`, `PUT`, `NA`                                                      |
-| `drv_strike_price`   | Float   | Strike price                  | Must be > 0                                                                              |
-
-#### Example Usage
+### Available Methods
 
 ```ruby
-# Basic LIMIT order
-order_params = {
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "CNC",
-  order_type: "LIMIT",
-  validity: "DAY",
-  security_id: "1333",
-  quantity: 10,
-  price: 150.0
-}
-
-order = DhanHQ::Models::Order.place(order_params)
+order = DhanHQ::Models::Order.place(payload)    # validate + POST + fetch order details
+order = DhanHQ::Models::Order.create(payload)   # build + #save (AR-style)
+orders = DhanHQ::Models::Order.all              # current-day order book
+order  = DhanHQ::Models::Order.find(order_id)
+order  = DhanHQ::Models::Order.find_by_correlation(correlation_id)
 ```
 
-```ruby
-# STOP_LOSS order
-stop_loss_params = {
-  transaction_type: "SELL",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
-  order_type: "STOP_LOSS",
-  validity: "DAY",
-  security_id: "1333",
-  quantity: 10,
-  price: 140.0,
-  trigger_price: 145.0
-}
+Instance workflow:
 
-order = DhanHQ::Models::Order.place(stop_loss_params)
+```ruby
+order = DhanHQ::Models::Order.new(params)
+order.save              # place or modify depending on presence of order_id
+order.modify(price: 101.5)
+order.cancel
+order.refresh
 ```
 
-```ruby
-# Bracket Order (BO)
-bracket_order_params = {
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "BO",
-  order_type: "LIMIT",
-  validity: "DAY",
-  security_id: "1333",
-  quantity: 10,
-  price: 150.0,
-  bo_profit_value: 160.0,
-  bo_stop_loss_value: 140.0
-}
+### Placement Payload (Order.place / Order#create / Order#save)
 
-order = DhanHQ::Models::Order.place(bracket_order_params)
-```
+Required fields validated by `DhanHQ::Contracts::PlaceOrderContract`:
+
+| Key               | Type    | Allowed Values / Notes |
+| ----------------- | ------- | ---------------------- |
+| `transaction_type`| String  | `BUY`, `SELL` |
+| `exchange_segment`| String  | Use `DhanHQ::Constants::EXCHANGE_SEGMENTS` |
+| `product_type`    | String  | `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO` |
+| `order_type`      | String  | `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET` |
+| `validity`        | String  | `DAY`, `IOC` |
+| `security_id`     | String  | Security identifier from the scrip master |
+| `quantity`        | Integer | Must be > 0 |
+
+Optional fields and special rules:
+
+| Key                   | Type    | Notes |
+| --------------------- | ------- | ----- |
+| `correlation_id`      | String  | ≤ 25 chars; useful for idempotency |
+| `disclosed_quantity`  | Integer | ≥ 0 and ≤ 30% of `quantity` |
+| `trading_symbol`      | String  | Optional label |
+| `price`               | Float   | Mandatory for `LIMIT` |
+| `trigger_price`       | Float   | Mandatory for SL / SLM |
+| `after_market_order`  | Boolean | Require `amo_time` when true |
+| `amo_time`            | String  | `OPEN`, `OPEN_30`, `OPEN_60` (check `DhanHQ::Constants::AMO_TIMINGS` for updates) |
+| `bo_profit_value`     | Float   | Required with `product_type: "BO"` |
+| `bo_stop_loss_value`  | Float   | Required with `product_type: "BO"` |
+| `drv_expiry_date`     | String  | Pass ISO `YYYY-MM-DD` for derivatives |
+| `drv_option_type`     | String  | `CALL`, `PUT`, `NA` |
+| `drv_strike_price`    | Float   | > 0 |
+
+Example:
 
 ```ruby
-# After Market Order (AMO)
-amo_params = {
+payload = {
   transaction_type: "BUY",
   exchange_segment: "NSE_EQ",
   product_type: "CNC",
@@ -140,80 +131,42 @@ amo_params = {
   security_id: "1333",
   quantity: 10,
   price: 150.0,
-  after_market_order: true,
-  amo_time: "OPEN"
+  correlation_id: "hs20240910-01"
 }
 
-order = DhanHQ::Models::Order.place(amo_params)
+order = DhanHQ::Models::Order.place(payload)
+puts order.order_status  # => "TRADED" / "PENDING" / ...
 ```
 
----
+### Modification & Cancellation
 
-### Modify Order Contract
+`Order#modify` merges the existing attributes with the supplied overrides and validates against `ModifyOrderContract`.
 
-Used for modifying existing orders. Requires order ID and at least one field to modify.
-
-#### Required Parameters
-
-| Parameter      | Type   | Description        | Validation      |
-| -------------- | ------ | ------------------ | --------------- |
-| `dhanClientId` | String | Client ID          | Required string |
-| `orderId`      | String | Order ID to modify | Required string |
-
-#### Optional Parameters (At least one required)
-
-| Parameter           | Type    | Description            | Validation                                                         |
-| ------------------- | ------- | ---------------------- | ------------------------------------------------------------------ |
-| `orderType`         | String  | New order type         | Must be one of: `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET` |
-| `quantity`          | Integer | New quantity           | Must be > 0                                                        |
-| `price`             | Float   | New price              | Must be > 0                                                        |
-| `triggerPrice`      | Float   | New trigger price      | Must be > 0                                                        |
-| `disclosedQuantity` | Integer | New disclosed quantity | Must be >= 0                                                       |
-| `validity`          | String  | New validity           | Must be one of: `DAY`, `IOC`                                       |
-
-#### Example Usage
+- Required: the instance must have an `order_id` and `dhan_client_id`.
+- At least one of `order_type`, `quantity`, `price`, `trigger_price`, `disclosed_quantity`, `validity` must change.
+- Payload is camelised automatically before hitting `/v2/orders/{orderId}`.
 
 ```ruby
-# Modify order quantity and price
-modify_params = {
-  dhanClientId: "123456",
-  orderId: "ORDER123",
-  quantity: 20,
-  price: 155.0
-}
-
-# Using the Order model
-order = DhanHQ::Models::Order.find("ORDER123")
-modified_order = order.modify(modify_params)
+order.modify(price: 154.2, trigger_price: 149.5)
+order.cancel
 ```
 
----
-
-### Slice Order Contract
-
-Used for slicing orders into multiple parts. Similar to Place Order but with additional validity options.
-
-#### Required Parameters
-
-| Parameter         | Type    | Description         | Validation                                                                                           |
-| ----------------- | ------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `transactionType` | String  | BUY or SELL         | Must be one of: `BUY`, `SELL`                                                                        |
-| `exchangeSegment` | String  | Exchange segment    | Must be one of: `NSE_EQ`, `NSE_FNO`, `NSE_CURRENCY`, `BSE_EQ`, `BSE_FNO`, `BSE_CURRENCY`, `MCX_COMM` |
-| `productType`     | String  | Product type        | Must be one of: `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO`                                       |
-| `orderType`       | String  | Order type          | Must be one of: `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET`                                   |
-| `validity`        | String  | Order validity      | Must be one of: `DAY`, `IOC`, `GTC`, `GTD`                                                           |
-| `securityId`      | String  | Security identifier | Required string                                                                                      |
-| `quantity`        | Integer | Order quantity      | Must be greater than 0                                                                               |
-
-#### Optional Parameters
-
-Same as Place Order Contract, with additional validity options (`GTC`, `GTD`).
-
-#### Example Usage
+For raw updates (e.g. background jobs) you can call the resource directly:
 
 ```ruby
-# Slice order with GTC validity
-slice_params = {
+params = DhanHQ::Models::Order.camelize_keys(order_id: "123", price: 100.0)
+DhanHQ::Contracts::ModifyOrderContract.new.call(params).success?
+DhanHQ::Models::Order.resource.update("123", params)
+```
+
+### Slicing Orders
+
+Use the same fields as placement, but the contract allows additional validity options (`GTC`, `GTD`). Build the payload in API casing before calling the resource helper.
+
+```ruby
+slice_payload = {
+  orderId: order.order_id,
+  dhanClientId: order.dhan_client_id,
   transactionType: "BUY",
   exchangeSegment: "NSE_EQ",
   productType: "CNC",
@@ -224,144 +177,185 @@ slice_params = {
   price: 150.0
 }
 
-# Using the Order model
-order = DhanHQ::Models::Order.find("ORDER123")
-sliced_order = order.slice_order(slice_params)
+DhanHQ::Contracts::SliceOrderContract.new.call(slice_payload).success?
+DhanHQ::Models::Order.resource.slicing(slice_payload)
 ```
+
+The instance helper `order.slice_order(slice_payload)` forwards the hash as-is—ensure you provide camelCase keys when you use it.
 
 ---
 
-## Data Models
+## Super & Forever Orders
 
-### Historical Data Model
+### Super Orders
 
-Fetches historical market data for instruments.
-
-#### Methods
-
-- `HistoricalData.daily(params)` - Fetch daily historical data
-- `HistoricalData.intraday(params)` - Fetch intraday historical data
-
-#### Required Parameters
-
-| Parameter          | Type   | Description         | Validation                                                                                                        |
-| ------------------ | ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `security_id`      | String | Security identifier | Required string                                                                                                   |
-| `exchange_segment` | String | Exchange segment    | Must be one of: `NSE_EQ`, `NSE_FNO`, `NSE_CURRENCY`, `BSE_EQ`, `BSE_FNO`, `BSE_CURRENCY`, `MCX_COMM`, `IDX_I`     |
-| `instrument`       | String | Instrument type     | Must be one of: `INDEX`, `FUTIDX`, `OPTIDX`, `EQUITY`, `FUTSTK`, `OPTSTK`, `FUTCOM`, `OPTFUT`, `FUTCUR`, `OPTCUR` |
-| `from_date`        | String | Start date          | Format: `YYYY-MM-DD`                                                                                              |
-| `to_date`          | String | End date            | Format: `YYYY-MM-DD`                                                                                              |
-
-#### Optional Parameters
-
-| Parameter     | Type    | Description                 | Validation                                 |
-| ------------- | ------- | --------------------------- | ------------------------------------------ |
-| `expiry_code` | Integer | Expiry code for derivatives | Must be one of: `0`, `1`, `2`              |
-| `interval`    | String  | Time interval for intraday  | Must be one of: `1`, `5`, `15`, `25`, `60` |
-
-#### Example Usage
+`DhanHQ::Models::SuperOrder` wraps `/v2/super/orders`.
 
 ```ruby
-# Daily historical data
-daily_params = {
-  security_id: "1333",
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
-  from_date: "2024-01-01",
-  to_date: "2024-01-31"
+legs = {
+  transactionType: "BUY",
+  exchangeSegment: "NSE_FNO",
+  productType: "CO",
+  orderType: "LIMIT",
+  validity: "DAY",
+  securityId: "43492",
+  quantity: 50,
+  price: 100.0,
+  stopLossPrice: 95.0,
+  targetPrice: 110.0
 }
 
-daily_data = DhanHQ::Models::HistoricalData.daily(daily_params)
-# Returns: { open: [...], high: [...], low: [...], close: [...], volume: [...], timestamp: [...] }
+super_order = DhanHQ::Models::SuperOrder.create(legs)
+super_order.modify(trailingJump: 2.5)
+super_order.cancel("ENTRY_LEG")
 ```
+
+### Forever Orders (GTT)
+
+`DhanHQ::Models::ForeverOrder` maps to `/v2/forever/orders`.
 
 ```ruby
-# Intraday historical data
-intraday_params = {
-  security_id: "1333",
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
-  interval: "15",
-  from_date: "2024-01-15",
-  to_date: "2024-01-15"
+params = {
+  dhanClientId: "123456",
+  transactionType: "SELL",
+  exchangeSegment: "NSE_EQ",
+  productType: "CNC",
+  orderType: "LIMIT",
+  validity: "DAY",
+  securityId: "1333",
+  price: 200.0,
+  triggerPrice: 198.0
 }
 
-intraday_data = DhanHQ::Models::HistoricalData.intraday(intraday_params)
+forever_order = DhanHQ::Models::ForeverOrder.create(params)
+forever_order.modify(price: 205.0)
+forever_order.cancel
 ```
+
+The forever order APIs work with camelCase keys—mirror the REST contracts when assembling payloads.
 
 ---
 
-### Option Chain Model
+## Portfolio & Funds
 
-Fetches option chain data and expiry lists for derivatives.
-
-#### Methods
-
-- `OptionChain.fetch(params)` - Fetch option chain data
-- `OptionChain.fetch_expiry_list(params)` - Fetch expiry list
-
-#### Required Parameters
-
-| Parameter          | Type    | Description               | Validation                                              |
-| ------------------ | ------- | ------------------------- | ------------------------------------------------------- |
-| `underlying_scrip` | Integer | Security ID of underlying | Required integer                                        |
-| `underlying_seg`   | String  | Underlying segment        | Must be one of: `IDX_I`, `NSE_FNO`, `BSE_FNO`, `MCX_FO` |
-| `expiry`           | String  | Expiry date               | Format: `YYYY-MM-DD`, must be valid date                |
-
-#### Example Usage
+### Positions
 
 ```ruby
-# Fetch option chain
-option_params = {
+positions = DhanHQ::Models::Position.all     # includes closed legs
+open_positions = DhanHQ::Models::Position.active
+```
+
+Convert an intraday position to delivery (or vice versa):
+
+```ruby
+convert_payload = {
+  dhanClientId: "123456",
+  securityId: "1333",
+  fromProductType: "INTRADAY",
+  toProductType: "CNC",
+  quantity: 10
+}
+
+response = DhanHQ::Models::Position.convert(convert_payload)
+raise response.errors.to_s if response.is_a?(DhanHQ::ErrorObject)
+```
+
+### Holdings
+
+```ruby
+holdings = DhanHQ::Models::Holding.all
+holdings.first.avg_cost_price
+```
+
+### Funds
+
+```ruby
+funds = DhanHQ::Models::Funds.fetch
+puts funds.available_balance
+
+balance = DhanHQ::Models::Funds.balance
+```
+
+API quirk: the REST response currently returns `availabelBalance`. The model maps it automatically to `available_balance`.
+
+---
+
+## Trade & Ledger Data
+
+### Trades
+
+```ruby
+# Historical trades
+history = DhanHQ::Models::Trade.history(from_date: "2024-01-01", to_date: "2024-01-31", page: 0)
+
+# Current day trade book
+trade_book = DhanHQ::Models::Trade.today
+
+# Trade details for a specific order (today)
+trade = DhanHQ::Models::Trade.find_by_order_id("ORDER123")
+```
+
+### Ledger Entries
+
+```ruby
+ledger = DhanHQ::Models::LedgerEntry.all(from_date: "2024-04-01", to_date: "2024-04-30")
+ledger.each { |entry| puts "#{entry.voucherdate} #{entry.narration} #{entry.runbal}" }
+```
+
+Both endpoints return arrays and skip validation because they represent historical data dumps.
+
+---
+
+## Data & Market Services
+
+### Historical Data
+
+`DhanHQ::Models::HistoricalData` enforces `HistoricalDataContract` before delegating to `/v2/charts`.
+
+| Key                | Type   | Notes |
+| ------------------ | ------ | ----- |
+| `security_id`      | String | Required |
+| `exchange_segment` | String | See `EXCHANGE_SEGMENTS` |
+| `instrument`       | String | Use `DhanHQ::Constants::INSTRUMENTS` |
+| `from_date`        | String | `YYYY-MM-DD` |
+| `to_date`          | String | `YYYY-MM-DD` |
+| `expiry_code`      | Integer| Optional (`0`, `1`, `2`) |
+| `interval`         | String | Optional (`1`, `5`, `15`, `25`, `60`) for intraday |
+
+```ruby
+bars = DhanHQ::Models::HistoricalData.intraday(
+  security_id: "13",
+  exchange_segment: "IDX_I",
+  instrument: "INDEX",
+  interval: "5",
+  from_date: "2024-08-14",
+  to_date: "2024-08-14"
+)
+```
+
+### Option Chain
+
+```ruby
+chain = DhanHQ::Models::OptionChain.fetch(
   underlying_scrip: 1333,
   underlying_seg: "NSE_FNO",
-  expiry: "2024-02-29"
-}
+  expiry: "2024-12-26"
+)
 
-option_chain = DhanHQ::Models::OptionChain.fetch(option_params)
-# Returns filtered option chain with valid strikes
-```
-
-```ruby
-# Fetch expiry list
-expiry_params = {
+expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
   underlying_scrip: 1333,
   underlying_seg: "NSE_FNO"
-}
-
-expiry_list = DhanHQ::Models::OptionChain.fetch_expiry_list(expiry_params)
-# Returns array of expiry dates
+)
 ```
 
----
+The model filters strikes where both CE and PE have zero `last_price`, keeping the payload compact.
 
-### Margin Calculator Model
+### Margin Calculator
 
-Calculates margin requirements for orders.
-
-#### Required Parameters
-
-| Parameter         | Type    | Description         | Validation                                                     |
-| ----------------- | ------- | ------------------- | -------------------------------------------------------------- |
-| `dhanClientId`    | String  | Client ID           | Required string                                                |
-| `exchangeSegment` | String  | Exchange segment    | Must be one of: `NSE_EQ`, `NSE_FNO`, `BSE_EQ`                  |
-| `transactionType` | String  | Transaction type    | Must be one of: `BUY`, `SELL`                                  |
-| `quantity`        | Integer | Order quantity      | Must be greater than 0                                         |
-| `productType`     | String  | Product type        | Must be one of: `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO` |
-| `securityId`      | String  | Security identifier | Required string                                                |
-| `price`           | Float   | Order price         | Must be greater than 0                                         |
-
-#### Optional Parameters
-
-| Parameter      | Type  | Description   | Validation     |
-| -------------- | ----- | ------------- | -------------- |
-| `triggerPrice` | Float | Trigger price | Optional float |
-
-#### Example Usage
+`DhanHQ::Models::Margin.calculate` proxies `/v2/margincalculator` without transforming keys. Mirror the REST casing:
 
 ```ruby
-# Calculate margin for a trade
-margin_params = {
+params = {
   dhanClientId: "123456",
   exchangeSegment: "NSE_EQ",
   transactionType: "BUY",
@@ -371,131 +365,98 @@ margin_params = {
   price: 150.0
 }
 
-margin_info = DhanHQ::Models::Margin.calculate(margin_params)
+margin = DhanHQ::Models::Margin.calculate(params)
+puts margin.total_margin
 ```
 
----
+### REST Market Feed (Batch LTP/OHLC/Quote)
 
-## Constants and Enums
+```ruby
+payload = {
+  "NSE_EQ" => [11536, 3456],
+  "NSE_FNO" => [49081, 49082]
+}
 
-### Transaction Types
-- `BUY` - Buy transaction
-- `SELL` - Sell transaction
+ltp   = DhanHQ::Models::MarketFeed.ltp(payload)
+ohlc  = DhanHQ::Models::MarketFeed.ohlc(payload)
+quote = DhanHQ::Models::MarketFeed.quote(payload)
+```
 
-### Exchange Segments
-- `NSE_EQ` - NSE Equity
-- `NSE_FNO` - NSE F&O
-- `NSE_CURRENCY` - NSE Currency
-- `BSE_EQ` - BSE Equity
-- `BSE_FNO` - BSE F&O
-- `BSE_CURRENCY` - BSE Currency
-- `MCX_COMM` - MCX Commodity
-- `IDX_I` - Index
+These endpoints are rate-limited by Dhan. The client’s internal `RateLimiter` throttles calls—consider batching symbols sensibly.
 
-### Product Types
-- `CNC` - Cash and Carry
-- `INTRADAY` - Intraday
-- `MARGIN` - Margin
-- `MTF` - Margin Trading Facility
-- `CO` - Cover Order
-- `BO` - Bracket Order
+### WebSocket Market Feed
 
-### Order Types
-- `LIMIT` - Limit Order
-- `MARKET` - Market Order
-- `STOP_LOSS` - Stop Loss Order
-- `STOP_LOSS_MARKET` - Stop Loss Market Order
+The gem provides a resilient EventMachine + Faye wrapper. Minimal setup:
 
-### Validity Types
-- `DAY` - Day validity
-- `IOC` - Immediate or Cancel
-- `GTC` - Good Till Cancelled (for slice orders)
-- `GTD` - Good Till Date (for slice orders)
+```ruby
+DhanHQ.configure_with_env
+ws = DhanHQ::WS::Client.new(mode: :quote).start
 
-### Instruments
-- `INDEX` - Index
-- `FUTIDX` - Future Index
-- `OPTIDX` - Option Index
-- `EQUITY` - Equity
-- `FUTSTK` - Future Stock
-- `OPTSTK` - Option Stock
-- `FUTCOM` - Future Commodity
-- `OPTFUT` - Option Future
-- `FUTCUR` - Future Currency
-- `OPTCUR` - Option Currency
+ws.on(:tick) do |tick|
+  puts "[#{tick[:segment]} #{tick[:security_id]}] LTP=#{tick[:ltp]} kind=#{tick[:kind]}"
+end
+
+ws.subscribe_one(segment: "IDX_I", security_id: "13")
+ws.unsubscribe_one(segment: "IDX_I", security_id: "13")
+
+ws.disconnect!
+```
+
+Modes: `:ticker`, `:quote`, `:full`. The client handles reconnects, 429 cool-offs, and idempotent subscriptions.
 
 ---
 
-## Validation Rules
+## Constants & Enums
 
-### Conditional Requirements
+Use `DhanHQ::Constants` for canonical values:
 
-1. **Price Field**: Required for `LIMIT` orders
-2. **Trigger Price**: Required for `STOP_LOSS` and `STOP_LOSS_MARKET` orders
-3. **AMO Time**: Required when `after_market_order` is `true`
-4. **Bracket Order Fields**: Both `bo_profit_value` and `bo_stop_loss_value` are required for `BO` product type
-5. **Disclosed Quantity**: Cannot exceed 30% of total quantity
-6. **Modify Order**: At least one field must be provided for modification
+- `TRANSACTION_TYPES`
+- `EXCHANGE_SEGMENTS`
+- `PRODUCT_TYPES`
+- `ORDER_TYPES`
+- `VALIDITY_TYPES`
+- `AMO_TIMINGS`
+- `INSTRUMENTS`
+- `ORDER_STATUSES`
+- CSV URLs: `COMPACT_CSV_URL`, `DETAILED_CSV_URL`
+- `DHAN_ERROR_MAPPING` for mapping broker error codes to Ruby exceptions
 
-### Format Requirements
+Example:
 
-1. **Dates**: Must be in `YYYY-MM-DD` format
-2. **Correlation ID**: Maximum 25 characters
-3. **Numeric Values**: Must be positive where specified
-4. **Expiry Dates**: Must be valid dates
+```ruby
+validity = DhanHQ::Constants::VALIDITY_TYPES # => ["DAY", "IOC"]
+```
 
 ---
 
 ## Error Handling
 
-The DhanHQ client includes comprehensive error handling with specific error types:
+The client normalises broker error payloads and raises specific subclasses of `DhanHQ::Error` (see `lib/DhanHQ/errors.rb`). Key mappings:
 
-### Error Types
+- `InvalidAuthenticationError` → `DH-901`
+- `InvalidAccessError` → `DH-902`
+- `UserAccountError` → `DH-903`
+- `RateLimitError` → `DH-904`, HTTP 429/805
+- `InputExceptionError` → `DH-905`
+- `OrderError` → `DH-906`
+- `DataError` → `DH-907`
+- `InternalServerError` → `DH-908`, `800`
+- `NetworkError` → `DH-909`
+- `OtherError` → `DH-910`
+- `InvalidTokenError`, `InvalidClientIDError`, `InvalidRequestError` for the remaining broker error codes (`807`–`814`)
 
-- `InvalidAuthenticationError` (DH-901)
-- `InvalidAccessError` (DH-902)
-- `UserAccountError` (DH-903)
-- `RateLimitError` (DH-904)
-- `InputExceptionError` (DH-905)
-- `OrderError` (DH-906)
-- `DataError` (DH-907)
-- `InternalServerError` (DH-908)
-- `NetworkError` (DH-909)
-- `OtherError` (DH-910)
-
-### Common Error Codes
-
-- `800` - Internal Server Error
-- `804` - Too many instruments
-- `805` - Too many requests (Rate Limit)
-- `806` - Data API not subscribed
-- `807` - Token expired
-- `808` - Authentication failed
-- `809` - Invalid token
-- `810` - Invalid Client ID
-- `811` - Invalid expiry date
-- `812` - Invalid date format
-- `813` - Invalid security ID
-- `814` - Invalid request
-
-### Error Handling Example
+Handle errors explicitly while placing orders:
 
 ```ruby
 begin
-  order = DhanHQ::Models::Order.place(order_params)
-  if order
-    puts "Order placed successfully: #{order.order_id}"
-  else
-    puts "Failed to place order"
-  end
+  order = DhanHQ::Models::Order.place(payload)
+  puts "Order status: #{order.order_status}"
 rescue DhanHQ::InvalidAuthenticationError => e
-  puts "Authentication failed: #{e.message}"
+  warn "Auth failed: #{e.message}"
 rescue DhanHQ::OrderError => e
-  puts "Order error: #{e.message}"
+  warn "Order rejected: #{e.message}"
 rescue DhanHQ::RateLimitError => e
-  puts "Rate limit exceeded: #{e.message}"
-rescue => e
-  puts "Unexpected error: #{e.message}"
+  warn "Slow down: #{e.message}"
 end
 ```
 
@@ -503,15 +464,14 @@ end
 
 ## Best Practices
 
-1. **Always validate parameters** before making API calls
-2. **Handle errors gracefully** with appropriate error types
-3. **Use correlation IDs** for tracking orders
-4. **Check order status** after placement/modification
-5. **Respect rate limits** to avoid throttling
-6. **Use appropriate product types** based on your trading strategy
-7. **Validate dates** before making historical data requests
-8. **Check margin requirements** before placing large orders
+1. Validate payloads locally (`DhanHQ::Contracts::*`) before hitting the API in batch scripts.
+2. Use `correlation_id` to make order placement idempotent across retries.
+3. Call `Order#refresh` or `Order.find` after placement when you depend on derived fields like `average_traded_price` or `filled_qty`.
+4. Respect the built-in rate limiter; space out historical data and market feed calls to avoid `DH-904`/805 errors.
+5. Keep enum values in sync by referencing `DhanHQ::Constants`; avoid hardcoding strings in application code.
+6. Capture and persist broker error codes—they are mapped to Ruby error classes but still valuable for support tickets.
+7. For WebSocket feeds, subscribe in frames ≤ 100 instruments and handle reconnect callbacks to resubscribe cleanly.
 
 ---
 
-This guide provides comprehensive information about all available models and their parameters. Always refer to the official DhanHQ API documentation for the most up-to-date information and additional details.
+Always cross-check with https://dhanhq.co/docs/v2/ for endpoint-specific nuances. The Ruby client aims to mirror those contracts while adding guard rails and idiomatic ergonomics.
