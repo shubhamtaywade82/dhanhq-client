@@ -6,7 +6,8 @@ module DhanHQ
   class RateLimiter
     RATE_LIMITS = {
       order_api: { per_second: 25, per_minute: 250, per_hour: 1000, per_day: 7000 },
-      data_api: { per_second: 10, per_minute: 1000, per_hour: 5000, per_day: 10_000 },
+      data_api: { per_second: 5, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      quote_api: { per_second: 1, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: Float::INFINITY },
       option_chain: { per_second: 1.0 / 3, per_minute: 20, per_hour: 600, per_day: 4800 },
       non_trading_api: { per_second: 20, per_minute: Float::INFINITY, per_hour: Float::INFINITY,
                          per_day: Float::INFINITY }

@@ -64,12 +64,13 @@ RSpec.describe DhanHQ::RateLimiter do
 
   describe "#record_request" do
     it "increments all rate limit counters" do
-      expect { rate_limiter.send(:record_request) }.to change {
-        [
-          rate_limiter.instance_variable_get(:@buckets)[:per_second].value,
-          rate_limiter.instance_variable_get(:@buckets)[:per_minute].value
-        ]
-      }.by([1, 1])
+      rate_limiter.send(:record_request)
+
+      buckets = rate_limiter.instance_variable_get(:@buckets)
+      expect(buckets[:per_second].value).to eq(1)
+      expect(buckets[:per_minute].value).to eq(1)
+      expect(buckets[:per_hour].value).to eq(1)
+      expect(buckets[:per_day].value).to eq(1)
     end
   end
 
@@ -115,6 +116,105 @@ RSpec.describe DhanHQ::RateLimiter do
       rate_limiter.instance_variable_get(:@buckets)[:per_day].value = 0
 
       expect(rate_limiter.send(:allow_request?)).to be true
+    end
+  end
+
+  describe "configured limits" do
+    context "when api type is order_api" do
+      it "enforces documented thresholds" do
+        buckets = rate_limiter.instance_variable_get(:@buckets)
+
+        buckets[:per_second].value = 25
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_second].value = 0
+        buckets[:per_minute].value = 250
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_minute].value = 0
+        buckets[:per_hour].value = 1000
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_hour].value = 0
+        buckets[:per_day].value = 7000
+        expect(rate_limiter.send(:allow_request?)).to be false
+      end
+    end
+
+    context "when api type is data_api" do
+      let(:api_type) { :data_api }
+
+      it "allows unlimited minute/hour traffic but caps per_second and per_day" do
+        buckets = rate_limiter.instance_variable_get(:@buckets)
+
+        buckets[:per_second].value = 5
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_second].value = 0
+        buckets[:per_minute].value = 10_000
+        buckets[:per_hour].value = 50_000
+        expect(rate_limiter.send(:allow_request?)).to be true
+
+        buckets[:per_minute].value = 0
+        buckets[:per_hour].value = 0
+        buckets[:per_day].value = 100_000
+        expect(rate_limiter.send(:allow_request?)).to be false
+      end
+    end
+
+    context "when api type is quote_api" do
+      let(:api_type) { :quote_api }
+
+      it "enforces the 1 request per second window" do
+        buckets = rate_limiter.instance_variable_get(:@buckets)
+
+        expect(rate_limiter.send(:allow_request?)).to be true
+        buckets[:per_second].value = 1
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        # Unlimited buckets should not block requests
+        buckets[:per_second].value = 0
+        buckets[:per_minute].value = 1_000
+        buckets[:per_hour].value = 1_000
+        buckets[:per_day].value = 1_000
+        expect(rate_limiter.send(:allow_request?)).to be true
+      end
+    end
+
+    context "when api type is non_trading_api" do
+      let(:api_type) { :non_trading_api }
+
+      it "allows 20 per second with no other caps" do
+        buckets = rate_limiter.instance_variable_get(:@buckets)
+
+        buckets[:per_second].value = 20
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_second].value = 0
+        buckets[:per_minute].value = 1_000
+        buckets[:per_hour].value = 10_000
+        buckets[:per_day].value = 100_000
+        expect(rate_limiter.send(:allow_request?)).to be true
+      end
+    end
+
+    context "when api type is option_chain" do
+      let(:api_type) { :option_chain }
+
+      it "sleeps to respect the 4 second spacing" do
+        allow(rate_limiter).to receive(:sleep)
+
+        Timecop.freeze
+        rate_limiter.throttle! # first call should not sleep
+
+        Timecop.travel(1) # second request only 1 second later
+        expect(rate_limiter).to receive(:sleep) do |duration|
+          expect(duration).to be_within(0.1).of(3.0)
+        end
+        rate_limiter.throttle!
+      ensure
+        Timecop.return
+      end
     end
   end
 end

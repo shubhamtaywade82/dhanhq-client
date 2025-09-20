@@ -37,7 +37,13 @@ module DhanHQ
       # @param params [Hash]
       # @return [HashWithIndifferentAccess]
       def quote(params)
-        post("/marketfeed/quote", params: params)
+        quote_resource.post("/marketfeed/quote", params: params)
+      end
+
+      private
+
+      def quote_resource
+        @quote_resource ||= self.class.new(api_type: :quote_api)
       end
     end
   end
