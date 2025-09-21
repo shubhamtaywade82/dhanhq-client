@@ -11,9 +11,10 @@ Use this guide as the companion to the official Dhan API v2 documentation. It ma
 5. [Portfolio & Funds](#portfolio--funds)
 6. [Trade & Ledger Data](#trade--ledger-data)
 7. [Data & Market Services](#data--market-services)
-8. [Constants & Enums](#constants--enums)
-9. [Error Handling](#error-handling)
-10. [Best Practices](#best-practices)
+8. [Account Utilities](#account-utilities)
+9. [Constants & Enums](#constants--enums)
+10. [Error Handling](#error-handling)
+11. [Best Practices](#best-practices)
 
 ---
 
@@ -60,8 +61,8 @@ All models inherit from `DhanHQ::BaseModel` and expose a consistent API:
 - **Instance helpers**: `#save`, `#modify`, `#cancel`, `#refresh`, `#destroy`
 - **Validation**: the gem wraps Dry::Validation contracts. Validation errors raise `DhanHQ::Error`.
 - **Parameter naming**:
-  - Ruby-facing APIs (e.g. `Order.place`, `Order#modify`) accept snake_case keys and symbols. The client handles camelCase conversion before hitting the REST API.
-  - Lower-level helpers that proxy the REST API (e.g. `Margin.calculate`, `MarketFeed.ltp`) expect exactly what the HTTP endpoint receives—stick to the casing from the official documentation when you call them directly.
+  - Ruby-facing APIs (e.g. `Order.place`, `Order#slice_order`, `Margin.calculate`, `Position.convert`) accept snake_case keys and symbols. The client handles camelCase conversion before hitting the REST API.
+  - When you work with the raw `DhanHQ::Resources::*` classes directly, supply the fields exactly as documented by the REST API.
 - **Responses**: model constructors normalise keys to snake_case and expose attribute reader methods. Raw API hashes are wrapped in `HashWithIndifferentAccess` for easy lookup.
 
 ---
@@ -161,27 +162,32 @@ DhanHQ::Models::Order.resource.update("123", params)
 
 ### Slicing Orders
 
-Use the same fields as placement, but the contract allows additional validity options (`GTC`, `GTD`). Build the payload in API casing before calling the resource helper.
+Use the same fields as placement, but the contract allows additional validity options (`GTC`, `GTD`). The model helper accepts snake_case parameters and handles camelCase conversion as part of validation:
 
 ```ruby
 slice_payload = {
-  orderId: order.order_id,
-  dhanClientId: order.dhan_client_id,
-  transactionType: "BUY",
-  exchangeSegment: "NSE_EQ",
-  productType: "CNC",
-  orderType: "LIMIT",
+  order_id: order.order_id,
+  transaction_type: "BUY",
+  exchange_segment: "NSE_EQ",
+  product_type: "STOP_LOSS",
+  order_type: "STOP_LOSS",
   validity: "GTC",
-  securityId: "1333",
+  security_id: "1333",
   quantity: 100,
+  trigger_price: 148.5,
   price: 150.0
 }
 
-DhanHQ::Contracts::SliceOrderContract.new.call(slice_payload).success?
-DhanHQ::Models::Order.resource.slicing(slice_payload)
+order.slice_order(slice_payload)
 ```
 
-The instance helper `order.slice_order(slice_payload)` forwards the hash as-is—ensure you provide camelCase keys when you use it.
+When you call the resource layer directly, camelCase the keys first so they match the REST contract:
+
+```ruby
+payload = DhanHQ::Models::Order.camelize_keys(slice_payload)
+DhanHQ::Contracts::SliceOrderContract.new.call(payload).success?
+DhanHQ::Models::Order.resource.slicing(payload)
+```
 
 ---
 
@@ -232,7 +238,7 @@ forever_order.modify(price: 205.0)
 forever_order.cancel
 ```
 
-The forever order APIs work with camelCase keys—mirror the REST contracts when assembling payloads.
+The forever order helpers accept snake_case parameters and camelize them internally; only the low-level resource requires raw API casing.
 
 ---
 
@@ -249,16 +255,20 @@ Convert an intraday position to delivery (or vice versa):
 
 ```ruby
 convert_payload = {
-  dhanClientId: "123456",
-  securityId: "1333",
-  fromProductType: "INTRADAY",
-  toProductType: "CNC",
-  quantity: 10
+  dhan_client_id: "123456",
+  security_id: "1333",
+  from_product_type: "INTRADAY",
+  to_product_type: "CNC",
+  convert_qty: 10,
+  exchange_segment: "NSE_EQ",
+  position_type: "LONG"
 }
 
 response = DhanHQ::Models::Position.convert(convert_payload)
 raise response.errors.to_s if response.is_a?(DhanHQ::ErrorObject)
 ```
+
+The conversion helper validates the payload with `PositionConversionContract`; missing or invalid fields raise `DhanHQ::Error` before the request is sent.
 
 ### Holdings
 
@@ -352,22 +362,24 @@ The model filters strikes where both CE and PE have zero `last_price`, keeping t
 
 ### Margin Calculator
 
-`DhanHQ::Models::Margin.calculate` proxies `/v2/margincalculator` without transforming keys. Mirror the REST casing:
+`DhanHQ::Models::Margin.calculate` camelizes your snake_case keys and validates with `MarginCalculatorContract` before posting to `/v2/margincalculator`:
 
 ```ruby
 params = {
-  dhanClientId: "123456",
-  exchangeSegment: "NSE_EQ",
-  transactionType: "BUY",
+  dhan_client_id: "123456",
+  exchange_segment: "NSE_EQ",
+  transaction_type: "BUY",
   quantity: 10,
-  productType: "INTRADAY",
-  securityId: "1333",
+  product_type: "INTRADAY",
+  security_id: "1333",
   price: 150.0
 }
 
 margin = DhanHQ::Models::Margin.calculate(params)
 puts margin.total_margin
 ```
+
+If a required field is missing (for example `transaction_type`), the contract raises `DhanHQ::Error` before any API call is issued.
 
 ### REST Market Feed (Batch LTP/OHLC/Quote)
 
@@ -403,6 +415,59 @@ ws.disconnect!
 ```
 
 Modes: `:ticker`, `:quote`, `:full`. The client handles reconnects, 429 cool-offs, and idempotent subscriptions.
+
+---
+
+## Account Utilities
+
+### Profile
+
+```ruby
+profile = DhanHQ::Models::Profile.fetch
+profile.dhan_client_id   # => "1100003626"
+profile.token_validity   # => "30/03/2025 15:37"
+profile.active_segment   # => "Equity, Derivative, Currency, Commodity"
+```
+
+If the credentials are invalid the helper raises `DhanHQ::InvalidAuthenticationError`.
+
+### EDIS (Electronic Delivery Instruction Slip)
+
+```ruby
+# Generate a CDSL form for a single ISIN
+form = DhanHQ::Models::Edis.form(
+  isin: "INE0ABCDE123",
+  qty: 1,
+  exchange: "NSE",
+  segment: "EQ",
+  bulk: false
+)
+
+# Prepare a bulk file
+bulk_form = DhanHQ::Models::Edis.bulk_form(
+  isin: %w[INE0ABCDE123 INE0XYZ89012],
+  exchange: "NSE",
+  segment: "EQ"
+)
+
+# Manage T-PIN and status inquiries
+DhanHQ::Models::Edis.tpin                    # => {"status"=>"TPIN sent"}
+authorisations = DhanHQ::Models::Edis.inquire("ALL")
+```
+
+All helpers accept snake_case keys; the client camelizes them before calling `/v2/edis/...`.
+
+### Kill Switch
+
+```ruby
+DhanHQ::Models::KillSwitch.activate    # => {"killSwitchStatus"=>"ACTIVATE"}
+DhanHQ::Models::KillSwitch.deactivate  # => {"killSwitchStatus"=>"DEACTIVATE"}
+
+# Explicit status update
+DhanHQ::Models::KillSwitch.update("ACTIVATE")
+```
+
+Only `"ACTIVATE"` and `"DEACTIVATE"` are accepted—any other value raises `DhanHQ::Error`.
 
 ---
 

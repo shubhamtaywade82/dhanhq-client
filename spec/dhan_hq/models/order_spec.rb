@@ -233,4 +233,54 @@ RSpec.describe DhanHQ::Models::Order do
       expect(order.quantity).to eq(10)
     end
   end
+
+  describe "#slice_order" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
+    let(:order) do
+      described_class.new({ orderId: "OID123", dhanClientId: "1100003626" }, skip_validation: true)
+    end
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "camelizes, validates, and delegates to slicing" do
+      params = {
+        transaction_type: "BUY",
+        exchange_segment: "NSE_EQ",
+        product_type: "CNC",
+        order_type: "STOP_LOSS",
+        validity: "DAY",
+        security_id: "1333",
+        quantity: 1,
+        trigger_price: 1500.5
+      }
+
+      expect(resource_double).to receive(:slicing).with(
+        hash_including(
+          "orderId" => "OID123",
+          "transactionType" => "BUY",
+          "triggerPrice" => 1500.5
+        )
+      ).and_return([{ "orderStatus" => "PENDING" }])
+
+      order.slice_order(params)
+    end
+
+    it "raises when trigger price missing for stop loss" do
+      params = {
+        transaction_type: "BUY",
+        exchange_segment: "NSE_EQ",
+        product_type: "CNC",
+        order_type: "STOP_LOSS",
+        validity: "DAY",
+        security_id: "1333",
+        quantity: 1
+      }
+
+      expect do
+        order.slice_order(params)
+      end.to raise_error(DhanHQ::Error, /triggerPrice/)
+    end
+  end
 end

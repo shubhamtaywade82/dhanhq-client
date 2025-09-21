@@ -7,7 +7,7 @@ module DhanHQ
       HTTP_PATH = "/v2/forever"
 
       def all
-        get("/all")
+        get("/orders")
       end
 
       def create(params)

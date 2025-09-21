@@ -27,7 +27,9 @@ require_relative "DhanHQ/rate_limiter"
 # Contracts
 require_relative "DhanHQ/contracts/base_contract"
 require_relative "DhanHQ/contracts/historical_data_contract"
+require_relative "DhanHQ/contracts/margin_calculator_contract"
 require_relative "DhanHQ/contracts/position_conversion_contract"
+require_relative "DhanHQ/contracts/slice_order_contract"
 
 # Resources
 require_relative "DhanHQ/resources/option_chain"
@@ -42,6 +44,8 @@ require_relative "DhanHQ/resources/trades"
 require_relative "DhanHQ/resources/historical_data"
 require_relative "DhanHQ/resources/margin_calculator"
 require_relative "DhanHQ/resources/market_feed"
+require_relative "DhanHQ/resources/edis"
+require_relative "DhanHQ/resources/kill_switch"
 require_relative "DhanHQ/resources/profile"
 
 # Models
@@ -57,6 +61,8 @@ require_relative "DhanHQ/models/holding"
 require_relative "DhanHQ/models/ledger_entry"
 require_relative "DhanHQ/models/trade"
 require_relative "DhanHQ/models/margin"
+require_relative "DhanHQ/models/edis"
+require_relative "DhanHQ/models/kill_switch"
 require_relative "DhanHQ/models/profile"
 
 require_relative "DhanHQ/constants"

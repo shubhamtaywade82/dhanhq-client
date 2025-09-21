@@ -23,7 +23,10 @@ module DhanHQ
         # @param params [Hash] Request parameters for margin calculation.
         # @return [Margin]
         def calculate(params)
-          response = resource.calculate(params)
+          formatted_params = camelize_keys(params)
+          validate_params!(formatted_params, DhanHQ::Contracts::MarginCalculatorContract)
+
+          response = resource.calculate(formatted_params)
           new(response, skip_validation: true)
         end
       end

@@ -13,14 +13,14 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
     let(:params) do
       {
         # Adjust these parameters for a valid margin calculation in your account
-        dhanClientId: ENV.fetch("CLIENT_ID", "FAKE_ID"),
-        exchangeSegment: "NSE_EQ",
-        transactionType: "BUY",
-        productType: "CNC",
-        securityId: "11536", # Example Security ID (e.g. TCS)
+        dhan_client_id: ENV.fetch("CLIENT_ID", "FAKE_ID"),
+        exchange_segment: "NSE_EQ",
+        transaction_type: "BUY",
+        product_type: "CNC",
+        security_id: "11536", # Example Security ID (e.g. TCS)
         quantity: 10,
         price: 100.0
-        # triggerPrice:  ... # only needed for STOP_LOSS orders
+        # trigger_price:  ... # only needed for STOP_LOSS orders
       }
     end
 
@@ -42,6 +42,55 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
       # Optionally, you can also test the to_h method
       hash = margin.to_h
       expect(hash).to include(:total_margin, :span_margin, :exposure_margin)
+    end
+  end
+
+  describe "validation" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::MarginCalculator) }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "raises when required fields are missing", vcr: false do
+      expect(resource_double).not_to receive(:calculate)
+
+      expect do
+        described_class.calculate({})
+      end.to raise_error(DhanHQ::Error, /Validation Error/)
+    end
+  end
+
+  describe "formatting" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::MarginCalculator) }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "camelizes keys before posting", vcr: false do
+      payload = {
+        dhan_client_id: "1100003626",
+        exchange_segment: "NSE_EQ",
+        transaction_type: "BUY",
+        product_type: "CNC",
+        security_id: "1333",
+        quantity: 1,
+        price: 1400.0
+      }
+
+      expect(resource_double).to receive(:calculate) do |arg|
+        expect(arg).to include(
+          "dhanClientId" => "1100003626",
+          "transactionType" => "BUY",
+          "productType" => "CNC"
+        )
+        {}
+      end
+
+      allow(described_class).to receive(:new).and_return(instance_double(described_class))
+
+      described_class.calculate(payload)
     end
   end
 end

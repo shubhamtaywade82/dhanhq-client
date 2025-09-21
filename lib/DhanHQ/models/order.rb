@@ -215,7 +215,14 @@ module DhanHQ
       # Slicing (optional)
       # If you want an AR approach:
       def slice_order(params)
-        self.class.resource.slicing(params.merge(order_id: id))
+        raise "Order ID is required to slice an order" unless id
+
+        base_payload = params.merge(order_id: id)
+        formatted_payload = camelize_keys(base_payload)
+
+        validate_params!(formatted_payload, DhanHQ::Contracts::SliceOrderContract)
+
+        self.class.resource.slicing(formatted_payload)
       end
 
       ##
