@@ -1,7 +1,15 @@
 # frozen_string_literal: true
 
+require "simplecov"
 require "debug"
 require "dotenv/load"
+
+SimpleCov.start do
+  enable_coverage :branch
+  add_filter "/spec/"
+  add_filter "/tmp/"
+end
+
 require "DhanHQ"
 require "webmock/rspec"
 

@@ -284,6 +284,7 @@ DEPENDENCIES
   rubocop-rake (~> 0.6.0)
   rubocop-rspec (~> 3.2)
   rubycritic
+  simplecov (~> 0.22)
   timecop
   vcr
   webmock (~> 3.24)

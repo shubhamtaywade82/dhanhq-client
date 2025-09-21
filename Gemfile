@@ -29,6 +29,8 @@ gem "vcr"
 
 gem "dotenv", groups: %i[development test]
 
+gem "simplecov", "~> 0.22", require: false, groups: %i[development test]
+
 group :test do
   gem "timecop"
 end
