@@ -32,4 +32,56 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
       expect(pe_last_price).to be > 0 if strike_data.key?("pe")
     end
   end
+
+  context "with stubbed resource" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::OptionChain) }
+    let(:params) { { underlying_scrip: 13, underlying_seg: "IDX_I", expiry: "2025-02-06" } }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(described_class).to receive(:validate_params!).and_call_original
+    end
+
+    it "exposes the validation contract helpers" do
+      expect(described_class.send(:validation_contract)).to be_a(DhanHQ::Contracts::OptionChainContract)
+      instance = described_class.new({}, skip_validation: true)
+      expect(instance.send(:validation_contract)).to be_a(DhanHQ::Contracts::OptionChainContract)
+    end
+
+    it "returns filtered strikes when status is success" do
+      payload = {
+        status: "success",
+        data: {
+          oc: {
+            "100" => { "ce" => { "last_price" => "0" }, "pe" => { "last_price" => "0" } },
+            "200" => { "ce" => { "last_price" => "5" }, "pe" => { "last_price" => "0" } }
+          }
+        }
+      }
+      allow(resource_double).to receive(:fetch).with(params).and_return(payload)
+
+      result = described_class.fetch(params)
+      expect(result[:oc].keys).to eq(["200"])
+    end
+
+    it "returns an empty hash when status is not success" do
+      allow(resource_double).to receive(:fetch).and_return({ status: "error" })
+
+      expect(described_class.fetch(params)).to eq({}.with_indifferent_access)
+    end
+
+    it "returns expiry list when status success" do
+      allow(resource_double).to receive(:expirylist).with(params)
+                                                    .and_return({ status: "success", data: %w[2025-02-06 2025-02-13] })
+
+      expiries = described_class.fetch_expiry_list(params)
+      expect(expiries).to eq(%w[2025-02-06 2025-02-13])
+    end
+
+    it "returns empty array when expiry list status not success" do
+      allow(resource_double).to receive(:expirylist).and_return({ status: "error" })
+
+      expect(described_class.fetch_expiry_list(params)).to eq([])
+    end
+  end
 end

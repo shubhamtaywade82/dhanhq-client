@@ -32,4 +32,12 @@ RSpec.describe DhanHQ::Models::Funds, vcr: { cassette_name: "models/funds" } do
       expect(bal).to be >= 0
     end
   end
+
+  describe "#assign_attributes" do
+    it "normalises the typo'd availabelBalance key" do
+      instance = described_class.new({ "availabelBalance" => 42.0 }, skip_validation: true)
+
+      expect(instance.available_balance).to eq(42.0)
+    end
+  end
 end

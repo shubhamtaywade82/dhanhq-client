@@ -60,3 +60,54 @@ RSpec.describe DhanHQ::Models::Trade, vcr: {
     end
   end
 end
+
+RSpec.describe DhanHQ::Models::Trade, "unit" do
+  let(:history_resource) { instance_double(DhanHQ::Resources::Statements) }
+  let(:tradebook_resource) { instance_double(DhanHQ::Resources::Trades) }
+
+  before do
+    described_class.instance_variable_set(:@resource, nil)
+    described_class.instance_variable_set(:@tradebook_resource, nil)
+    allow(described_class).to receive(:resource).and_return(history_resource)
+    allow(described_class).to receive(:tradebook_resource).and_return(tradebook_resource)
+  end
+
+  describe ".history" do
+    it "returns models when response is array" do
+      allow(history_resource).to receive(:trade_history).and_return([{ "orderId" => "OID1" }])
+
+      trades = described_class.history(from_date: "2024-01-01", to_date: "2024-01-02")
+      expect(trades.first).to be_a(described_class)
+    end
+
+    it "returns [] for non arrays" do
+      allow(history_resource).to receive(:trade_history).and_return("unexpected")
+
+      expect(described_class.history(from_date: "2024-01-01", to_date: "2024-01-02")).to eq([])
+    end
+  end
+
+  describe ".today" do
+    it "maps responses to models" do
+      allow(tradebook_resource).to receive(:all).and_return([{ "orderId" => "OID1" }])
+
+      trades = described_class.today
+      expect(trades.first.order_id).to eq("OID1")
+    end
+  end
+
+  describe ".find_by_order_id" do
+    it "returns nil when response empty" do
+      allow(tradebook_resource).to receive(:find).and_return([])
+
+      expect(described_class.find_by_order_id("OID1")).to be_nil
+    end
+
+    it "unwraps array payload" do
+      allow(tradebook_resource).to receive(:find).and_return([{ "orderId" => "OID1" }])
+
+      trade = described_class.find_by_order_id("OID1")
+      expect(trade.order_id).to eq("OID1")
+    end
+  end
+end

@@ -283,4 +283,185 @@ RSpec.describe DhanHQ::Models::Order do
       end.to raise_error(DhanHQ::Error, /triggerPrice/)
     end
   end
+
+  context "with stubbed resource" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    describe ".all" do
+      it "wraps array responses" do
+        allow(resource_double).to receive(:all).and_return([{ "orderId" => "OID1", "orderStatus" => "PENDING" }])
+
+        orders = described_class.all
+        expect(orders.map(&:order_id)).to eq(["OID1"])
+      end
+
+      it "returns [] for non array" do
+        allow(resource_double).to receive(:all).and_return("unexpected")
+
+        expect(described_class.all).to eq([])
+      end
+    end
+
+    describe ".find" do
+      it "unwraps array payloads" do
+        allow(resource_double).to receive(:find).with("OID1").and_return([{ "orderId" => "OID1" }])
+
+        order = described_class.find("OID1")
+        expect(order.order_id).to eq("OID1")
+      end
+    end
+
+    describe ".find_by_correlation" do
+      it "returns model when status success" do
+        allow(resource_double).to receive(:by_correlation).with("CORR")
+                                                          .and_return({ status: "success", orderId: "OID1" })
+
+        order = described_class.find_by_correlation("CORR")
+        expect(order.order_id).to eq("OID1")
+      end
+
+      it "returns nil for non-success" do
+        allow(resource_double).to receive(:by_correlation).and_return({ status: "error" })
+
+        expect(described_class.find_by_correlation("CORR")).to be_nil
+      end
+    end
+
+    describe ".place" do
+      let(:params) do
+        {
+          transaction_type: "BUY",
+          exchange_segment: "NSE_EQ",
+          product_type: "CNC",
+          order_type: "MARKET",
+          validity: "DAY",
+          security_id: "1333",
+          quantity: 1
+        }
+      end
+
+      it "camelizes payload and fetches final order" do
+        expect(resource_double).to receive(:create).with(hash_including(
+          "transactionType" => "BUY",
+          "exchangeSegment" => "NSE_EQ"
+        )).and_return({ "orderId" => "OID1" })
+        expect(resource_double).to receive(:find).with("OID1")
+                                                 .and_return({ "orderId" => "OID1", "orderStatus" => "PENDING" })
+
+        order = described_class.place(params)
+        expect(order.order_status).to eq("PENDING")
+      end
+    end
+
+    describe "#modify" do
+      let(:order) { described_class.new({ orderId: "OID1", dhanClientId: "1100003626" }, skip_validation: true) }
+
+      it "sends filtered camelized payload" do
+        expect(resource_double).to receive(:update).with("OID1", { "orderId" => "OID1", "dhanClientId" => "1100003626", "quantity" => 2 })
+                                                   .and_return({ status: "success", orderStatus: "MODIFIED" })
+
+        updated = order.modify(quantity: 2, ignored: nil)
+        expect(updated.order_status).to eq("MODIFIED")
+      end
+
+      it "returns error object when update unsuccessful" do
+        allow(resource_double).to receive(:update).and_return({ status: "error" })
+
+        result = order.modify(quantity: 2)
+        expect(result).to be_a(DhanHQ::ErrorObject)
+      end
+    end
+
+    describe "#cancel" do
+      let(:order) { described_class.new({ orderId: "OID1" }, skip_validation: true) }
+
+      it "delegates to resource" do
+        expect(resource_double).to receive(:cancel).with("OID1").and_return({ "orderStatus" => "CANCELLED" })
+        expect(order.cancel).to be(true)
+      end
+    end
+
+    describe "#refresh" do
+      it "raises when order id missing" do
+        record = described_class.new({}, skip_validation: true)
+        expect { record.refresh }.to raise_error("Order ID is required to refresh an order")
+      end
+
+      it "delegates to find" do
+        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
+        expect(described_class).to receive(:find).with("OID1").and_return(:reloaded)
+
+        expect(record.refresh).to eq(:reloaded)
+      end
+    end
+
+    describe "#save" do
+      let(:order) { described_class.new({}, skip_validation: true) }
+
+      before do
+        allow(order).to receive(:assign_attributes)
+        allow(order).to receive(:normalize_keys).and_return({ order_id: "OID1" })
+        allow(order).to receive(:to_request_params).and_return({})
+      end
+
+      it "places a new order when valid" do
+        allow(order).to receive(:valid?).and_return(true)
+        allow(order).to receive(:new_record?).and_return(true)
+        expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
+
+        expect(order.save).to be(true)
+      end
+
+      it "returns false when create fails" do
+        allow(order).to receive(:valid?).and_return(true)
+        allow(order).to receive(:new_record?).and_return(true)
+        expect(resource_double).to receive(:create).and_return({})
+
+        expect(order.save).to be(false)
+      end
+
+      it "updates existing orders" do
+        allow(order).to receive(:valid?).and_return(true)
+        allow(order).to receive(:new_record?).and_return(false)
+        allow(order).to receive(:id).and_return("OID1")
+        expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
+
+        expect(order.save).to be(true)
+      end
+
+      it "returns false when update fails" do
+        allow(order).to receive(:valid?).and_return(true)
+        allow(order).to receive(:new_record?).and_return(false)
+        allow(order).to receive(:id).and_return("OID1")
+        expect(resource_double).to receive(:update).and_return({})
+
+        expect(order.save).to be(false)
+      end
+    end
+
+    describe "#destroy" do
+      it "returns false for new records" do
+        record = described_class.new({}, skip_validation: true)
+        expect(record.destroy).to be(false)
+      end
+
+      it "returns true when deletion succeeds" do
+        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
+        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success", "orderStatus" => "CANCELLED" })
+
+        expect(record.destroy).to be(true)
+      end
+
+      it "returns false when deletion fails" do
+        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
+        expect(resource_double).to receive(:delete).and_return({ "orderStatus" => "ACTIVE" })
+
+        expect(record.destroy).to be(false)
+      end
+    end
+  end
 end

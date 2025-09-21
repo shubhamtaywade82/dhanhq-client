@@ -1,44 +1,55 @@
 # frozen_string_literal: true
 
 RSpec.describe DhanHQ::Models::Edis do
-  let(:resource_double) { instance_double(DhanHQ::Resources::Edis) }
+  describe ".resource" do
+    it "memoizes the resource instance" do
+      described_class.instance_variable_set(:@resource, nil)
 
-  before do
-    allow(described_class).to receive(:resource).and_return(resource_double)
-  end
-
-  describe ".form" do
-    it "delegates to the resource" do
-      params = { isin: "INE0ABCDE", qty: 1, exchange: "NSE", segment: "EQ", bulk: false }
-      expect(resource_double).to receive(:form).with(params).and_return({})
-
-      expect(described_class.form(params)).to eq({})
+      first = described_class.resource
+      expect(first).to be_a(DhanHQ::Resources::Edis)
+      expect(described_class.resource).to be(first)
     end
   end
 
-  describe ".bulk_form" do
-    it "delegates to the resource" do
-      params = { isin: %w[INE0ABCDE INE0XYZ12], exchange: "NSE", segment: "EQ" }
-      expect(resource_double).to receive(:bulk_form).with(params).and_return({})
+  context "with stubbed resource" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Edis) }
 
-      expect(described_class.bulk_form(params)).to eq({})
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
     end
-  end
 
-  describe ".tpin" do
-    it "fetches the tpin" do
-      expect(resource_double).to receive(:tpin).and_return({ status: "queued" })
+    describe ".form" do
+      it "delegates to the resource" do
+        params = { isin: "INE0ABCDE", qty: 1, exchange: "NSE", segment: "EQ", bulk: false }
+        expect(resource_double).to receive(:form).with(params).and_return({})
 
-      expect(described_class.tpin).to eq({ status: "queued" })
+        expect(described_class.form(params)).to eq({})
+      end
     end
-  end
 
-  describe ".inquire" do
-    it "requests status for the given isin" do
-      expect(resource_double).to receive(:inquire).with("ALL").and_return([])
+    describe ".bulk_form" do
+      it "delegates to the resource" do
+        params = { isin: %w[INE0ABCDE INE0XYZ12], exchange: "NSE", segment: "EQ" }
+        expect(resource_double).to receive(:bulk_form).with(params).and_return({})
 
-      expect(described_class.inquire("ALL")).to eq([])
+        expect(described_class.bulk_form(params)).to eq({})
+      end
+    end
+
+    describe ".tpin" do
+      it "fetches the tpin" do
+        expect(resource_double).to receive(:tpin).and_return({ status: "queued" })
+
+        expect(described_class.tpin).to eq({ status: "queued" })
+      end
+    end
+
+    describe ".inquire" do
+      it "requests status for the given isin" do
+        expect(resource_double).to receive(:inquire).with("ALL").and_return([])
+
+        expect(described_class.inquire("ALL")).to eq([])
+      end
     end
   end
 end
-

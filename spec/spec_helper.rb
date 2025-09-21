@@ -1,15 +1,21 @@
 # frozen_string_literal: true
 
-require "simplecov"
-require "debug"
-require "dotenv/load"
+if ENV["SIMPLECOV"] == "true" || ENV["COVERAGE"] == "true"
+  require "simplecov"
 
-SimpleCov.start do
-  enable_coverage :branch
-  add_filter "/spec/"
-  add_filter "/tmp/"
+  SimpleCov.start do
+    enable_coverage :branch
+    track_files "lib/DhanHQ/models/**/*.rb"
+    add_filter "/spec/"
+    add_filter "/tmp/"
+    add_filter do |source_file|
+      !source_file.filename.include?("/lib/DhanHQ/models/")
+    end
+  end
 end
 
+require "debug"
+require "dotenv/load"
 require "DhanHQ"
 require "webmock/rspec"
 

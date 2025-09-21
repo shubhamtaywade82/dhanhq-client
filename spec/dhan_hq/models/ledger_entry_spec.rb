@@ -36,3 +36,25 @@ RSpec.describe DhanHQ::Models::LedgerEntry, vcr: {
     end
   end
 end
+
+RSpec.describe DhanHQ::Models::LedgerEntry, "unit" do
+  let(:resource_double) { instance_double(DhanHQ::Resources::Statements) }
+
+  before do
+    described_class.instance_variable_set(:@resource, nil)
+    allow(described_class).to receive(:resource).and_return(resource_double)
+  end
+
+  it "returns [] when response not array" do
+    allow(resource_double).to receive(:ledger).and_return("unexpected")
+
+    expect(described_class.all(from_date: "2024-01-01", to_date: "2024-01-02")).to eq([])
+  end
+
+  it "exposes a hash representation" do
+    allow(resource_double).to receive(:ledger).and_return([{ "dhanClientId" => "110" }])
+
+    entry = described_class.all(from_date: "2024-01-01", to_date: "2024-01-02").first
+    expect(entry.to_h[:dhan_client_id]).to eq("110")
+  end
+end

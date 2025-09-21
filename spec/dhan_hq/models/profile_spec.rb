@@ -19,3 +19,17 @@ RSpec.describe DhanHQ::Models::Profile, vcr: {
   end
 end
 
+RSpec.describe DhanHQ::Models::Profile, "unit" do
+  let(:resource_double) { instance_double(DhanHQ::Resources::Profile) }
+
+  before do
+    described_class.instance_variable_set(:@resource, nil)
+    allow(described_class).to receive(:resource).and_return(resource_double)
+  end
+
+  it "returns nil when response is not a hash" do
+    allow(resource_double).to receive(:fetch).and_return([])
+
+    expect(described_class.fetch).to be_nil
+  end
+end

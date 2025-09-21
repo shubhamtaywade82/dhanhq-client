@@ -26,3 +26,25 @@ RSpec.describe DhanHQ::Models::Holding, vcr: {
     end
   end
 end
+
+RSpec.describe DhanHQ::Models::Holding, "unit" do
+  let(:resource_double) { instance_double(DhanHQ::Resources::Holdings) }
+
+  before do
+    described_class.instance_variable_set(:@resource, nil)
+    allow(described_class).to receive(:resource).and_return(resource_double)
+  end
+
+  it "returns [] when API raises no holdings error" do
+    allow(resource_double).to receive(:all).and_raise(DhanHQ::NoHoldingsError)
+
+    expect(described_class.all).to eq([])
+  end
+
+  it "converts holdings into hashes" do
+    allow(resource_double).to receive(:all).and_return([{ "exchange" => "NSE", "securityId" => "1333" }])
+
+    holding = described_class.all.first
+    expect(holding.to_h[:exchange]).to eq("NSE")
+  end
+end

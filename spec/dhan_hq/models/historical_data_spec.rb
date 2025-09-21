@@ -83,3 +83,33 @@ RSpec.describe DhanHQ::Models::HistoricalData, vcr: { cassette_name: "models/his
     end
   end
 end
+
+RSpec.describe DhanHQ::Models::HistoricalData, "unit" do
+  let(:resource_double) { instance_double(DhanHQ::Resources::HistoricalData) }
+  let(:params) do
+    {
+      security_id: "1333",
+      exchange_segment: "NSE_EQ",
+      instrument: "EQUITY",
+      from_date: "2024-01-01",
+      to_date: "2024-01-02"
+    }
+  end
+
+  before do
+    allow(described_class).to receive(:resource).and_return(resource_double)
+  end
+
+  it "passes through non-success responses" do
+    payload = { status: "error" }
+    allow(resource_double).to receive(:daily).and_return(payload)
+
+    expect(described_class.daily(params)).to eq(payload)
+  end
+
+  it "delegates intraday calls" do
+    expect(resource_double).to receive(:intraday).with(params).and_return({})
+
+    expect(described_class.intraday(params)).to eq({})
+  end
+end

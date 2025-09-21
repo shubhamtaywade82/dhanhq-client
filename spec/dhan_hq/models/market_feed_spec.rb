@@ -121,3 +121,26 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
     end
   end
 end
+
+RSpec.describe DhanHQ::Models::MarketFeed, "unit" do
+  let(:resource_double) { instance_double(DhanHQ::Resources::MarketFeed) }
+
+  before do
+    allow(described_class).to receive(:resource).and_return(resource_double)
+  end
+
+  it "delegates ltp" do
+    expect(resource_double).to receive(:ltp).with(:payload).and_return({})
+    expect(described_class.ltp(:payload)).to eq({})
+  end
+
+  it "delegates ohlc" do
+    expect(resource_double).to receive(:ohlc).with(:payload).and_return({})
+    expect(described_class.ohlc(:payload)).to eq({})
+  end
+
+  it "delegates quote" do
+    expect(resource_double).to receive(:quote).with(:payload).and_return({})
+    expect(described_class.quote(:payload)).to eq({})
+  end
+end

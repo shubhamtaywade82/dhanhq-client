@@ -93,4 +93,13 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
       described_class.calculate(payload)
     end
   end
+
+  describe "#to_h" do
+    it "returns normalised attributes" do
+      margin = described_class.new({ "totalMargin" => 10.0, "spanMargin" => 5.0 }, skip_validation: true)
+
+      hash = margin.to_h
+      expect(hash).to include(:total_margin, :span_margin)
+    end
+  end
 end
