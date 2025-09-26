@@ -53,12 +53,10 @@ module DhanHQ
                 end
 
                 @ws.on :message do |ev|
-                  begin
-                    msg = JSON.parse(ev.data, symbolize_names: true)
-                    @on_json&.call(msg)
-                  rescue => e
-                    DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
-                  end
+                  msg = JSON.parse(ev.data, symbolize_names: true)
+                  @on_json&.call(msg)
+                rescue StandardError => e
+                  DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
                 end
 
                 @ws.on :close do |ev|
@@ -73,11 +71,12 @@ module DhanHQ
                   failed = true
                 end
               end
-            rescue => e
+            rescue StandardError => e
               DhanHQ.logger&.error("[DhanHQ::WS::Orders] crashed #{e.class} #{e.message}")
               failed = true
             ensure
               break if @stop
+
               if got_429
                 @cooloff_until = Time.now + COOL_OFF_429
                 DhanHQ.logger&.warn("[DhanHQ::WS::Orders] cooling off #{COOL_OFF_429}s due to 429")
@@ -105,7 +104,7 @@ module DhanHQ
             payload = {
               LoginReq: { MsgCode: 42, ClientId: cfg.partner_id },
               UserType: "PARTNER",
-              Secret:   cfg.partner_secret
+              Secret: cfg.partner_secret
             }
           else
             token = cfg.access_token or raise "DhanHQ.access_token not set"

@@ -68,8 +68,7 @@ RSpec.describe DhanHQ::Models::Trade, "unit" do
   before do
     described_class.instance_variable_set(:@resource, nil)
     described_class.instance_variable_set(:@tradebook_resource, nil)
-    allow(described_class).to receive(:resource).and_return(history_resource)
-    allow(described_class).to receive(:tradebook_resource).and_return(tradebook_resource)
+    allow(described_class).to receive_messages(resource: history_resource, tradebook_resource: tradebook_resource)
   end
 
   describe ".history" do

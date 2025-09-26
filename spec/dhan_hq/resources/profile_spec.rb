@@ -22,4 +22,3 @@ RSpec.describe DhanHQ::Resources::Profile, vcr: {
     end
   end
 end
-

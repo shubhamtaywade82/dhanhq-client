@@ -16,9 +16,10 @@ module DhanHQ
 
         def start
           return self if @started.true?
+
           @started.make_true
           @conn = Connection.new(url: @url) do |msg|
-            emit(:update, msg)  if msg&.dig(:Type) == "order_alert"
+            emit(:update, msg) if msg&.dig(:Type) == "order_alert"
             emit(:raw, msg)
           end
           @conn.start
@@ -28,6 +29,7 @@ module DhanHQ
 
         def stop
           return unless @started.true?
+
           @started.make_false
           @conn&.stop
           emit(:close, true)
@@ -46,7 +48,11 @@ module DhanHQ
         private
 
         def emit(event, payload)
-          list = @callbacks[event] rescue []
+          list = begin
+            @callbacks[event]
+          rescue StandardError
+            []
+          end
           list.each { |cb| cb.call(payload) }
         end
       end

@@ -42,7 +42,9 @@ module DhanHQ
 
       error_code = body[:errorCode] || response.status.to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
-      error_message = "No holdings found for this account. Add holdings or wait for them to settle before retrying." if error_code == "DH-1111"
+      if error_code == "DH-1111"
+        error_message = "No holdings found for this account. Add holdings or wait for them to settle before retrying."
+      end
 
       error_class = DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code]
 
