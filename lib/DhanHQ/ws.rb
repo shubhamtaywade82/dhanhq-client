@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "ws/client"
+require_relative "ws/orders"
 
 module DhanHQ
   module WS

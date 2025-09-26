@@ -1,7 +1,9 @@
-require:
+plugins:
   - rubocop-rspec
-  - rubocop-rake
   - rubocop-performance
+
+require:
+  - rubocop-rake
 
 AllCops:
   TargetRubyVersion: 3.1
