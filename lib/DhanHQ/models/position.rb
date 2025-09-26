@@ -2,7 +2,9 @@
 
 module DhanHQ
   module Models
+    # Model representing an intraday or carry-forward position snapshot.
     class Position < BaseModel
+      # Base path used by the positions resource.
       HTTP_PATH = "/v2/positions"
 
       attributes :dhan_client_id, :trading_symbol, :security_id, :position_type, :exchange_segment,
@@ -35,6 +37,9 @@ module DhanHQ
           end
         end
 
+        # Filters the position list down to non-closed entries.
+        #
+        # @return [Array<Position>]
         def active
           all.reject { |position| position.position_type == "CLOSED" }
         end

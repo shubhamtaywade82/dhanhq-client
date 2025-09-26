@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module DhanHQ
+  # Helper methods for running Dry::Validation contracts against payloads.
   module ValidationHelper
     # Validate the attributes using the validation contract
     #

@@ -2,6 +2,8 @@
 
 module DhanHQ
   module WS
+    # Utility helpers for translating between various exchange segment
+    # representations used by the streaming API.
     module Segments
       # Canonical enum mapping (per Dhan spec)
       STRING_TO_CODE = {
@@ -15,9 +17,14 @@ module DhanHQ
         "BSE_FNO" => 8
       }.freeze
 
+      # Lookup table converting numeric feed codes into exchange strings.
       CODE_TO_STRING = STRING_TO_CODE.invert.freeze
 
-      # Accept "NSE_FNO"/:nse_fno/2/"2" and return the STRING Dhan expects in requests.
+      # Accepts multiple segment representations and returns the canonical
+      # string used by the API.
+      #
+      # @param segment [String, Symbol, Integer]
+      # @return [String]
       def self.to_request_string(segment)
         case segment
         when String
@@ -39,17 +46,27 @@ module DhanHQ
       # Ensures:
       #   - ExchangeSegment is a STRING enum (e.g., "NSE_FNO")
       #   - SecurityId is a STRING
+      #
+      # @param h [Hash]
+      # @return [Hash] Normalized instrument hash.
       def self.normalize_instrument(h)
         seg = to_request_string(h[:ExchangeSegment] || h["ExchangeSegment"])
         sid = (h[:SecurityId] || h["SecurityId"]).to_s
         { ExchangeSegment: seg, SecurityId: sid }
       end
 
+      # Normalizes all instruments in the provided list.
+      #
+      # @param list [Enumerable<Hash>]
+      # @return [Array<Hash>]
       def self.normalize_instruments(list)
         Array(list).map { |h| normalize_instrument(h) }
       end
 
-      # Convert response header's segment code (byte) -> enum string
+      # Converts a numeric response code into the API's segment string.
+      #
+      # @param code_byte [Integer]
+      # @return [String]
       def self.from_code(code_byte)
         CODE_TO_STRING[code_byte] || code_byte.to_s
       end

@@ -117,6 +117,10 @@ module DhanHQ
         build_from_response(payload)
       end
 
+      # Fetches records filtered by query parameters.
+      #
+      # @param params [Hash] Query parameters supported by the API.
+      # @return [Array<BaseModel>, BaseModel, DhanHQ::ErrorObject]
       def where(params)
         response = resource.get("", params: params)
         build_from_response(response)
@@ -158,10 +162,17 @@ module DhanHQ
       success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
     end
 
+    # Persists the current resource by delegating to {#create} or {#update}.
+    #
+    # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject, false]
     def save
       new_record? ? self.class.create(attributes) : update(attributes)
     end
 
+    # Same as {#save} but raises {DhanHQ::Error} when persistence fails.
+    #
+    # @return [DhanHQ::BaseModel]
+    # @raise [DhanHQ::Error] When the record cannot be saved.
     def save!
       result = save
       return result unless result == false || result.nil? || result.is_a?(DhanHQ::ErrorObject)
@@ -181,6 +192,9 @@ module DhanHQ
     # Delete the resource
     #
     # @return [Boolean] True if deletion was successful
+    # Deletes the resource from the remote API.
+    #
+    # @return [Boolean] True when the server confirms deletion.
     def delete
       response = self.class.resource.delete("/#{id}")
       success_response?(response)
@@ -188,6 +202,9 @@ module DhanHQ
       false
     end
 
+    # Alias for {#delete} maintained for ActiveModel familiarity.
+    #
+    # @return [Boolean]
     def destroy
       response = self.class.resource.delete("/#{id}")
       success_response?(response)
@@ -210,6 +227,9 @@ module DhanHQ
       optionchain_api? ? titleize_keys(@attributes) : camelize_keys(@attributes)
     end
 
+    # Identifier inferred from the loaded attributes.
+    #
+    # @return [String, Integer, nil]
     def id
       @attributes[:id] || @attributes[:order_id] || @attributes[:security_id]
     end

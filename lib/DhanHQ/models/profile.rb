@@ -6,6 +6,7 @@ module DhanHQ
     # Ruby wrapper around the `/v2/profile` endpoint. Provides typed accessors
     # and snake_case keys while leaving the underlying response untouched.
     class Profile < BaseModel
+      # Base path for profile retrieval.
       HTTP_PATH = "/v2/profile"
 
       attributes :dhan_client_id, :token_validity, :active_segment, :ddpi,
@@ -32,6 +33,9 @@ module DhanHQ
         end
       end
 
+      # Profile responses are informational and not validated locally.
+      #
+      # @return [nil]
       def validation_contract
         nil
       end

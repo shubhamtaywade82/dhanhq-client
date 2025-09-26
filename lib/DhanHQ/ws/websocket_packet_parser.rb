@@ -16,7 +16,9 @@ require_relative "packets/depth_delta_packet"
 
 module DhanHQ
   module WS
+    # Parses raw WebSocket frames using the binary packet definitions.
     class WebsocketPacketParser
+      # Numeric feed codes emitted by the streaming service.
       RESPONSE_CODES = {
         index: 1,
         ticker: 2,
@@ -37,6 +39,9 @@ module DhanHQ
         @binary_stream = StringIO.new(@binary_data.byteslice(8..) || "".b) # payload only
       end
 
+      # Parses the supplied binary frame and returns a normalized hash.
+      #
+      # @return [Hash]
       def parse
         body =
           case header.feed_response_code

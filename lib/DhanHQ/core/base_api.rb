@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  # Base class for all API resource classes
-  # Delegates HTTP requests to `DhanHQ::Client`
+  # Base class for all API resource classes.
+  # Delegates HTTP requests to {DhanHQ::Client} and exposes helpers shared by
+  # resource wrappers.
   class BaseAPI
     include DhanHQ::APIHelper
     include DhanHQ::AttributeHelper
 
+    # Default API type used when a subclass does not override {#initialize}.
     API_TYPE = :non_trading_api
+    # Root path prepended to each endpoint segment.
     HTTP_PATH = ""
 
     attr_reader :client

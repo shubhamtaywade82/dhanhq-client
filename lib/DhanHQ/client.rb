@@ -69,20 +69,46 @@ module DhanHQ
       handle_response(response)
     end
 
-    # Convenience wrappers for common HTTP methods. These make it easier to stub
-    # network calls in tests where `request` is invoked internally.
+    # Convenience wrapper for issuing a GET request.
+    #
+    # @param path [String] The API endpoint path.
+    # @param params [Hash] Query parameters for the request.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>]
+    #   Parsed JSON response.
+    # @see #request
     def get(path, params = {})
       request(:get, path, params)
     end
 
+    # Convenience wrapper for issuing a POST request.
+    #
+    # @param path [String] The API endpoint path.
+    # @param params [Hash] JSON payload for the request.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>]
+    #   Parsed JSON response.
+    # @see #request
     def post(path, params = {})
       request(:post, path, params)
     end
 
+    # Convenience wrapper for issuing a PUT request.
+    #
+    # @param path [String] The API endpoint path.
+    # @param params [Hash] JSON payload for the request.
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>]
+    #   Parsed JSON response.
+    # @see #request
     def put(path, params = {})
       request(:put, path, params)
     end
 
+    # Convenience wrapper for issuing a DELETE request.
+    #
+    # @param path [String] The API endpoint path.
+    # @param params [Hash] Optional request payload (rare for DELETE).
+    # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>]
+    #   Parsed JSON response.
+    # @see #request
     def delete(path, params = {})
       request(:delete, path, params)
     end

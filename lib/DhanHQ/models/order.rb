@@ -4,8 +4,11 @@ require_relative "../contracts/place_order_contract"
 require_relative "../contracts/modify_order_contract"
 
 module DhanHQ
+  # ActiveRecord-style models built on top of the REST resources.
   module Models
+    # Representation of an order as returned by the REST APIs.
     class Order < BaseModel
+      # Attributes eligible for modification requests.
       MODIFIABLE_FIELDS = %i[
         dhan_client_id
         order_id

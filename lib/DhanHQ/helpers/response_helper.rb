@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module DhanHQ
+  # Helper mixin for normalising API responses and raising mapped errors.
   module ResponseHelper
     private
 

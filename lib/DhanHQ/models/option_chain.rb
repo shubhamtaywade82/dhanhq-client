@@ -4,10 +4,14 @@ require_relative "../contracts/option_chain_contract"
 
 module DhanHQ
   module Models
+    # Model for fetching and filtering option chain snapshots.
     class OptionChain < BaseModel
       attr_reader :underlying_scrip, :underlying_seg, :expiry, :last_price, :option_data
 
       class << self
+        # Shared resource for option chain operations.
+        #
+        # @return [DhanHQ::Resources::OptionChain]
         def resource
           @resource ||= DhanHQ::Resources::OptionChain.new
         end

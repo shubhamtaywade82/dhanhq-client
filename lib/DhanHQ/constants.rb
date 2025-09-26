@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 module DhanHQ
+  # Enumerations and helper lookups used across the REST and WebSocket clients.
   module Constants
+    # Valid transaction directions accepted by order placement APIs.
     TRANSACTION_TYPES = %w[BUY SELL].freeze
 
+    # Supported exchange segments for security lookups and subscription APIs.
     EXCHANGE_SEGMENTS = %w[
       NSE_EQ
       NSE_FNO
@@ -15,6 +18,7 @@ module DhanHQ
       IDX_I
     ].freeze
 
+    # Security instrument kinds returned in instrument master downloads.
     INSTRUMENTS = %w[
       INDEX
       FUTIDX
@@ -28,6 +32,7 @@ module DhanHQ
       OPTCUR
     ].freeze
 
+    # Product types that can be used while placing or modifying orders.
     PRODUCT_TYPES = %w[
       CNC
       INTRADAY
@@ -37,6 +42,7 @@ module DhanHQ
       BO
     ].freeze
 
+    # Order execution types supported by the platform.
     ORDER_TYPES = %w[
       LIMIT
       MARKET
@@ -44,8 +50,10 @@ module DhanHQ
       STOP_LOSS_MARKET
     ].freeze
 
+    # Order validity flags supported by the trading APIs.
     VALIDITY_TYPES = %w[DAY IOC].freeze
 
+    # Permitted after-market order submission windows.
     AMO_TIMINGS = %w[
       OPEN
       OPEN_30
@@ -53,6 +61,7 @@ module DhanHQ
       PRE_OPEN
     ].freeze
 
+    # Status values returned when querying order lifecycle events.
     ORDER_STATUSES = %w[
       TRANSIT
       PENDING
@@ -65,45 +74,64 @@ module DhanHQ
       TRIGGERED
     ].freeze
 
-    # Constants for Exchange Segment
+    # Exchange aliases used when building subscription payloads.
     NSE = "NSE_EQ"
+    # Bombay Stock Exchange equities segment alias.
     BSE = "BSE_EQ"
+    # Currency segment alias.
     CUR = "NSE_CURRENCY"
+    # Multi Commodity Exchange segment alias.
     MCX = "MCX_COMM"
+    # F&O segment alias.
     FNO = "NSE_FNO"
+    # National Stock Exchange futures & options segment alias.
     NSE_FNO = "NSE_FNO"
+    # Bombay Stock Exchange futures & options segment alias.
     BSE_FNO = "BSE_FNO"
+    # Broad index segment alias.
     INDEX = "IDX_I"
 
+    # Segments that support option instruments.
     OPTION_SEGMENTS = [NSE, BSE, CUR, MCX, FNO, NSE_FNO, BSE_FNO, INDEX].freeze
 
-    # Constants for Transaction Type
+    # Canonical buy transaction label.
     BUY = "BUY"
+    # Canonical sell transaction label.
     SELL = "SELL"
 
-    # Constants for Product Type
+    # Cash-and-carry product identifier.
     CNC = "CNC"
+    # Intraday margin product identifier.
     INTRA = "INTRADAY"
+    # Carry-forward margin product identifier.
     MARGIN = "MARGIN"
+    # Cover order product identifier.
     CO = "CO"
+    # Bracket order product identifier.
     BO = "BO"
+    # Margin trading funding identifier.
     MTF = "MTF"
 
-    # Constants for Order Type
+    # Limit price order type.
     LIMIT = "LIMIT"
+    # Market order type.
     MARKET = "MARKET"
+    # Stop-loss limit order type.
     SL = "STOP_LOSS"
+    # Stop-loss market order type.
     SLM = "STOP_LOSS_MARKET"
 
-    # Constants for Validity
+    # Good-for-day validity flag.
     DAY = "DAY"
+    # Immediate-or-cancel validity flag.
     IOC = "IOC"
 
-    # CSV URLs for Security ID List
+    # Download URL for the compact instrument master CSV.
     COMPACT_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
+    # Download URL for the detailed instrument master CSV.
     DETAILED_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
 
-    # Paths that require `client-id` in headers
+    # API routes that require a `client-id` header in addition to the access token.
     DATA_API_PATHS = %w[
       /v2/marketfeed/ltp
       /v2/marketfeed/ohlc
@@ -112,7 +140,7 @@ module DhanHQ
       /v2/optionchain/expirylist
     ].freeze
 
-    # DHANHQ API Error Mapping
+    # Mapping of DhanHQ error codes to SDK error classes for consistent exception handling.
     DHAN_ERROR_MAPPING = {
       "DH-901" => DhanHQ::InvalidAuthenticationError,
       "DH-902" => DhanHQ::InvalidAccessError,

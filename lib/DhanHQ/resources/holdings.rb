@@ -2,8 +2,11 @@
 
 module DhanHQ
   module Resources
+    # Resource client exposing portfolio holdings.
     class Holdings < BaseAPI
+      # Holdings are exposed via the trading API.
       API_TYPE = :order_api
+      # Base path for holdings queries.
       HTTP_PATH = "/v2/holdings"
 
       ##

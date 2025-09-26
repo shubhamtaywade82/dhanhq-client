@@ -2,7 +2,9 @@
 
 module DhanHQ
   module Models
+    # Model for the on-demand margin calculator response.
     class Margin < BaseModel
+      # Base path used to invoke the calculator.
       HTTP_PATH = "/v2/margincalculator"
 
       attr_reader :total_margin, :span_margin, :exposure_margin, :available_balance,

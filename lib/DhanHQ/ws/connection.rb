@@ -6,8 +6,11 @@ require "json"
 
 module DhanHQ
   module WS
+    # Low-level wrapper responsible for establishing and maintaining the raw
+    # WebSocket connection to the streaming API.
     class Connection
       SUB_CODES   = { ticker: 15, quote: 17, full: 21 }.freeze # adjust if needed
+      # Request codes used when unsubscribing from feeds.
       UNSUB_CODES = { ticker: 16, quote: 18, full: 22 }.freeze
 
       COOL_OFF_429 = 60  # seconds to cool off on 429
@@ -15,6 +18,13 @@ module DhanHQ
 
       attr_reader :stopping
 
+      # @param url [String] WebSocket endpoint URL.
+      # @param mode [Symbol] Feed mode (:ticker, :quote, :full).
+      # @param bus [DhanHQ::WS::CmdBus] Command queue feeding subscription
+      #   changes.
+      # @param state [DhanHQ::WS::SubState] Tracks subscription status.
+      # @yield [binary]
+      # @yieldparam binary [String] Raw binary frame received from the socket.
       def initialize(url:, mode:, bus:, state:, &on_binary)
         @url = url
         @mode = mode
@@ -29,6 +39,9 @@ module DhanHQ
         @thr = nil
       end
 
+      # Starts the connection in a background thread.
+      #
+      # @return [DhanHQ::WS::Connection] self.
       def start
         return self if @thr&.alive?
 
@@ -36,7 +49,9 @@ module DhanHQ
         self
       end
 
-      # Hard stop: no graceful packet, just close and never reconnect
+      # Stops the connection without sending the explicit disconnect frame.
+      #
+      # @return [DhanHQ::WS::Connection] self.
       def stop
         @stop = true
         @stopping = true
@@ -49,8 +64,9 @@ module DhanHQ
         self
       end
 
-      # Public API: explicit disconnect (send RequestCode 12) and close socket
-      # Graceful broker disconnect (RequestCode 12), then no reconnect
+      # Sends the disconnect frame (RequestCode 12) and closes the socket.
+      #
+      # @return [DhanHQ::WS::Connection] self.
       def disconnect!
         @stop = true
         @stopping = true
@@ -63,7 +79,9 @@ module DhanHQ
         self
       end
 
-      # Is underlying socket open?
+      # Indicates whether the underlying socket is currently open.
+      #
+      # @return [Boolean]
       def open?
         @ws && @ws.instance_variable_get(:@driver)&.ready_state == 1
       rescue StandardError

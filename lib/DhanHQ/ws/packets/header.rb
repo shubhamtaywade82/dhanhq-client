@@ -4,7 +4,9 @@ require "bindata"
 
 module DhanHQ
   module WS
+    # Binary structures backing the streaming feed decoder.
     module Packets
+      # Binary representation of the 8-byte frame header.
       class Header < BinData::Record
         endian :big # Default to big-endian for majority fields
 

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module DhanHQ
+  # Helper mixin used by models and clients to assemble API requests.
   module RequestHelper
     # Builds a model object from API response
     #

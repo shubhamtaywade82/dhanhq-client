@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Contracts
+    # Validates payloads for the historical data endpoints.
     class HistoricalDataContract < Dry::Validation::Contract
       include DhanHQ::Constants
 

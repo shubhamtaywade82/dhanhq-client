@@ -4,17 +4,30 @@ require "concurrent"
 
 module DhanHQ
   module WS
+    # Tracks the set of active WebSocket clients so they can be collectively
+    # disconnected when required.
     class Registry
       @clients = []
       class << self
+        # Registers a client instance with the registry.
+        #
+        # @param client [DhanHQ::WS::Client]
+        # @return [void]
         def register(client)
           @clients << client unless @clients.include?(client)
         end
 
+        # Removes a client from the registry.
+        #
+        # @param client [DhanHQ::WS::Client]
+        # @return [void]
         def unregister(client)
           @clients.delete(client)
         end
 
+        # Stops and removes all registered clients.
+        #
+        # @return [void]
         def stop_all
           @clients.dup.each do |c|
             c.stop
