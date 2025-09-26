@@ -9,7 +9,9 @@ module DhanHQ
     # GET /v2/trades/{from-date}/{to-date}/{page}
     #
     class Statements < BaseAPI
+      # Statement history is fetched from the non-trading API tier.
       API_TYPE = :non_trading_api
+      # Base path for ledger and trade history.
       HTTP_PATH = "/v2"
 
       ##

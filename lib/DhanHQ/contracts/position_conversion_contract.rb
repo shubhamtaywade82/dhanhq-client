@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Contracts
+    # Validates requests for converting positions between product types.
     class PositionConversionContract < BaseContract
       params do
         required(:dhanClientId).filled(:string)

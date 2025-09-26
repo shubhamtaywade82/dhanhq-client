@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Models
+    # Model wrapping multi-leg super order payloads.
     class SuperOrder < BaseModel
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_type,
@@ -13,10 +14,16 @@ module DhanHQ
                  :trailing_jump
 
       class << self
+        # Shared resource instance used for API calls.
+        #
+        # @return [DhanHQ::Resources::SuperOrders]
         def resource
           @resource ||= DhanHQ::Resources::SuperOrders.new
         end
 
+        # Fetches all configured super orders.
+        #
+        # @return [Array<SuperOrder>]
         def all
           response = resource.all
           return [] unless response.is_a?(Array)
@@ -24,6 +31,10 @@ module DhanHQ
           response.map { |o| new(o, skip_validation: true) }
         end
 
+        # Creates a new super order with the provided legs.
+        #
+        # @param params [Hash]
+        # @return [SuperOrder, nil]
         def create(params)
           response = resource.create(params)
           return nil unless response.is_a?(Hash) && response["orderId"]
@@ -32,6 +43,10 @@ module DhanHQ
         end
       end
 
+      # Updates the order legs for an existing super order.
+      #
+      # @param new_params [Hash]
+      # @return [Boolean]
       def modify(new_params)
         raise "Order ID is required to modify a super order" unless id
 
@@ -39,6 +54,10 @@ module DhanHQ
         response["orderId"] == id
       end
 
+      # Cancels a specific leg (or the entry leg by default).
+      #
+      # @param leg_name [String]
+      # @return [Boolean]
       def cancel(leg_name = "ENTRY_LEG")
         raise "Order ID is required to cancel a super order" unless id
 

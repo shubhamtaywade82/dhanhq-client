@@ -2,8 +2,11 @@
 
 module DhanHQ
   module Resources
+    # Resource client for querying option chain data APIs.
     class OptionChain < BaseAPI
+      # Option chain queries have bespoke rate limits, hence their own API type.
       API_TYPE = :option_chain
+      # Base path for option chain endpoints.
       HTTP_PATH = "/v2/optionchain"
 
       ##

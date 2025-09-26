@@ -10,6 +10,7 @@ module DhanHQ
     # WebSocket connection to the streaming API.
     class Connection
       SUB_CODES   = { ticker: 15, quote: 17, full: 21 }.freeze # adjust if needed
+      # Request codes used when unsubscribing from feeds.
       UNSUB_CODES = { ticker: 16, quote: 18, full: 22 }.freeze
 
       COOL_OFF_429 = 60  # seconds to cool off on 429

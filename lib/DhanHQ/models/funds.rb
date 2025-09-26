@@ -2,7 +2,9 @@
 
 module DhanHQ
   module Models
+    # Model representing the funds/limits endpoint response.
     class Funds < BaseModel
+      # Base path used by the funds resource.
       HTTP_PATH = "/v2/fundlimit"
 
       attributes :available_balance, :sod_limit, :collateral_amount, :receiveable_amount, :utilized_amount,

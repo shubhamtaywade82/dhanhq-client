@@ -8,7 +8,9 @@ module DhanHQ
     # The endpoint is a simple GET request to `/v2/profile` that returns
     # account level metadata (token validity, active segments, etc.).
     class Profile < BaseAPI
+      # Profile metadata is served from the non-trading API tier.
       API_TYPE = :non_trading_api
+      # Base path for profile lookups.
       HTTP_PATH = "/v2/profile"
 
       ##

@@ -5,13 +5,19 @@ require "dry-validation"
 
 module DhanHQ
   module Contracts
+    # Shared contract used to validate place and modify order payloads.
     class OrderContract < BaseContract
-      # Common enums from annexure
+      # Allowed transaction directions supported by DhanHQ order APIs.
       TRANSACTION_TYPES = %w[BUY SELL].freeze
+      # Supported exchange segments for order placement requests.
       EXCHANGE_SEGMENTS = %w[NSE_EQ NSE_FNO NSE_CURRENCY BSE_EQ MCX_COMM BSE_CURRENCY BSE_FNO].freeze
+      # Permitted product types for order placement.
       PRODUCT_TYPES = %w[CNC INTRADAY MARGIN CO BO].freeze
+      # Supported order execution types.
       ORDER_TYPES = %w[LIMIT MARKET STOP_LOSS STOP_LOSS_MARKET].freeze
+      # Validity window options for orders.
       VALIDITY_TYPES = %w[DAY IOC].freeze
+      # After-market execution windows.
       AMO_TIMES = %w[PRE_OPEN OPEN OPEN_30 OPEN_60].freeze
 
       params do
@@ -70,6 +76,7 @@ module DhanHQ
       end
     end
 
+    # Contract enforcing additional requirements for new order placement.
     class PlaceOrderContract < OrderContract
       # Additional placement specific rules
       rule(:after_market_order) do
@@ -77,6 +84,7 @@ module DhanHQ
       end
     end
 
+    # Contract extending {OrderContract} for order modification payloads.
     class ModifyOrderContract < OrderContract
       # Modification specific requirements
       params do

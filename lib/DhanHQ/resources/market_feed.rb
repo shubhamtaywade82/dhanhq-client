@@ -2,8 +2,11 @@
 
 module DhanHQ
   module Resources
+    # Resource client for fetching on-demand market data snapshots.
     class MarketFeed < BaseAPI
+      # Market feed requests hit the data API tier.
       API_TYPE = :data_api
+      # Root path for market feed endpoints.
       HTTP_PATH = "/v2"
 
       ##
@@ -42,6 +45,9 @@ module DhanHQ
 
       private
 
+      # Lazily builds a `:quote_api` scoped client for quote depth requests.
+      #
+      # @return [MarketFeed]
       def quote_resource
         @quote_resource ||= self.class.new(api_type: :quote_api)
       end

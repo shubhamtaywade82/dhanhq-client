@@ -4,6 +4,7 @@ require "dry-validation"
 require_relative "../constants"
 
 module DhanHQ
+  # Namespace housing Dry::Validation contracts for request payload validation.
   module Contracts
     # Base contract that includes shared logic and constants.
     class BaseContract < Dry::Validation::Contract

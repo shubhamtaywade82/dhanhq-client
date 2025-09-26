@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module DhanHQ
+  # Helper methods for normalising attribute keys across API responses.
   module AttributeHelper
     # Convert keys from snake_case to camelCase
     #
@@ -20,8 +21,8 @@ module DhanHQ
 
     # Convert keys from camelCase to snake_case
     #
-    # @param key [String] The key to convert
-    # @return [Symbol] The snake_cased key
+    # @param hash [Hash] The hash to convert
+    # @return [Hash] The snake_cased hash
     def snake_case(hash)
       hash.transform_keys { |key| key.to_s.underscore.to_sym }
     end

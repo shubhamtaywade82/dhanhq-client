@@ -76,6 +76,9 @@ module DhanHQ
   class Error < StandardError; end
 
   class << self
+    # Default REST API host used when no custom base URL is provided.
+    #
+    # @return [String]
     BASE_URL = "https://api.dhan.co/v2"
     # The current configuration instance.
     #
@@ -101,11 +104,17 @@ module DhanHQ
     end
 
     # default logger so calls like DhanHQ.logger&.info never explode
+    # Accessor for the logger instance used by the SDK.
+    #
+    # @return [Logger] The configured logger, defaulting to STDOUT at INFO level.
     def logger
       @logger ||= Logger.new($stdout, level: Logger::INFO)
     end
 
-    # Configures the DhanHQ client with user-defined settings.
+    # Configures the DhanHQ client using environment variables.
+    #
+    # When credentials are injected via `ACCESS_TOKEN` and `CLIENT_ID` this helper
+    # can be used to initialise a configuration without a block.
     #
     # @example
     #   DhanHQ.configure_with_env

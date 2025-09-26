@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Contracts
+    # Validates requests sent to the margin calculator endpoint.
     class MarginCalculatorContract < Dry::Validation::Contract
       params do
         required(:dhanClientId).filled(:string)

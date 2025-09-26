@@ -5,6 +5,7 @@ require "bindata"
 module DhanHQ
   module WS
     module Packets
+      # Binary representation of a single depth level in the feed.
       class MarketDepthLevel < BinData::Record
         endian :little
 

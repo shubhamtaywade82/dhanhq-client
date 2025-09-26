@@ -17,6 +17,7 @@ module DhanHQ
         "BSE_FNO" => 8
       }.freeze
 
+      # Lookup table converting numeric feed codes into exchange strings.
       CODE_TO_STRING = STRING_TO_CODE.invert.freeze
 
       # Accepts multiple segment representations and returns the canonical

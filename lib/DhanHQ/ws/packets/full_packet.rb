@@ -6,6 +6,7 @@ require_relative "market_depth_level"
 module DhanHQ
   module WS
     module Packets
+      # Binary definition of the "full" market depth packet.
       class FullPacket < BinData::Record
         endian :little
 

@@ -5,6 +5,7 @@ require "bindata"
 module DhanHQ
   module WS
     module Packets
+      # Binary definition for quote snapshots emitted by the feed.
       class QuotePacket < BinData::Record
         endian :little
 

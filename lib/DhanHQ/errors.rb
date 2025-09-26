@@ -28,6 +28,7 @@ module DhanHQ
 
   # Order and market data errors
   class OrderError < Error; end
+  # Raised when the API signals an issue with the requested data payload.
   class DataError < Error; end
 
   # Server and network-related errors

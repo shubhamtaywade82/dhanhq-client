@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Models
+    # ActiveModel-style wrapper for Good Till Trigger/Forever orders.
     class ForeverOrder < BaseModel
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_flag,

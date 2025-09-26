@@ -2,7 +2,9 @@
 
 module DhanHQ
   module Models
+    # Model representing a single portfolio holding.
     class Holding < BaseModel
+      # Base path used when retrieving holdings.
       HTTP_PATH = "/v2/holdings"
 
       attributes :exchange, :trading_symbol, :security_id, :isin, :total_qty,

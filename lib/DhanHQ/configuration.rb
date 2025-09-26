@@ -8,6 +8,9 @@ module DhanHQ
   #
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Configuration
+    # Default REST API host used when the base URL is not overridden.
+    #
+    # @return [String]
     BASE_URL = "https://api.dhan.co/v2"
     # The client ID for API authentication.
     # @return [String, nil] The client ID or `nil` if not set.

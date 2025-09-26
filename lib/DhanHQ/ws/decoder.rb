@@ -8,6 +8,7 @@ module DhanHQ
     # Translates the binary WebSocket frames into Ruby hashes that can be
     # consumed by client code.
     class Decoder
+      # Mapping of feed response codes to semantic event kinds.
       FEED_KIND = {
         2 => :ticker, 4 => :quote, 5 => :oi, 6 => :prev_close, 8 => :full, 50 => :disconnect, 41 => :depth_bid, 51 => :depth_ask
       }.freeze
