@@ -16,7 +16,6 @@ module DhanHQ
 
         def start
           return self if @started.true?
-
           @started.make_true
           @conn = Connection.new(url: @url) do |msg|
             emit(:update, msg) if msg&.dig(:Type) == "order_alert"
@@ -29,7 +28,6 @@ module DhanHQ
 
         def stop
           return unless @started.true?
-
           @started.make_false
           @conn&.stop
           emit(:close, true)

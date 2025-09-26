@@ -3,6 +3,7 @@
 require "eventmachine"
 require "faye/websocket"
 require "json"
+require "thread" # rubocop:disable Lint/RedundantRequireStatement
 
 module DhanHQ
   module WS
@@ -44,33 +45,7 @@ module DhanHQ
             sleep (@cooloff_until - Time.now).ceil if @cooloff_until && Time.now < @cooloff_until
 
             begin
-              EM.run do
-                @ws = Faye::WebSocket::Client.new(@url, nil, headers: default_headers)
-
-                @ws.on :open do |_|
-                  DhanHQ.logger&.info("[DhanHQ::WS::Orders] open")
-                  send_login
-                end
-
-                @ws.on :message do |ev|
-                  msg = JSON.parse(ev.data, symbolize_names: true)
-                  @on_json&.call(msg)
-                rescue StandardError => e
-                  DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
-                end
-
-                @ws.on :close do |ev|
-                  DhanHQ.logger&.warn("[DhanHQ::WS::Orders] close #{ev.code} #{ev.reason}")
-                  failed  = (ev.code != 1000)
-                  got_429 = ev.reason.to_s.include?("429")
-                  EM.stop
-                end
-
-                @ws.on :error do |ev|
-                  DhanHQ.logger&.error("[DhanHQ::WS::Orders] error #{ev.message}")
-                  failed = true
-                end
-              end
+              failed, got_429 = run_session
             rescue StandardError => e
               DhanHQ.logger&.error("[DhanHQ::WS::Orders] crashed #{e.class} #{e.message}")
               failed = true
@@ -81,6 +56,7 @@ module DhanHQ
                 @cooloff_until = Time.now + COOL_OFF_429
                 DhanHQ.logger&.warn("[DhanHQ::WS::Orders] cooling off #{COOL_OFF_429}s due to 429")
               end
+
               if failed
                 sleep_time = [backoff, MAX_BACKOFF].min
                 jitter = rand(0.2 * sleep_time)
@@ -92,6 +68,55 @@ module DhanHQ
               end
             end
           end
+        end
+
+        def run_session
+          failed  = false
+          got_429 = false
+          latch   = Queue.new
+
+          runner = proc do |stopper|
+            @ws = Faye::WebSocket::Client.new(@url, nil, headers: default_headers)
+
+            @ws.on :open do |_|
+              DhanHQ.logger&.info("[DhanHQ::WS::Orders] open")
+              send_login
+            end
+
+            @ws.on :message do |ev|
+              begin
+                msg = JSON.parse(ev.data, symbolize_names: true)
+                @on_json&.call(msg)
+              rescue StandardError => e
+                DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
+              end
+            end
+
+            @ws.on :close do |ev|
+              DhanHQ.logger&.warn("[DhanHQ::WS::Orders] close #{ev.code} #{ev.reason}")
+              failed  = (ev.code != 1000)
+              got_429 = ev.reason.to_s.include?("429")
+              latch << true
+              stopper.call
+            end
+
+            @ws.on :error do |ev|
+              DhanHQ.logger&.error("[DhanHQ::WS::Orders] error #{ev.message}")
+              failed = true
+            end
+          end
+
+          if EM.reactor_running?
+            EM.schedule { runner.call(-> {}) }
+          else
+            EM.run do
+              runner.call(-> { EM.stop })
+            end
+          end
+
+          latch.pop
+
+          [failed, got_429]
         end
 
         def default_headers
