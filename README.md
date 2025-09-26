@@ -45,6 +45,11 @@ DhanHQ.configure do |config|
   config.base_url     = "https://api.dhan.co/v2"
   # Optional WS version (default: 2)
   config.ws_version   = 2
+  # Optional Order Update WS knobs
+  config.ws_order_url  = "wss://api-order-update.dhan.co"
+  config.ws_user_type  = "SELF"     # or "PARTNER"
+  config.partner_id    = nil         # required for PARTNER mode
+  config.partner_secret = nil
 end
 ```
 
@@ -186,6 +191,74 @@ DhanHQ::WS.disconnect_all_local!
 
   * `ws.disconnect!` or `ws.stop` prevents reconnects
   * An `at_exit` hook stops all registered WS clients to avoid leaked sockets
+
+---
+
+## Order Update WebSocket (NEW)
+
+Receive live updates whenever your orders transition between states (placed → traded → cancelled, etc.).
+
+### Standalone Ruby script
+
+```ruby
+require "dhanhq"
+
+DhanHQ.configure_with_env
+DhanHQ.logger.level = Logger::INFO
+
+ou = DhanHQ::WS::Orders::Client.new.start
+
+ou.on(:update) do |payload|
+  data = payload[:Data] || {}
+  puts "ORDER #{data[:OrderNo]} #{data[:Status]} traded=#{data[:TradedQty]} avg=#{data[:AvgTradedPrice]}"
+end
+
+# Keep the script alive (CTRL+C to exit)
+sleep
+
+# Later, stop the socket
+ou.stop
+```
+
+Or, if you just need a quick callback:
+
+```ruby
+DhanHQ::WS::Orders.connect do |payload|
+  # handle :update callbacks only
+end
+```
+
+### Rails bot integration
+
+Mirror the market-feed supervisor by adding an Order Update hub singleton that hydrates your local DB and hands off to execution services.
+
+1. **Service** – `app/services/live/order_update_hub.rb`
+
+   ```ruby
+   Live::OrderUpdateHub.instance.start!
+   ```
+
+   The hub wires `DhanHQ::WS::Orders::Client` to:
+
+   * Upsert local `BrokerOrder` rows so UIs always reflect current broker status.
+   * Auto-subscribe traded entry legs on your existing `Live::WsHub` (if defined).
+   * Refresh `Execution::PositionGuard` (if present) with fill prices/qty for trailing exits.
+
+2. **Initializer** – `config/initializers/order_update_hub.rb`
+
+   ```ruby
+   if ENV["ENABLE_WS"] == "true"
+     Rails.application.config.to_prepare do
+       Live::OrderUpdateHub.instance.start!
+     end
+
+     at_exit { Live::OrderUpdateHub.instance.stop! }
+   end
+   ```
+
+   Flip `ENABLE_WS=true` in your Procfile or `.env` to boot the hub alongside the existing feed supervisor. On shutdown the client is stopped cleanly to avoid leaked sockets.
+
+The hub is resilient to missing dependencies—if you do not have a `BrokerOrder` model, it safely skips persistence while keeping downstream callbacks alive.
 
 ---
 

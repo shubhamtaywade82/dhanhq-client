@@ -29,6 +29,22 @@ module DhanHQ
     # @return [String] URL for detailed CSV.
     attr_accessor :detailed_csv_url
 
+    # Websocket order updates endpoint.
+    # @return [String]
+    attr_accessor :ws_order_url
+
+    # Websocket user type for order updates.
+    # @return [String] "SELF" or "PARTNER".
+    attr_accessor :ws_user_type
+
+    # Partner ID for order updates when `ws_user_type` is "PARTNER".
+    # @return [String, nil]
+    attr_accessor :partner_id
+
+    # Partner secret for order updates when `ws_user_type` is "PARTNER".
+    # @return [String, nil]
+    attr_accessor :partner_secret
+
     # Initializes a new configuration instance with default values.
     #
     # @example
@@ -38,7 +54,11 @@ module DhanHQ
     def initialize
       @client_id = ENV.fetch("CLIENT_ID", nil)
       @access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      @base_url     = "https://api.dhan.co/v2"
+      @base_url       = "https://api.dhan.co/v2"
+      @ws_order_url   = "wss://api-order-update.dhan.co"
+      @ws_user_type   = "SELF"
+      @partner_id     = nil
+      @partner_secret = nil
     end
   end
 end
