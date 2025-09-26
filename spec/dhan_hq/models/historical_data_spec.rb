@@ -78,8 +78,8 @@ RSpec.describe DhanHQ::Models::HistoricalData, vcr: { cassette_name: "models/his
       end
 
       # We can also check for positive volumes, etc.
-      response[:volume].each { |v| expect(v).to be_a(Numeric) }
-      response[:timestamp].each { |ts| expect(ts).to be_a(Numeric) }
+      expect(response[:volume]).to all(be_a(Numeric))
+      expect(response[:timestamp]).to all(be_a(Numeric))
     end
   end
 end

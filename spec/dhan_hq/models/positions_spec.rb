@@ -11,6 +11,18 @@ RSpec.describe DhanHQ::Resources::Positions, vcr: {
     DhanHQ.configure_with_env
   end
 
+  let(:conversion_params) do
+    {
+      dhan_client_id: "1100003626",
+      from_product_type: "INTRADAY",
+      exchange_segment: "NSE_EQ",
+      position_type: "LONG",
+      security_id: "1333",
+      convert_qty: 1,
+      to_product_type: "CNC"
+    }
+  end
+
   describe "#all" do
     it "fetches all open positions for the day" do
       response = positions_resource.all
@@ -36,18 +48,6 @@ RSpec.describe DhanHQ::Resources::Positions, vcr: {
         expect(response.size).to eq(0)
       end
     end
-  end
-
-  let(:conversion_params) do
-    {
-      dhan_client_id: "1100003626",
-      from_product_type: "INTRADAY",
-      exchange_segment: "NSE_EQ",
-      position_type: "LONG",
-      security_id: "1333",
-      convert_qty: 1,
-      to_product_type: "CNC"
-    }
   end
 
   describe "#convert" do
@@ -95,9 +95,9 @@ RSpec.describe DhanHQ::Models::Position do
   describe ".active" do
     it "filters closed positions" do
       allow(resource_double).to receive(:all).and_return([
-        { "positionType" => "LONG" },
-        { "positionType" => "CLOSED" }
-      ])
+                                                           { "positionType" => "LONG" },
+                                                           { "positionType" => "CLOSED" }
+                                                         ])
 
       expect(described_class.active.map(&:position_type)).to eq(["LONG"])
     end
@@ -118,9 +118,9 @@ RSpec.describe DhanHQ::Models::Position do
 
     it "returns the API response when successful" do
       expect(resource_double).to receive(:convert).with(hash_including(
-        "dhanClientId" => "1100003626",
-        "convertQty" => 1
-      )).and_return({ status: "success" })
+                                                          "dhanClientId" => "1100003626",
+                                                          "convertQty" => 1
+                                                        )).and_return({ status: "success" })
 
       expect(described_class.convert(params)).to eq({ status: "success" })
     end

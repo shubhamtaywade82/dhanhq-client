@@ -138,7 +138,7 @@ module DhanHQ
               jitter = rand(0.2 * sleep_time)
               DhanHQ.logger&.warn("[DhanHQ::WS] reconnecting in #{(sleep_time + jitter).round(1)}s")
               sleep(sleep_time + jitter)
-              backoff *= 2.0 # rubocop:disable Lint/UselessAssignment
+              backoff *= 2.0
             else
               backoff = 2.0 # reset only after a clean session end
             end

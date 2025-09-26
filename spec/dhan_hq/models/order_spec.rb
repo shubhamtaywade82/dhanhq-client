@@ -189,7 +189,7 @@ RSpec.describe DhanHQ::Models::Order do
 
     it "delegates to resource.cancel and returns true on success" do
       expect(resource_double).to receive(:cancel).with("OID123")
-                                                .and_return({ "orderStatus" => "CANCELLED" })
+                                                 .and_return({ "orderStatus" => "CANCELLED" })
 
       expect(order.cancel).to be(true)
     end
@@ -346,9 +346,9 @@ RSpec.describe DhanHQ::Models::Order do
 
       it "camelizes payload and fetches final order" do
         expect(resource_double).to receive(:create).with(hash_including(
-          "transactionType" => "BUY",
-          "exchangeSegment" => "NSE_EQ"
-        )).and_return({ "orderId" => "OID1" })
+                                                           "transactionType" => "BUY",
+                                                           "exchangeSegment" => "NSE_EQ"
+                                                         )).and_return({ "orderId" => "OID1" })
         expect(resource_double).to receive(:find).with("OID1")
                                                  .and_return({ "orderId" => "OID1", "orderStatus" => "PENDING" })
 
@@ -361,7 +361,9 @@ RSpec.describe DhanHQ::Models::Order do
       let(:order) { described_class.new({ orderId: "OID1", dhanClientId: "1100003626" }, skip_validation: true) }
 
       it "sends filtered camelized payload" do
-        expect(resource_double).to receive(:update).with("OID1", { "orderId" => "OID1", "dhanClientId" => "1100003626", "quantity" => 2 })
+        expect(resource_double).to receive(:update).with("OID1",
+                                                         { "orderId" => "OID1", "dhanClientId" => "1100003626",
+                                                           "quantity" => 2 })
                                                    .and_return({ status: "success", orderStatus: "MODIFIED" })
 
         updated = order.modify(quantity: 2, ignored: nil)
@@ -404,39 +406,32 @@ RSpec.describe DhanHQ::Models::Order do
 
       before do
         allow(order).to receive(:assign_attributes)
-        allow(order).to receive(:normalize_keys).and_return({ order_id: "OID1" })
-        allow(order).to receive(:to_request_params).and_return({})
+        allow(order).to receive_messages(normalize_keys: { order_id: "OID1" }, to_request_params: {})
       end
 
       it "places a new order when valid" do
-        allow(order).to receive(:valid?).and_return(true)
-        allow(order).to receive(:new_record?).and_return(true)
+        allow(order).to receive_messages(valid?: true, new_record?: true)
         expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
 
         expect(order.save).to be(true)
       end
 
       it "returns false when create fails" do
-        allow(order).to receive(:valid?).and_return(true)
-        allow(order).to receive(:new_record?).and_return(true)
+        allow(order).to receive_messages(valid?: true, new_record?: true)
         expect(resource_double).to receive(:create).and_return({})
 
         expect(order.save).to be(false)
       end
 
       it "updates existing orders" do
-        allow(order).to receive(:valid?).and_return(true)
-        allow(order).to receive(:new_record?).and_return(false)
-        allow(order).to receive(:id).and_return("OID1")
+        allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
         expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
 
         expect(order.save).to be(true)
       end
 
       it "returns false when update fails" do
-        allow(order).to receive(:valid?).and_return(true)
-        allow(order).to receive(:new_record?).and_return(false)
-        allow(order).to receive(:id).and_return("OID1")
+        allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
         expect(resource_double).to receive(:update).and_return({})
 
         expect(order.save).to be(false)
@@ -451,7 +446,8 @@ RSpec.describe DhanHQ::Models::Order do
 
       it "returns true when deletion succeeds" do
         record = described_class.new({ orderId: "OID1" }, skip_validation: true)
-        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success", "orderStatus" => "CANCELLED" })
+        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success",
+                                                                              "orderStatus" => "CANCELLED" })
 
         expect(record.destroy).to be(true)
       end
