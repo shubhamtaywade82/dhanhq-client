@@ -14,7 +14,7 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 Add to your Gemfile:
 
 ```ruby
-gem "dhanhq"
+gem "DhanHQ"
 ```
 
 Install:
@@ -26,7 +26,7 @@ bundle install
 Or:
 
 ```bash
-gem install dhanhq
+gem install DhanHQ
 ```
 
 ---
@@ -36,7 +36,7 @@ gem install dhanhq
 ### Programmatic
 
 ```ruby
-require "dhanhq"
+require "DhanHQ"
 
 DhanHQ.configure do |config|
   config.client_id    = ENV["CLIENT_ID"]    # e.g. "1001234567"
