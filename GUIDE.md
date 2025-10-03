@@ -22,7 +22,7 @@ Use this guide as the companion to the official Dhan API v2 documentation. It ma
 
 ```ruby
 # Gemfile
-gem "dhanhq"
+gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
 ```
 
 ```bash
@@ -32,7 +32,7 @@ bundle install
 Configure the client (directly or via ENV variables):
 
 ```ruby
-require "dhanhq"
+require 'DhanHQ'
 
 DhanHQ.configure do |config|
   config.client_id    = ENV.fetch("CLIENT_ID")
@@ -41,14 +41,17 @@ DhanHQ.configure do |config|
   config.ws_version   = 2                           # optional, defaults to 2
 end
 
-DhanHQ.logger.level = Logger::INFO  # switch to DEBUG while integrating
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }  # set DHAN_LOG_LEVEL=DEBUG while integrating
 ```
 
 Or, bootstrap from environment variables:
 
 ```ruby
+require 'DhanHQ'
+
 # expects CLIENT_ID and ACCESS_TOKEN to be present
 DhanHQ.configure_with_env
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
 
 ---

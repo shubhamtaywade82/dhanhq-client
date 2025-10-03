@@ -14,7 +14,7 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 Add to your Gemfile:
 
 ```ruby
-gem "DhanHQ"
+gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
 ```
 
 Install:
@@ -36,7 +36,7 @@ gem install DhanHQ
 ### Programmatic
 
 ```ruby
-require "DhanHQ"
+require 'DhanHQ'
 
 DhanHQ.configure do |config|
   config.client_id    = ENV["CLIENT_ID"]    # e.g. "1001234567"
@@ -56,16 +56,20 @@ end
 ### From ENV / .env
 
 ```ruby
+require 'DhanHQ'
+
 DhanHQ.configure_with_env
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 # expects:
 #   CLIENT_ID=...
 #   ACCESS_TOKEN=...
+#   DHAN_LOG_LEVEL=... (optional, defaults to INFO)
 ```
 
 ### Logging
 
 ```ruby
-DhanHQ.logger.level = Logger::INFO  # or DEBUG for verbose
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
 
 ---
@@ -143,8 +147,10 @@ oc = DhanHQ::Models::OptionChain.fetch(
 ### Start, subscribe, stop
 
 ```ruby
+require 'DhanHQ'
+
 DhanHQ.configure_with_env
-DhanHQ.logger.level = Logger::INFO
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 
 ws = DhanHQ::WS::Client.new(mode: :quote).start
 
@@ -201,10 +207,10 @@ Receive live updates whenever your orders transition between states (placed → 
 ### Standalone Ruby script
 
 ```ruby
-require "dhanhq"
+require 'DhanHQ'
 
 DhanHQ.configure_with_env
-DhanHQ.logger.level = Logger::INFO
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 
 ou = DhanHQ::WS::Orders::Client.new.start
 
@@ -322,7 +328,7 @@ end
 
    ```ruby
    DhanHQ.configure_with_env
-   DhanHQ.logger.level = Logger::INFO
+   DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
    ```
 
 2. **Start WS supervisor**
@@ -434,7 +440,7 @@ DhanHQ::Models::SuperOrder.modify(
 * **No ticks after reconnect**
   Ensure you re-subscribed after a clean start (the client resends the snapshot automatically on reconnect).
 * **Binary parse errors**
-  Run with `DhanHQ.logger.level = Logger::DEBUG` to inspect; we safely drop malformed frames and keep the loop alive.
+  Run with `DHAN_LOG_LEVEL=DEBUG` to inspect; we safely drop malformed frames and keep the loop alive.
 
 ---
 

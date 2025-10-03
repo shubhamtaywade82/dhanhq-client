@@ -17,8 +17,8 @@ DhanHQ is a **Ruby client** for interacting with **Dhan API v2.0**. It provides 
 
 Add this line to your application's Gemfile:
 
-```bash
-gem 'dhanhq'
+```ruby
+gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
 ```
 
 Then execute:
@@ -37,6 +37,8 @@ gem install dhanhq
 Set your DhanHQ API credentials:
 
 ```ruby
+require 'DhanHQ'
+
 DhanHQ.configure do |config|
   config.client_id = "your_client_id"
   config.access_token = "your_access_token"
@@ -50,13 +52,17 @@ Use `config.base_url` to point the client at a different API URL (for example, a
 Alternatively, set credentials from environment variables:
 
 ```ruby
+require 'DhanHQ'
+
 DhanHQ.configure_with_env
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
 
 `configure_with_env` expects the following environment variables:
 
 * `CLIENT_ID`
 * `ACCESS_TOKEN`
+* `DHAN_LOG_LEVEL` (optional, defaults to `INFO`)
 
 Create a `.env` file in your project root to supply these values:
 
@@ -65,7 +71,7 @@ CLIENT_ID=your_client_id
 ACCESS_TOKEN=your_access_token
 ```
 
-The gem requires `dotenv/load`, so these variables are loaded automatically when you require `dhanhq`.
+The gem requires `dotenv/load`, so these variables are loaded automatically when you require `DhanHQ`.
 
 ## 🚀 Usage
 
@@ -264,7 +270,7 @@ bundle exec rake release
 
 ```ruby
 DhanHQ.configure_with_env
-DhanHQ.logger.level = Logger::INFO
+DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 
 ws = DhanHQ::WS::Client.new(mode: :quote).start
 
@@ -374,7 +380,7 @@ end
 
    ```ruby
    DhanHQ.configure_with_env
-   DhanHQ.logger.level = Logger::INFO
+   DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
    ```
 
 2. **Start WS supervisor**
@@ -486,7 +492,7 @@ DhanHQ::Models::SuperOrder.modify(
 * **No ticks after reconnect**
   Ensure you re-subscribed after a clean start (the client resends the snapshot automatically on reconnect).
 * **Binary parse errors**
-  Run with `DhanHQ.logger.level = Logger::DEBUG` to inspect; we safely drop malformed frames and keep the loop alive.
+  Run with `DHAN_LOG_LEVEL=DEBUG` to inspect; we safely drop malformed frames and keep the loop alive.
 
 ---
 
