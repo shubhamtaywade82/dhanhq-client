@@ -68,18 +68,7 @@ Below are several suggestions and improvements you can consider to further enhan
 ### **6. Configuration Improvements**
 
 - **Global Configuration Object:**
-  You already have a configuration class. Consider exposing configuration via a DSL so that users of the gem can do something like:
-
-  ```ruby
-  DhanHQ.configure do |config|
-    config.client_id = 'your_client_id'
-    config.access_token = 'your_access_token'
-    config.base_url = 'https://api.dhan.co/v2'
-  end
-  ```
-
-- **Environment-based Configuration:**
-  Your `configure_with_env` method is a good idea for production use. Ensure that you document this well so that users know how to set environment variables.
+  Continue iterating on the existing configuration helpers while keeping `DhanHQ.configure_with_env` as the primary entrypoint. Provide any additional toggles by reading from ENV so docs can focus on the single bootstrap path.
 
 ---
 

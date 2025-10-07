@@ -39,32 +39,29 @@ Set your DhanHQ API credentials:
 ```ruby
 require 'DhanHQ'
 
-DhanHQ.configure do |config|
-  config.client_id = "your_client_id"
-  config.access_token = "your_access_token"
-  # Optional: override the default API endpoint
-  config.base_url = "https://api.dhan.co/v2"
-end
-```
-
-Use `config.base_url` to point the client at a different API URL (for example, a sandbox).
-
-Alternatively, set credentials from environment variables:
-
-```ruby
-require 'DhanHQ'
-
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
 
-`configure_with_env` expects the following environment variables:
+**Minimum environment variables**
 
-* `CLIENT_ID`
-* `ACCESS_TOKEN`
-* `DHAN_LOG_LEVEL` (optional, defaults to `INFO`)
+* `CLIENT_ID` – trading account client id issued by Dhan.
+* `ACCESS_TOKEN` – API access token generated from the Dhan console.
 
-Create a `.env` file in your project root to supply these values:
+If either key is missing `configure_with_env` raises an error. Ensure your
+application loads them into `ENV` before requiring the gem.
+
+**Optional overrides**
+
+* `DHAN_LOG_LEVEL` – change logger verbosity (`INFO` default).
+* `DHAN_BASE_URL` – point REST calls to an alternate host.
+* `DHAN_WS_VERSION` – lock WebSocket connections to a specific version.
+* `DHAN_WS_ORDER_URL` – override the order update WebSocket endpoint.
+* `DHAN_WS_USER_TYPE` – choose between `SELF` and `PARTNER` streaming modes.
+* `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` – required when streaming as a partner.
+
+Create a `.env` file in your project root to supply the minimum values (and any
+optional overrides you need):
 
 ```dotenv
 CLIENT_ID=your_client_id
@@ -72,6 +69,11 @@ ACCESS_TOKEN=your_access_token
 ```
 
 The gem requires `dotenv/load`, so these variables are loaded automatically when you require `DhanHQ`.
+
+To override defaults (base URL, WebSocket settings, partner credentials), set
+`DHAN_BASE_URL`, `DHAN_WS_VERSION`, `DHAN_WS_ORDER_URL`, `DHAN_WS_USER_TYPE`,
+`DHAN_PARTNER_ID`, and `DHAN_PARTNER_SECRET` before calling
+`configure_with_env`.
 
 ## 🚀 Usage
 

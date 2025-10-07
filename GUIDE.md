@@ -29,30 +29,40 @@ gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', bran
 bundle install
 ```
 
-Configure the client (directly or via ENV variables):
+Bootstrap from environment variables:
 
 ```ruby
 require 'DhanHQ'
 
-DhanHQ.configure do |config|
-  config.client_id    = ENV.fetch("CLIENT_ID")
-  config.access_token = ENV.fetch("ACCESS_TOKEN")
-  config.base_url     = "https://api.dhan.co/v2"   # optional override
-  config.ws_version   = 2                           # optional, defaults to 2
-end
-
-DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }  # set DHAN_LOG_LEVEL=DEBUG while integrating
-```
-
-Or, bootstrap from environment variables:
-
-```ruby
-require 'DhanHQ'
-
-# expects CLIENT_ID and ACCESS_TOKEN to be present
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
+
+**Minimum requirements**
+
+`configure_with_env` reads from `ENV` and raises unless both variables are set:
+
+| Variable | Description |
+| --- | --- |
+| `CLIENT_ID` | Your Dhan trading client id. |
+| `ACCESS_TOKEN` | REST/WebSocket access token generated via Dhan APIs. |
+
+Provide them via `.env`, Rails credentials, or your secret manager of choice
+before the initializer runs.
+
+**Optional overrides**
+
+Set any of the following environment variables _before_ calling
+`configure_with_env` to customise runtime behaviour:
+
+| Variable | Purpose |
+| --- | --- |
+| `DHAN_LOG_LEVEL` | Change logger verbosity (`INFO` default). |
+| `DHAN_BASE_URL` | Override the REST API host. |
+| `DHAN_WS_VERSION` | Target a specific WebSocket API version. |
+| `DHAN_WS_ORDER_URL` | Customise the order update WebSocket endpoint. |
+| `DHAN_WS_USER_TYPE` | Toggle between `SELF` and `PARTNER` streaming modes. |
+| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when streaming as a partner. |
 
 ---
 

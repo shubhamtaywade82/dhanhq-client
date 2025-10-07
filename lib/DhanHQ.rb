@@ -124,7 +124,12 @@ module DhanHQ
       self.configuration ||= Configuration.new
       configuration.access_token = ENV.fetch("ACCESS_TOKEN", nil)
       configuration.client_id = ENV.fetch("CLIENT_ID", nil)
-      configuration.base_url = BASE_URL
+      configuration.base_url = ENV.fetch("DHAN_BASE_URL", BASE_URL)
+      configuration.ws_version = ENV.fetch("DHAN_WS_VERSION", configuration.ws_version || 2).to_i
+      configuration.ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", configuration.ws_order_url)
+      configuration.ws_user_type = ENV.fetch("DHAN_WS_USER_TYPE", configuration.ws_user_type)
+      configuration.partner_id = ENV.fetch("DHAN_PARTNER_ID", configuration.partner_id)
+      configuration.partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", configuration.partner_secret)
     end
   end
 end
