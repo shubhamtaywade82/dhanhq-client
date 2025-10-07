@@ -145,8 +145,12 @@ end
 # ---- Main: start 1..3 clients ----
 modes =
   case opts[:mode]
-  when "ticker", "quote", "full" then [opts[:mode]]
-  else %w[ticker quote full]
+  when "ticker", "quote", "full"
+    [opts[:mode]]
+  else
+    # Use a single connection in :full mode for "all" to avoid broker limits
+    # (full already includes quote + ticker data)
+    %w[quote]
   end
 
 clients = []
@@ -158,6 +162,13 @@ modes.each do |m|
   ws, cnt = run_client(mode: m, watch: WATCH, log: loggers[m])
   clients << ws
   counters[m] = cnt
+  # Stagger connection attempts to avoid concurrent handshakes/rate limits
+  10.times do
+    break if ws.connected?
+
+    sleep 0.5
+  end
+  sleep 1.0
 end
 
 # ---- Stats printer ----
