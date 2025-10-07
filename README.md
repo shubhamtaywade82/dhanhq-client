@@ -33,26 +33,6 @@ gem install DhanHQ
 
 ## Configuration
 
-### Programmatic
-
-```ruby
-require 'DhanHQ'
-
-DhanHQ.configure do |config|
-  config.client_id    = ENV["CLIENT_ID"]    # e.g. "1001234567"
-  config.access_token = ENV["ACCESS_TOKEN"] # e.g. "eyJhbGciOi..."
-  # Optional REST base
-  config.base_url     = "https://api.dhan.co/v2"
-  # Optional WS version (default: 2)
-  config.ws_version   = 2
-  # Optional Order Update WS knobs
-  config.ws_order_url  = "wss://api-order-update.dhan.co"
-  config.ws_user_type  = "SELF"     # or "PARTNER"
-  config.partner_id    = nil         # required for PARTNER mode
-  config.partner_secret = nil
-end
-```
-
 ### From ENV / .env
 
 ```ruby
@@ -60,11 +40,32 @@ require 'DhanHQ'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
-# expects:
-#   CLIENT_ID=...
-#   ACCESS_TOKEN=...
-#   DHAN_LOG_LEVEL=... (optional, defaults to INFO)
 ```
+
+**Minimum environment variables**
+
+| Variable | Purpose |
+| --- | --- |
+| `CLIENT_ID` | Trading account client id issued by Dhan. |
+| `ACCESS_TOKEN` | API access token generated from the Dhan console. |
+
+`configure_with_env` raises if either value is missing. Load them via `dotenv`,
+Rails credentials, or any other mechanism that populates `ENV` before
+initialisation.
+
+**Optional overrides**
+
+Set these variables _before_ calling `configure_with_env` when you need to
+override defaults supplied by the gem:
+
+| Variable | When to use |
+| --- | --- |
+| `DHAN_LOG_LEVEL` | Adjust logger verbosity (`INFO` by default). |
+| `DHAN_BASE_URL` | Point REST calls to a different API hostname. |
+| `DHAN_WS_VERSION` | Pin to a specific WebSocket API version. |
+| `DHAN_WS_ORDER_URL` | Override the order update WebSocket endpoint. |
+| `DHAN_WS_USER_TYPE` | Switch between `SELF` and `PARTNER` streaming modes. |
+| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`. |
 
 ### Logging
 
@@ -115,6 +116,13 @@ oc = DhanHQ::Models::OptionChain.fetch(
   expiry: "2025-08-21"
 )
 ```
+
+### Rails integration
+
+Need a full-stack example inside Rails (REST + WebSockets + automation)? Check
+out the [Rails integration guide](docs/rails_integration.md) for
+initializers, service objects, workers, and ActionCable wiring tailored for the
+`DhanHQ` gem.
 
 ---
 

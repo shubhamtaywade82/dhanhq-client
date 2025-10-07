@@ -32,6 +32,10 @@ module DhanHQ
     # @return [String] URL for detailed CSV.
     attr_accessor :detailed_csv_url
 
+    # Websocket API version.
+    # @return [Integer]
+    attr_accessor :ws_version
+
     # Websocket order updates endpoint.
     # @return [String]
     attr_accessor :ws_order_url
@@ -57,11 +61,12 @@ module DhanHQ
     def initialize
       @client_id = ENV.fetch("CLIENT_ID", nil)
       @access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      @base_url       = "https://api.dhan.co/v2"
-      @ws_order_url   = "wss://api-order-update.dhan.co"
-      @ws_user_type   = "SELF"
-      @partner_id     = nil
-      @partner_secret = nil
+      @base_url       = ENV.fetch("DHAN_BASE_URL", "https://api.dhan.co/v2")
+      @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
+      @ws_order_url   = ENV.fetch("DHAN_WS_ORDER_URL", "wss://api-order-update.dhan.co")
+      @ws_user_type   = ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
+      @partner_id     = ENV.fetch("DHAN_PARTNER_ID", nil)
+      @partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", nil)
     end
   end
 end
