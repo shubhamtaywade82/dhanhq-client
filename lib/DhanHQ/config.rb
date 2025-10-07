@@ -25,8 +25,8 @@ module DhanHQ
     def configure_with_env
       self.client_id    = ENV.fetch("CLIENT_ID", nil)
       self.access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      self.base_url   ||= "https://api.dhan.co/v2"
-      self.ws_version ||= 2
+      self.base_url     = ENV.fetch("DHAN_BASE_URL", "https://api.dhan.co/v2")
+      self.ws_version   = ENV.fetch("DHAN_WS_VERSION", 2).to_i
     end
   end
 end

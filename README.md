@@ -33,26 +33,6 @@ gem install DhanHQ
 
 ## Configuration
 
-### Programmatic
-
-```ruby
-require 'DhanHQ'
-
-DhanHQ.configure do |config|
-  config.client_id    = ENV["CLIENT_ID"]    # e.g. "1001234567"
-  config.access_token = ENV["ACCESS_TOKEN"] # e.g. "eyJhbGciOi..."
-  # Optional REST base
-  config.base_url     = "https://api.dhan.co/v2"
-  # Optional WS version (default: 2)
-  config.ws_version   = 2
-  # Optional Order Update WS knobs
-  config.ws_order_url  = "wss://api-order-update.dhan.co"
-  config.ws_user_type  = "SELF"     # or "PARTNER"
-  config.partner_id    = nil         # required for PARTNER mode
-  config.partner_secret = nil
-end
-```
-
 ### From ENV / .env
 
 ```ruby
@@ -60,11 +40,32 @@ require 'DhanHQ'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
-# expects:
-#   CLIENT_ID=...
-#   ACCESS_TOKEN=...
-#   DHAN_LOG_LEVEL=... (optional, defaults to INFO)
 ```
+
+**Minimum environment variables**
+
+| Variable | Purpose |
+| --- | --- |
+| `CLIENT_ID` | Trading account client id issued by Dhan. |
+| `ACCESS_TOKEN` | API access token generated from the Dhan console. |
+
+`configure_with_env` raises if either value is missing. Load them via `dotenv`,
+Rails credentials, or any other mechanism that populates `ENV` before
+initialisation.
+
+**Optional overrides**
+
+Set these variables _before_ calling `configure_with_env` when you need to
+override defaults supplied by the gem:
+
+| Variable | When to use |
+| --- | --- |
+| `DHAN_LOG_LEVEL` | Adjust logger verbosity (`INFO` by default). |
+| `DHAN_BASE_URL` | Point REST calls to a different API hostname. |
+| `DHAN_WS_VERSION` | Pin to a specific WebSocket API version. |
+| `DHAN_WS_ORDER_URL` | Override the order update WebSocket endpoint. |
+| `DHAN_WS_USER_TYPE` | Switch between `SELF` and `PARTNER` streaming modes. |
+| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`. |
 
 ### Logging
 
@@ -115,6 +116,13 @@ oc = DhanHQ::Models::OptionChain.fetch(
   expiry: "2025-08-21"
 )
 ```
+
+### Rails integration
+
+Need a full-stack example inside Rails (REST + WebSockets + automation)? Check
+out the [Rails integration guide](docs/rails_integration.md) for
+initializers, service objects, workers, and ActionCable wiring tailored for the
+`DhanHQ` gem.
 
 ---
 
@@ -293,19 +301,38 @@ Use the string enums below in WS `subscribe_*` and REST params:
 ws.on(:tick) { |t| do_something_fast(t) } # avoid heavy work here
 ```
 
-### Shared TickCache (recommended)
+### Shared `Live::TickCache` (recommended)
 
 ```ruby
 # app/services/live/tick_cache.rb
-class TickCache
-  MAP = Concurrent::Map.new
-  def self.put(t)  = MAP["#{t[:segment]}:#{t[:security_id]}"] = t
-  def self.get(seg, sid) = MAP["#{seg}:#{sid}"]
-  def self.ltp(seg, sid) = get(seg, sid)&.dig(:ltp)
+module Live
+  class TickCache
+    MAP = Concurrent::Map.new
+
+    class << self
+      def put(tick)
+        MAP[key(tick[:segment], tick[:security_id])] = tick
+      end
+
+      def get(segment, security_id)
+        MAP[key(segment, security_id)]
+      end
+
+      def ltp(segment, security_id)
+        get(segment, security_id)&.dig(:ltp)
+      end
+
+      private
+
+      def key(segment, security_id)
+        "#{segment}:#{security_id}"
+      end
+    end
+  end
 end
 
-ws.on(:tick) { |t| TickCache.put(t) }
-ltp = TickCache.ltp("NSE_FNO", "12345")
+ws.on(:tick) { |t| Live::TickCache.put(t) }
+ltp = Live::TickCache.ltp("NSE_FNO", "12345")
 ```
 
 ### Filtered callback
@@ -338,15 +365,23 @@ end
    INDICES = [
      { segment: "IDX_I", security_id: "13" },  # NIFTY index value
      { segment: "IDX_I", security_id: "25" }   # BANKNIFTY index value
-   ]
+   ].freeze
 
    Rails.application.config.to_prepare do
-     $WS = DhanHQ::WS::Client.new(mode: :quote).start
-     $WS.on(:tick) do |t|
-       TickCache.put(t)
-       Execution::PositionGuard.instance.on_tick(t)  # trailing & fast exits
+     Rails.application.config.x.dhan_market_ws ||= begin
+       client = DhanHQ::WS::Client.new(mode: :quote)
+
+       client.on(:tick) do |t|
+         Live::TickCache.put(t)
+         Execution::PositionGuard.instance.on_tick(t)  # trailing & fast exits
+       end
+
+       client.start.tap do |running|
+         INDICES.each do |instrument|
+           running.subscribe_one(segment: instrument[:segment], security_id: instrument[:security_id])
+         end
+       end
      end
-     INDICES.each { |i| $WS.subscribe_one(segment: i[:segment], security_id: i[:security_id]) }
    end
    ```
 
@@ -377,10 +412,10 @@ intent = {
   security_id:      "12345",   # option
   transaction_type: "BUY",
   quantity:         50,
-  # derived risk params from ATR/ADX
-  take_profit:      0.35,      # 35% target
-  stop_loss:        0.18,      # 18% SL
-  trailing_sl:      0.12       # 12% trail
+  # derived risk params from ATR/ADX expressed as absolute price steps
+  take_profit:      25.0,      # ₹25 target above entry
+  stop_loss:        12.5,      # ₹12.50 stop below entry
+  trailing_sl:      5.0        # ₹5 trail step
 }
 
 # If your SuperOrder model exposes create/modify:

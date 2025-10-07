@@ -39,32 +39,29 @@ Set your DhanHQ API credentials:
 ```ruby
 require 'DhanHQ'
 
-DhanHQ.configure do |config|
-  config.client_id = "your_client_id"
-  config.access_token = "your_access_token"
-  # Optional: override the default API endpoint
-  config.base_url = "https://api.dhan.co/v2"
-end
-```
-
-Use `config.base_url` to point the client at a different API URL (for example, a sandbox).
-
-Alternatively, set credentials from environment variables:
-
-```ruby
-require 'DhanHQ'
-
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
 ```
 
-`configure_with_env` expects the following environment variables:
+**Minimum environment variables**
 
-* `CLIENT_ID`
-* `ACCESS_TOKEN`
-* `DHAN_LOG_LEVEL` (optional, defaults to `INFO`)
+* `CLIENT_ID` – trading account client id issued by Dhan.
+* `ACCESS_TOKEN` – API access token generated from the Dhan console.
 
-Create a `.env` file in your project root to supply these values:
+If either key is missing `configure_with_env` raises an error. Ensure your
+application loads them into `ENV` before requiring the gem.
+
+**Optional overrides**
+
+* `DHAN_LOG_LEVEL` – change logger verbosity (`INFO` default).
+* `DHAN_BASE_URL` – point REST calls to an alternate host.
+* `DHAN_WS_VERSION` – lock WebSocket connections to a specific version.
+* `DHAN_WS_ORDER_URL` – override the order update WebSocket endpoint.
+* `DHAN_WS_USER_TYPE` – choose between `SELF` and `PARTNER` streaming modes.
+* `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` – required when streaming as a partner.
+
+Create a `.env` file in your project root to supply the minimum values (and any
+optional overrides you need):
 
 ```dotenv
 CLIENT_ID=your_client_id
@@ -72,6 +69,11 @@ ACCESS_TOKEN=your_access_token
 ```
 
 The gem requires `dotenv/load`, so these variables are loaded automatically when you require `DhanHQ`.
+
+To override defaults (base URL, WebSocket settings, partner credentials), set
+`DHAN_BASE_URL`, `DHAN_WS_VERSION`, `DHAN_WS_ORDER_URL`, `DHAN_WS_USER_TYPE`,
+`DHAN_PARTNER_ID`, and `DHAN_PARTNER_SECRET` before calling
+`configure_with_env`.
 
 ## 🚀 Usage
 
@@ -345,19 +347,38 @@ Use the string enums below in WS `subscribe_*` and REST params:
 ws.on(:tick) { |t| do_something_fast(t) } # avoid heavy work here
 ```
 
-### Shared TickCache (recommended)
+### Shared `Live::TickCache` (recommended)
 
 ```ruby
 # app/services/live/tick_cache.rb
-class TickCache
-  MAP = Concurrent::Map.new
-  def self.put(t)  = MAP["#{t[:segment]}:#{t[:security_id]}"] = t
-  def self.get(seg, sid) = MAP["#{seg}:#{sid}"]
-  def self.ltp(seg, sid) = get(seg, sid)&.dig(:ltp)
+module Live
+  class TickCache
+    MAP = Concurrent::Map.new
+
+    class << self
+      def put(tick)
+        MAP[key(tick[:segment], tick[:security_id])] = tick
+      end
+
+      def get(segment, security_id)
+        MAP[key(segment, security_id)]
+      end
+
+      def ltp(segment, security_id)
+        get(segment, security_id)&.dig(:ltp)
+      end
+
+      private
+
+      def key(segment, security_id)
+        "#{segment}:#{security_id}"
+      end
+    end
+  end
 end
 
-ws.on(:tick) { |t| TickCache.put(t) }
-ltp = TickCache.ltp("NSE_FNO", "12345")
+ws.on(:tick) { |t| Live::TickCache.put(t) }
+ltp = Live::TickCache.ltp("NSE_FNO", "12345")
 ```
 
 ### Filtered callback
@@ -390,15 +411,23 @@ end
    INDICES = [
      { segment: "IDX_I", security_id: "13" },  # NIFTY index value
      { segment: "IDX_I", security_id: "25" }   # BANKNIFTY index value
-   ]
+   ].freeze
 
    Rails.application.config.to_prepare do
-     $WS = DhanHQ::WS::Client.new(mode: :quote).start
-     $WS.on(:tick) do |t|
-       TickCache.put(t)
-       Execution::PositionGuard.instance.on_tick(t)  # trailing & fast exits
+     Rails.application.config.x.dhan_market_ws ||= begin
+       client = DhanHQ::WS::Client.new(mode: :quote)
+
+       client.on(:tick) do |t|
+         Live::TickCache.put(t)
+         Execution::PositionGuard.instance.on_tick(t)  # trailing & fast exits
+       end
+
+       client.start.tap do |running|
+         INDICES.each do |instrument|
+           running.subscribe_one(segment: instrument[:segment], security_id: instrument[:security_id])
+         end
+       end
      end
-     INDICES.each { |i| $WS.subscribe_one(segment: i[:segment], security_id: i[:security_id]) }
    end
    ```
 
@@ -429,10 +458,10 @@ intent = {
   security_id:      "12345",   # option
   transaction_type: "BUY",
   quantity:         50,
-  # derived risk params from ATR/ADX
-  take_profit:      0.35,      # 35% target
-  stop_loss:        0.18,      # 18% SL
-  trailing_sl:      0.12       # 12% trail
+  # derived risk params from ATR/ADX expressed as absolute price steps
+  take_profit:      25.0,      # ₹25 target above entry
+  stop_loss:        12.5,      # ₹12.50 stop below entry
+  trailing_sl:      5.0        # ₹5 trail step
 }
 
 # If your SuperOrder model exposes create/modify:
