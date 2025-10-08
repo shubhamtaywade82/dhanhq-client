@@ -130,6 +130,29 @@ def fetch_intraday(params, interval)
   )
 end
 
+# The API allows max 90 days per call. If the requested window exceeds this,
+# fetch in chunks and concatenate arrays chronologically.
+def fetch_intraday_windowed(params, interval)
+  from_d = Date.parse(params[:from_date])
+  to_d   = Date.parse(params[:to_date])
+  max_span = 90
+  return fetch_intraday(params, interval) if (to_d - from_d).to_i <= max_span
+
+  merged = { "open" => [], "high" => [], "low" => [], "close" => [], "volume" => [], "timestamp" => [] }
+  cursor = from_d
+  while cursor <= to_d
+    chunk_to = [cursor + max_span, to_d].min
+    chunk_params = params.merge(from_date: cursor.strftime("%Y-%m-%d"), to_date: chunk_to.strftime("%Y-%m-%d"))
+    part = fetch_intraday(chunk_params, interval)
+    %w[open high low close volume timestamp].each do |k|
+      ary = (part[k] || part[k.to_sym]) || []
+      merged[k].concat(Array(ary))
+    end
+    cursor = chunk_to + 1
+  end
+  merged
+end
+
 def parse_time_like(val)
   return Time.at(val) if val.is_a?(Numeric)
 
@@ -383,38 +406,57 @@ def compute_for(candles, params)
 end
 
 one_min = []
-three_min = []
 five_min = []
+fifteen_min = []
+twentyfive_min = []
+sixty_min = []
 
 if opts[:data_file]
   raw = JSON.parse(File.read(opts[:data_file]))
-  case opts[:data_interval].to_i
+  base_ivl = opts[:data_interval].to_i
+  case base_ivl
   when 1
     one_min = to_candles(raw)
-    three_min = resample(one_min, 3)
     five_min = resample(one_min, 5)
-  when 3
-    three_min = to_candles(raw)
+    fifteen_min = resample(one_min, 15)
+    twentyfive_min = resample(one_min, 25)
+    sixty_min = resample(one_min, 60)
   when 5
     five_min = to_candles(raw)
+    fifteen_min = resample(five_min, 15)
+    twentyfive_min = resample(five_min, 25)
+    sixty_min = resample(five_min, 60)
+  when 15
+    fifteen_min = to_candles(raw)
+    sixty_min = resample(fifteen_min, 60)
+  when 25
+    twentyfive_min = to_candles(raw)
+    # No exact 60 from 25; prefer fetching/resampling from 1m if needed
+  when 60
+    sixty_min = to_candles(raw)
   else
     one_min = to_candles(raw)
-    three_min = resample(one_min, 3)
     five_min = resample(one_min, 5)
+    fifteen_min = resample(one_min, 15)
+    twentyfive_min = resample(one_min, 25)
+    sixty_min = resample(one_min, 60)
   end
 else
-  raw_1 = fetch_intraday(opts, 1)
+  raw_1 = fetch_intraday_windowed(opts, 1)
   one_min = to_candles(raw_1)
-  three_min = resample(one_min, 3)
-  raw_5 = fetch_intraday(opts, 5)
-  five_min = to_candles(raw_5)
+  five_min = resample(one_min, 5)
+  fifteen_min = resample(one_min, 15)
+  twentyfive_min = resample(one_min, 25)
+  sixty_min = resample(one_min, 60)
 end
 
 if opts[:debug]
-  puts "sizes m1=#{one_min.size} m3=#{three_min.size} m5=#{five_min.size}"
+  puts "sizes m1=#{one_min.size} m5=#{five_min.size} m15=#{fifteen_min.size} m25=#{twentyfive_min.size} m60=#{sixty_min.size}"
   puts "last m1=#{one_min.last.inspect}" if one_min.any?
-  puts "last m3=#{three_min.last.inspect}" if three_min.any?
   puts "last m5=#{five_min.last.inspect}" if five_min.any?
+  puts "last m15=#{fifteen_min.last.inspect}" if fifteen_min.any?
+  puts "last m25=#{twentyfive_min.last.inspect}" if twentyfive_min.any?
+  puts "last m60=#{sixty_min.last.inspect}" if sixty_min.any?
 end
 
 out = {
@@ -427,8 +469,10 @@ out = {
   },
   indicators: {
     m1: compute_for(one_min, opts),
-    m3: compute_for(three_min, opts),
-    m5: compute_for(five_min, opts)
+    m5: compute_for(five_min, opts),
+    m15: compute_for(fifteen_min, opts),
+    m25: compute_for(twentyfive_min, opts),
+    m60: compute_for(sixty_min, opts)
   }
 }
 
