@@ -218,6 +218,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
     ruby-progressbar (1.13.0)
+    ruby-technical-analysis (1.0.4)
     ruby2_keywords (0.0.5)
     ruby_parser (3.21.1)
       racc (~> 1.5)
@@ -243,6 +244,7 @@ GEM
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
     stringio (3.1.7)
+    technical-analysis (0.2.4)
     thread_safe (0.3.6)
     timecop (0.9.10)
     tty-which (0.5.0)
@@ -283,8 +285,10 @@ DEPENDENCIES
   rubocop-performance
   rubocop-rake (~> 0.6.0)
   rubocop-rspec (~> 3.2)
+  ruby-technical-analysis
   rubycritic
   simplecov (~> 0.22)
+  technical-analysis
   timecop
   vcr
   webmock (~> 3.24)

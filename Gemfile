@@ -34,3 +34,9 @@ gem "simplecov", "~> 0.22", require: false, groups: %i[development test]
 group :test do
   gem "timecop"
 end
+
+# Optional tools for local technical analysis experiments (not part of the gem)
+group :tools do
+  gem "ruby-technical-analysis"
+  gem "technical-analysis"
+end
