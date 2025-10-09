@@ -18,7 +18,8 @@ module DhanHQ
           pe: { otm: (-0.45..-0.35), atm: (-0.52..-0.48), itm: (-0.70..-0.55) }
         },
         risk: { sl_pct: 0.30, tp_pct: 0.60, trail_arm_pct: 0.20, trail_step_pct: 0.10 },
-        atr_to_rupees_factor: 1.0
+        atr_to_rupees_factor: 1.0,
+        min_confidence: 0.6
       }.freeze
 
       def initialize(data:, config: {})
@@ -33,7 +34,11 @@ module DhanHQ
         ensure_option_chain!
 
         bias = BiasAggregator.new(@data[:indicators], @config).call
-        return no_trade("neutral/low confidence") if bias[:bias] == :neutral || bias[:confidence].to_f < 0.6
+        # Neutral override: if higher TF trend is strong and short-term momentum aligns, allow a modest-confidence entry
+        bias = neutral_override(bias) if bias[:bias] == :neutral
+        if bias[:bias] == :neutral || bias[:confidence].to_f < @config[:min_confidence].to_f
+          return no_trade("neutral/low confidence")
+        end
 
         side = bias[:bias] == :bullish ? :ce : :pe
         moneyness = MoneynessHelper.pick_moneyness(indicators: @data[:indicators],
@@ -47,6 +52,38 @@ module DhanHQ
       end
 
       private
+
+      # If bias is neutral, try to infer a directional tilt using strong higher timeframe ADX and M5/M15 momentum
+      def neutral_override(bias)
+        ind = @data[:indicators] || {}
+        m60 = ind[:m60] || {}
+        m5  = ind[:m5]  || {}
+        m15 = ind[:m15] || {}
+
+        adx60 = m60[:adx].to_f
+        strong = adx60 >= @config[:strong_adx].to_f
+        return bias unless strong
+
+        # Simple momentum checks
+        rsi5  = m5[:rsi]
+        rsi15 = m15[:rsi]
+        macd5 = (m5[:macd] || {})[:hist]
+        macd15 = (m15[:macd] || {})[:hist]
+
+        bullish = (rsi5 && rsi5 >= 55) || (rsi15 && rsi15 >= 55) || (macd5 && macd5 >= 0) || (macd15 && macd15 >= 0)
+        bearish = (rsi5 && rsi5 <= 45) || (rsi15 && rsi15 <= 45) || (macd5 && macd5 <= 0) || (macd15 && macd15 <= 0)
+
+        if bullish && !bearish
+          return { bias: :bullish, confidence: [@config[:min_confidence].to_f, 0.62].max, refs: %i[m5 m15 m60],
+                   notes: ["Override: strong M60 ADX with bullish M5/M15 momentum"] }
+        end
+        if bearish && !bullish
+          return { bias: :bearish, confidence: [@config[:min_confidence].to_f, 0.62].max, refs: %i[m5 m15 m60],
+                   notes: ["Override: strong M60 ADX with bearish M5/M15 momentum"] }
+        end
+
+        bias
+      end
 
       def ensure_option_chain!
         return if Array(@data[:option_chain]).any?
