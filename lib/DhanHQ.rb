@@ -70,6 +70,10 @@ require_relative "DhanHQ/ws"
 require_relative "DhanHQ/ws/singleton_lock"
 require_relative "ta"
 require_relative "dhanhq/analysis/multi_timeframe_analyzer"
+require_relative "dhanhq/analysis/helpers/bias_aggregator"
+require_relative "dhanhq/analysis/helpers/moneyness_helper"
+require_relative "dhanhq/contracts/options_buying_advisor_contract"
+require_relative "dhanhq/analysis/options_buying_advisor"
 
 # The top-level module for the DhanHQ client library.
 #

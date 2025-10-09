@@ -109,14 +109,35 @@ Options:
 - `--interval` (with `--data-file`) to specify base file interval
 - `--rsi`, `--atr`, `--adx`, `--macd` to tune periods
 
+## Options Buying Advisor CLI
+
+Use `bin/options_advisor.rb` to compute indicators, summarize multi-TF bias, and produce a single index options-buying recommendation (CE/PE). If you do not provide `--spot`, the script fetches spot via MarketFeed LTP automatically.
+
+Examples:
+
+```bash
+# Auto-fetch spot via MarketFeed.ltp and chain via OptionChain model
+./bin/options_advisor.rb --segment IDX_I --instrument INDEX --security-id 13 --symbol NIFTY
+
+# Provide pre-fetched option chain from file (JSON array of strikes)
+./bin/options_advisor.rb --segment IDX_I --instrument INDEX --security-id 13 --symbol NIFTY \
+  --chain-file ./chain.json
+
+# Override spot explicitly
+./bin/options_advisor.rb --segment IDX_I --instrument INDEX --security-id 13 --symbol NIFTY --spot 24890
+
+# Verbose debug logging (prints steps to STDERR; JSON output unchanged)
+./bin/options_advisor.rb --segment IDX_I --instrument INDEX --security-id 13 --symbol NIFTY --debug
+```
+
+Behavior:
+- Spot: when `--spot` is omitted, the script calls `DhanHQ::Models::MarketFeed.ltp({ SEG => [security_id] })` and reads `data[SEG][security_id]["last_price"]`.
+- Option chain: when `--chain-file` is omitted, the advisor fetches via `DhanHQ::Models::OptionChain` (nearest expiry), transforming OC into an internal array of strikes with CE/PE legs.
+- Debugging: with `--debug`, the script logs options, spot resolution, indicators meta, missing fields per timeframe, analyzer summary, and advisor output to STDERR.
+
 ## Best Practices & Tips
 
 - Keep intervals minimal per run to reduce rate limits; increase `throttle_seconds` if needed.
 - For higher intervals (e.g., 60m), ensure adequate `days_back` (auto-calculation is enabled by default).
 - The analyzer is heuristic; adjust weights or thresholds as your strategy matures.
-
-## Extending
-
-- Add new indicators in `TA::Indicators` and annotate them in the analyzer.
-- Customize timeframe weights inside `MultiTimeframeAnalyzer#aggregate_results`.
-- Add specs under `spec/analysis/` to validate your rules on fixtures.
+- See the advisor helpers under `lib/dhanhq/analysis/helpers/` to customize bias and moneyness rules.
