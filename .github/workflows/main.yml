@@ -1,9 +1,11 @@
-name: Ruby
+name: Ruby Gem CI & Release
 
 on:
   push:
     branches:
       - master
+    tags:
+      - 'v*.*.*'
 
   pull_request:
 
@@ -18,10 +20,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Run the default task
+
+      - name: Run tests
         run: bundle exec rake
+
+  release:
+    name: Release to RubyGems
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.4'
+
+      - name: Build gem
+        run: gem build DhanHQ.gemspec
+
+      - name: Push to RubyGems
+        env:
+          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+        run: |
+          mkdir -p ~/.gem
+          echo -e "---\n:rubygems_api_key: $RUBYGEMS_API_KEY\n" > ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+          gem push DhanHQ-*.gem
