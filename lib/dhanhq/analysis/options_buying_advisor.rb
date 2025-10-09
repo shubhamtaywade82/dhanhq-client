@@ -11,15 +11,15 @@ module DhanHQ
         timeframe_weights: { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 },
         min_adx_for_trend: 22,
         strong_adx: 35,
-        min_oi: 10_000,
-        max_spread_pct: 1.0,
+        min_oi: 1_000,
+        max_spread_pct: 3.0,
         preferred_deltas: {
           ce: { otm: (0.35..0.45), atm: (0.48..0.52), itm: (0.55..0.70) },
           pe: { otm: (-0.45..-0.35), atm: (-0.52..-0.48), itm: (-0.70..-0.55) }
         },
         risk: { sl_pct: 0.30, tp_pct: 0.60, trail_arm_pct: 0.20, trail_step_pct: 0.10 },
         atr_to_rupees_factor: 1.0,
-        min_confidence: 0.6
+        min_confidence: 0.58
       }.freeze
 
       def initialize(data:, config: {})

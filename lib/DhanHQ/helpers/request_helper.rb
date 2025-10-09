@@ -26,6 +26,9 @@ module DhanHQ
     # @param path [String] The API endpoint path.
     # @return [Hash] The request headers.
     def build_headers(path)
+      # Public CSV endpoint for segment-wise instruments requires no auth
+      return { "Accept" => "text/csv" } if path.start_with?("/v2/instrument/")
+
       headers = {
         "Content-Type" => "application/json",
         "Accept" => "application/json",
@@ -43,7 +46,8 @@ module DhanHQ
     # @param path [String] The API endpoint path.
     # @return [Boolean] True if the path belongs to a DATA API.
     def data_api?(path)
-      DhanHQ::Constants::DATA_API_PATHS.include?(path)
+      prefixes = DhanHQ::Constants::DATA_API_PREFIXES
+      prefixes.any? { |p| path.start_with?(p) }
     end
 
     # Prepares the request payload based on the HTTP method.

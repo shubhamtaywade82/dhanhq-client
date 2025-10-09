@@ -131,13 +131,11 @@ module DhanHQ
     # Download URL for the detailed instrument master CSV.
     DETAILED_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
 
-    # API routes that require a `client-id` header in addition to the access token.
-    DATA_API_PATHS = %w[
-      /v2/marketfeed/ltp
-      /v2/marketfeed/ohlc
-      /v2/marketfeed/quote
+    # API route prefixes that require a `client-id` header in addition to the access token.
+    DATA_API_PREFIXES = %w[
+      /v2/marketfeed/
       /v2/optionchain
-      /v2/optionchain/expirylist
+      /v2/instrument/
     ].freeze
 
     # Mapping of DhanHQ error codes to SDK error classes for consistent exception handling.
