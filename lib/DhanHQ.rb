@@ -68,6 +68,8 @@ require_relative "DhanHQ/models/profile"
 require_relative "DhanHQ/constants"
 require_relative "DhanHQ/ws"
 require_relative "DhanHQ/ws/singleton_lock"
+require_relative "ta"
+require_relative "dhanhq/analysis/multi_timeframe_analyzer"
 
 # The top-level module for the DhanHQ client library.
 #

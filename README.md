@@ -44,9 +44,9 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 
 **Minimum environment variables**
 
-| Variable | Purpose |
-| --- | --- |
-| `CLIENT_ID` | Trading account client id issued by Dhan. |
+| Variable       | Purpose                                           |
+| -------------- | ------------------------------------------------- |
+| `CLIENT_ID`    | Trading account client id issued by Dhan.         |
 | `ACCESS_TOKEN` | API access token generated from the Dhan console. |
 
 `configure_with_env` raises if either value is missing. Load them via `dotenv`,
@@ -58,14 +58,14 @@ initialisation.
 Set these variables _before_ calling `configure_with_env` when you need to
 override defaults supplied by the gem:
 
-| Variable | When to use |
-| --- | --- |
-| `DHAN_LOG_LEVEL` | Adjust logger verbosity (`INFO` by default). |
-| `DHAN_BASE_URL` | Point REST calls to a different API hostname. |
-| `DHAN_WS_VERSION` | Pin to a specific WebSocket API version. |
-| `DHAN_WS_ORDER_URL` | Override the order update WebSocket endpoint. |
-| `DHAN_WS_USER_TYPE` | Switch between `SELF` and `PARTNER` streaming modes. |
-| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`. |
+| Variable                                  | When to use                                          |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `DHAN_LOG_LEVEL`                          | Adjust logger verbosity (`INFO` by default).         |
+| `DHAN_BASE_URL`                           | Point REST calls to a different API hostname.        |
+| `DHAN_WS_VERSION`                         | Pin to a specific WebSocket API version.             |
+| `DHAN_WS_ORDER_URL`                       | Override the order update WebSocket endpoint.        |
+| `DHAN_WS_USER_TYPE`                       | Switch between `SELF` and `PARTNER` streaming modes. |
+| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`.           |
 
 ### Logging
 
@@ -461,3 +461,9 @@ PRs welcome! Please include tests for new packet decoders and WS behaviors (chun
 ## License
 
 MIT.
+
+## Technical Analysis (Indicators + Multi-Timeframe)
+
+See the guide for computing indicators and aggregating cross-timeframe bias:
+
+- docs/technical_analysis.md
