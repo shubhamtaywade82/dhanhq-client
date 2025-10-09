@@ -9,7 +9,7 @@ module TA
 
       k = 2.0 / (period + 1)
       series.each_with_index.reduce(nil) do |ema_prev, (v, i)|
-        i == 0 ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
+        i.zero? ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
       end
     end
 
@@ -17,9 +17,8 @@ module TA
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:RSI)
         return RubyTechnicalAnalysis::RSI.new(series: series, period: period).call
       end
-      if defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:rsi)
-        return TechnicalAnalysis.rsi(series, period: period)
-      end
+      return TechnicalAnalysis.rsi(series, period: period) if defined?(TechnicalAnalysis) &&
+                                                              TechnicalAnalysis.respond_to?(:rsi)
 
       simple_rsi(series, period)
     end

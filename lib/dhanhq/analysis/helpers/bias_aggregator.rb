@@ -49,14 +49,10 @@ module DhanHQ
         hist = macd[:hist]
         adx = val[:adx]
 
-        rsi_component = case rsi
-                        when nil then 0.5
-                        else
-                          return 0.65 if rsi >= 55
-                          return 0.35 if rsi <= 45
+        return 0.65 if rsi && rsi >= 55
+        return 0.35 if rsi && rsi <= 45
 
-                          0.5
-                        end
+        rsi_component = 0.5
 
         macd_component = case hist
                          when nil then 0.5

@@ -47,11 +47,11 @@ module DhanHQ
       #   - ExchangeSegment is a STRING enum (e.g., "NSE_FNO")
       #   - SecurityId is a STRING
       #
-      # @param h [Hash]
+      # @param instrument [Hash]
       # @return [Hash] Normalized instrument hash.
-      def self.normalize_instrument(h)
-        seg = to_request_string(h[:ExchangeSegment] || h["ExchangeSegment"])
-        sid = (h[:SecurityId] || h["SecurityId"]).to_s
+      def self.normalize_instrument(instrument)
+        seg = to_request_string(instrument[:ExchangeSegment] || instrument["ExchangeSegment"])
+        sid = (instrument[:SecurityId] || instrument["SecurityId"]).to_s
         { ExchangeSegment: seg, SecurityId: sid }
       end
 
@@ -60,7 +60,7 @@ module DhanHQ
       # @param list [Enumerable<Hash>]
       # @return [Array<Hash>]
       def self.normalize_instruments(list)
-        Array(list).map { |h| normalize_instrument(h) }
+        Array(list).map { |instrument| normalize_instrument(instrument) }
       end
 
       # Converts a numeric response code into the API's segment string.

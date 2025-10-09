@@ -8,6 +8,10 @@ require:
 AllCops:
   TargetRubyVersion: 3.1
   NewCops: enable
+  Exclude:
+    - "bin/**/*"
+    - "spec/**/*"
+    - "tmp/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
@@ -24,3 +28,70 @@ RSpec/ExampleLength:
 
 RSpec/MultipleMemoizedHelpers:
   Max: 10
+
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 140
+
+Metrics/AbcSize:
+  Max: 60
+  Exclude:
+    - "lib/DhanHQ/ws/**/*"
+    - "lib/dhanhq/analysis/**/*"
+    - "lib/ta/**/*"
+
+Metrics/MethodLength:
+  Max: 30
+  Exclude:
+    - "lib/DhanHQ/ws/**/*"
+    - "lib/dhanhq/analysis/**/*"
+    - "lib/ta/**/*"
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+  Exclude:
+    - "lib/DhanHQ/ws/**/*"
+    - "lib/dhanhq/analysis/**/*"
+    - "lib/ta/**/*"
+
+Metrics/PerceivedComplexity:
+  Max: 15
+  Exclude:
+    - "lib/DhanHQ/ws/**/*"
+    - "lib/dhanhq/analysis/**/*"
+    - "lib/ta/**/*"
+
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/ModuleLength:
+  Max: 200
+
+Naming/FileName:
+  Exclude:
+    - "lib/DhanHQ.rb"
+
+Naming/PredicatePrefix:
+  Enabled: false
+
+Naming/PredicateMethod:
+  Enabled: false
+
+Performance/CollectionLiteralInLoop:
+  Exclude:
+    - "lib/ta/**/*"
+
+Metrics/BlockLength:
+  Max: 50
+  Exclude:
+    - "lib/DhanHQ/ws/**/*"
+
+Metrics/ParameterLists:
+  Max: 8
+  Exclude:
+    - "lib/ta/technical_analysis.rb"
+
+Naming/MethodParameterName:
+  MinNameLength: 2

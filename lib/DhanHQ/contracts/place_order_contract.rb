@@ -95,24 +95,22 @@ module DhanHQ
 
       # Custom validation for trigger price when the order type is STOP_LOSS or STOP_LOSS_MARKET.
       rule(:trigger_price, :order_type) do
-        if values[:order_type] =~ /^STOP_LOSS/ && !values[:trigger_price]
-          key(:trigger_price).failure("is required for order_type STOP_LOSS or STOP_LOSS_MARKET")
-        end
+        next unless values[:order_type] =~ /^STOP_LOSS/ && !values[:trigger_price]
+
+        key(:trigger_price).failure("is required for order_type STOP_LOSS or STOP_LOSS_MARKET")
       end
 
       # Custom validation for AMO time when the order is marked as after-market.
       rule(:after_market_order, :amo_time) do
-        if values[:after_market_order] == true && !values[:amo_time]
-          key(:amo_time).failure("is required when after_market_order is true")
-        end
+        key(:amo_time).failure("is required when after_market_order is true") if values[:after_market_order] == true && !values[:amo_time]
       end
 
       # Custom validation for Bracket Order (BO) fields.
       rule(:bo_profit_value, :bo_stop_loss_value, :product_type) do
-        if values[:product_type] == "BO" && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
-          key(:bo_profit_value).failure("is required for Bracket Orders")
-          key(:bo_stop_loss_value).failure("is required for Bracket Orders")
-        end
+        next unless values[:product_type] == "BO" && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
+
+        key(:bo_profit_value).failure("is required for Bracket Orders")
+        key(:bo_stop_loss_value).failure("is required for Bracket Orders")
       end
     end
   end

@@ -36,9 +36,7 @@ module DhanHQ
         bias = BiasAggregator.new(@data[:indicators], @config).call
         # Neutral override: if higher TF trend is strong and short-term momentum aligns, allow a modest-confidence entry
         bias = neutral_override(bias) if bias[:bias] == :neutral
-        if bias[:bias] == :neutral || bias[:confidence].to_f < @config[:min_confidence].to_f
-          return no_trade("neutral/low confidence")
-        end
+        return no_trade("neutral/low confidence") if bias[:bias] == :neutral || bias[:confidence].to_f < @config[:min_confidence].to_f
 
         side = bias[:bias] == :bullish ? :ce : :pe
         moneyness = MoneynessHelper.pick_moneyness(indicators: @data[:indicators],
@@ -229,10 +227,16 @@ module DhanHQ
         { decision: :no_trade, reason: reason }
       end
 
-      def deep_merge(a, b)
-        return a unless b
+      def deep_merge(base_hash, override_hash)
+        return base_hash unless override_hash
 
-        a.merge(b) { |_, av, bv| av.is_a?(Hash) && bv.is_a?(Hash) ? deep_merge(av, bv) : bv }
+        base_hash.merge(override_hash) do |_, base_value, override_value|
+          if base_value.is_a?(Hash) && override_value.is_a?(Hash)
+            deep_merge(base_value, override_value)
+          else
+            override_value
+          end
+        end
       end
 
       def deep_symbolize(obj)

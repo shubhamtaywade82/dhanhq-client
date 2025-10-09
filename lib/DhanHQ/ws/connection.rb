@@ -58,7 +58,8 @@ module DhanHQ
         if @ws
           begin
             @ws.close
-          rescue StandardError
+          rescue StandardError => e
+            DhanHQ.logger&.warn("[DhanHQ::WS] failed to close socket cleanly: #{e.message}")
           end
         end
         self
@@ -70,13 +71,13 @@ module DhanHQ
       def disconnect!
         @stop = true
         @stopping = true
-        begin
-          send_disconnect
-        rescue StandardError
-        ensure
-          @ws&.close
-        end
+        send_disconnect
         self
+      rescue StandardError => e
+        DhanHQ.logger&.warn("[DhanHQ::WS] failed to send disconnect: #{e.message}")
+        self
+      ensure
+        @ws&.close
       end
 
       # Indicates whether the underlying socket is currently open.
@@ -84,7 +85,8 @@ module DhanHQ
       # @return [Boolean]
       def open?
         @ws && @ws.instance_variable_get(:@driver)&.ready_state == 1
-      rescue StandardError
+      rescue StandardError => e
+        DhanHQ.logger&.warn("[DhanHQ::WS] failed to query connection state: #{e.message}")
         false
       end
 
@@ -94,7 +96,7 @@ module DhanHQ
         backoff = 2.0
         until @stop
           failed = false
-          got_429 = false # rubocop:disable Naming/VariableNumber
+          too_many_requests_detected = false
 
           # respect any active cool-off window
           sleep (@cooloff_until - Time.now).ceil if @cooloff_until && Time.now < @cooloff_until
@@ -128,8 +130,8 @@ module DhanHQ
                 if @stopping
                   failed = false
                 else
-                  failed  = (ev.code != 1000)
-                  got_429 = ev.reason.to_s.include?("429")
+                  failed = (ev.code != 1000)
+                  too_many_requests_detected = ev.reason.to_s.include?("429")
                 end
                 EM.stop
               end
@@ -145,7 +147,7 @@ module DhanHQ
           ensure
             break if @stop
 
-            if got_429
+            if too_many_requests_detected
               @cooloff_until = Time.now + COOL_OFF_429
               DhanHQ.logger&.warn("[DhanHQ::WS] cooling off #{COOL_OFF_429}s due to 429")
             end
@@ -223,7 +225,9 @@ module DhanHQ
         DhanHQ.logger&.debug("[DhanHQ::WS] send_disconnect error #{e.class}: #{e.message}")
       end
 
-      def flatten(a) = a.flatten
+      def flatten(list)
+        list.flatten
+      end
 
       def uniq(list)
         seen = {}

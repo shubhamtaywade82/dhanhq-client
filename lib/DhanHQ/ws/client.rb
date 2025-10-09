@@ -161,7 +161,12 @@ module DhanHQ
 
       private
 
-      def prune(h) = { ExchangeSegment: h[:ExchangeSegment], SecurityId: h[:SecurityId] }
+      def prune(snapshot)
+        {
+          ExchangeSegment: snapshot[:ExchangeSegment],
+          SecurityId: snapshot[:SecurityId]
+        }
+      end
 
       def emit(event, payload)
         begin

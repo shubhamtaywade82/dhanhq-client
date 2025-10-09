@@ -6,6 +6,8 @@ require "dry/validation"
 module DhanHQ
   module Analysis
     class MultiTimeframeAnalyzer
+      RSI_UP_MOMENTUM   = %i[bullish overbought].freeze
+      RSI_DOWN_MOMENTUM = %i[bearish oversold].freeze
       class InputContract < Dry::Validation::Contract
         params do
           required(:meta).filled(:hash)
@@ -168,8 +170,8 @@ module DhanHQ
       end
 
       def rsi_rationale(per_tf)
-        ups = per_tf.count { |_tf, s| %i[bullish overbought].include?(s[:momentum]) }
-        downs = per_tf.count { |_tf, s| %i[bearish oversold].include?(s[:momentum]) }
+        ups = per_tf.count { |_tf, state| RSI_UP_MOMENTUM.include?(state[:momentum]) }
+        downs = per_tf.count { |_tf, state| RSI_DOWN_MOMENTUM.include?(state[:momentum]) }
         if ups > downs
           "Upward momentum across #{ups} TFs"
         elsif downs > ups

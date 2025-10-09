@@ -35,12 +35,12 @@ module TA
       trading_day?(Date.today) ? Date.today : last_trading_day(from: Date.today)
     end
 
-    def self.trading_days_ago(date, n)
-      raise ArgumentError, "n must be >= 0" if n.to_i.negative?
+    def self.trading_days_ago(date, days_back)
+      raise ArgumentError, "n must be >= 0" if days_back.to_i.negative?
 
       d = trading_day?(date) ? date : today_or_last_trading_day
       count = 0
-      while count < n
+      while count < days_back
         d = prev_trading_day(from: d)
         count += 1
       end

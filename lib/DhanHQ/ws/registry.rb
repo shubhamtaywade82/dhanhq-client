@@ -29,9 +29,10 @@ module DhanHQ
         #
         # @return [void]
         def stop_all
-          @clients.dup.each do |c|
-            c.stop
-          rescue StandardError
+          @clients.dup.each do |client|
+            client.stop
+          rescue StandardError => e
+            DhanHQ.logger&.warn("[DhanHQ::WS] failed to stop client #{client.class}: #{e.message}")
           end
           @clients.clear
         end
