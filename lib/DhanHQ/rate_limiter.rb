@@ -33,9 +33,11 @@ module DhanHQ
       if @api_type == :option_chain
         last_request_time = @buckets[:last_request_time]
 
-        sleep_time = 4 - (Time.now - last_request_time)
+        sleep_time = 3 - (Time.now - last_request_time)
         if sleep_time.positive?
-          puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit"
+          if ENV["DHAN_DEBUG"] == "true"
+            puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit"
+          end
           sleep(sleep_time)
         end
 
