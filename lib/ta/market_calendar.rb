@@ -11,31 +11,55 @@ module TA
       Date.new(2025, 8, 27)
     ].freeze
 
+    # Determines whether a date falls on a weekday.
+    #
+    # @param date [Date]
+    # @return [Boolean]
     def self.weekday?(date)
       w = date.wday
       w.between?(1, 5)
     end
 
+    # Checks if a date is a valid trading session.
+    #
+    # @param date [Date]
+    # @return [Boolean]
     def self.trading_day?(date)
       weekday?(date) && !MARKET_HOLIDAYS.include?(date)
     end
 
+    # Returns the last trading day on or before +from+.
+    #
+    # @param from [Date]
+    # @return [Date]
     def self.last_trading_day(from: Date.today)
       d = from
       d -= 1 until trading_day?(d)
       d
     end
 
+    # Returns the previous trading session strictly before +from+.
+    #
+    # @param from [Date]
+    # @return [Date]
     def self.prev_trading_day(from: Date.today)
       d = from - 1
       d -= 1 until trading_day?(d)
       d
     end
 
+    # Returns today's date if the market is open, otherwise the last session.
+    #
+    # @return [Date]
     def self.today_or_last_trading_day
       trading_day?(Date.today) ? Date.today : last_trading_day(from: Date.today)
     end
 
+    # Returns the trading day N sessions ago from the provided date.
+    #
+    # @param date [Date]
+    # @param days_back [Integer]
+    # @return [Date]
     def self.trading_days_ago(date, days_back)
       raise ArgumentError, "n must be >= 0" if days_back.to_i.negative?
 

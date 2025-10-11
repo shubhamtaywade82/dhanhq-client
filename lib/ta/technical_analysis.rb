@@ -36,11 +36,15 @@ module TA
       max_retries: 3
     }.freeze
 
+    # @param options [Hash] overrides for indicator periods and network behaviour.
     def initialize(options = {})
       @opts = DEFAULTS.merge(options.transform_keys(&:to_sym))
       @fetcher = Fetcher.new(throttle_seconds: @opts[:throttle_seconds], max_retries: @opts[:max_retries])
     end
 
+    # Computes indicators by fetching historical data for each interval.
+    #
+    # @return [Hash]
     def compute(exchange_segment:, instrument:, security_id:, from_date: nil, to_date: nil, days_back: nil,
                 intervals: [1, 5, 15, 25, 60])
       # Normalize to_date: default to last trading day; if provided and non-trading, roll back
@@ -83,6 +87,9 @@ module TA
       }
     end
 
+    # Computes indicators from a JSON export instead of live data.
+    #
+    # @return [Hash]
     def compute_from_file(path:, base_interval: 1, intervals: [1, 5, 15, 25, 60])
       raw = JSON.parse(File.read(path))
       base = Candles.from_series(raw)
@@ -101,12 +108,20 @@ module TA
 
     private
 
+    # Sleeps between interval requests to avoid rate limiting.
+    #
+    # @param multiplier [Numeric]
+    # @return [void]
     def sleep_with_jitter(multiplier = 1.0)
       base = (@opts[:throttle_seconds] || 3.0).to_f * multiplier
       jitter = rand * 0.3
       sleep(base + jitter)
     end
 
+    # Normalizes the requested end date to a trading day string.
+    #
+    # @param to_date [String, nil]
+    # @return [String]
     def normalize_to_date(to_date)
       return MarketCalendar.today_or_last_trading_day.strftime("%Y-%m-%d") if to_date.nil? || to_date.to_s.strip.empty?
 
@@ -122,6 +137,12 @@ module TA
       end
     end
 
+    # Normalizes the requested start date based on available data.
+    #
+    # @param from_date [String, nil]
+    # @param to_date [String]
+    # @param days_back [Integer, nil]
+    # @return [String]
     def normalize_from_date(from_date, to_date, days_back)
       if (from_date.nil? || from_date.to_s.strip.empty?) && days_back&.to_i&.positive?
         to_d = Date.parse(to_date)
@@ -146,6 +167,8 @@ module TA
     end
 
     # Calculate how many bars we need based on indicator periods
+    #
+    # @return [Integer]
     def required_bars_for_indicators
       rsi_need = (@opts[:rsi_period] || 14).to_i + 1
       atr_need = (@opts[:atr_period] || 14).to_i + 1
@@ -154,6 +177,10 @@ module TA
       [rsi_need, atr_need, adx_need, macd_need].max
     end
 
+    # Returns the approximate number of bars per trading day for the interval.
+    #
+    # @param interval_minutes [Integer]
+    # @return [Integer]
     def bars_per_trading_day(interval_minutes)
       minutes = interval_minutes.to_i
       return 1 if minutes <= 0
@@ -161,16 +188,28 @@ module TA
       (375.0 / minutes).floor
     end
 
+    # Estimates the days of data required for the given interval.
+    #
+    # @param interval_minutes [Integer]
+    # @return [Integer]
     def days_needed_for_interval(interval_minutes)
       need = required_bars_for_indicators
       per_day = [bars_per_trading_day(interval_minutes), 1].max
       ((need + per_day - 1) / per_day)
     end
 
+    # Determines the maximum number of days needed across intervals.
+    #
+    # @param intervals [Array<Integer>]
+    # @return [Integer]
     def auto_days_needed(intervals)
       Array(intervals).map { |ivl| days_needed_for_interval(ivl.to_i) }.max || 1
     end
 
+    # Computes indicators for a set of candles.
+    #
+    # @param candles [Array<Hash>]
+    # @return [Hash]
     def compute_for(candles)
       c = candles.map { |k| k[:c] }
       h = candles.map { |k| k[:h] }
@@ -185,6 +224,10 @@ module TA
       }
     end
 
+    # Safely returns the last element from an array-like object.
+    #
+    # @param arr [Object]
+    # @return [Object, nil]
     def safe_last(arr)
       return nil unless arr.respond_to?(:last)
 

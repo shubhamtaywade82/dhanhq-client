@@ -92,6 +92,9 @@ module DhanHQ
 
       private
 
+      # Runs the connection lifecycle loop with exponential backoff.
+      #
+      # @return [void]
       def loop_run
         backoff = 2.0
         until @stop
@@ -166,10 +169,16 @@ module DhanHQ
         end
       end
 
+      # Builds the default headers sent during the WebSocket handshake.
+      #
+      # @return [Hash]
       def default_headers
         { "User-Agent" => "dhanhq-ruby/#{defined?(DhanHQ::VERSION) ? DhanHQ::VERSION : "dev"} Ruby/#{RUBY_VERSION}" }
       end
 
+      # Processes queued subscription and unsubscription commands.
+      #
+      # @return [void]
       def drain_and_send
         cmds = @bus.drain
         return if cmds.empty?
@@ -195,6 +204,10 @@ module DhanHQ
         @state.mark_unsubscribed!(exist_only)
       end
 
+      # Sends batched subscribe requests to the server.
+      #
+      # @param list [Array<Hash>]
+      # @return [void]
       def send_sub(list)
         return if list.empty?
 
@@ -205,6 +218,10 @@ module DhanHQ
         end
       end
 
+      # Sends batched unsubscribe requests to the server.
+      #
+      # @param list [Array<Hash>]
+      # @return [void]
       def send_unsub(list)
         return if list.empty?
 
@@ -215,6 +232,9 @@ module DhanHQ
         end
       end
 
+      # Sends the disconnect request code before closing the socket.
+      #
+      # @return [void]
       def send_disconnect
         return unless @ws
 
@@ -225,10 +245,18 @@ module DhanHQ
         DhanHQ.logger&.debug("[DhanHQ::WS] send_disconnect error #{e.class}: #{e.message}")
       end
 
+      # Collapses nested arrays of instruments into a flat array.
+      #
+      # @param list [Array]
+      # @return [Array]
       def flatten(list)
         list.flatten
       end
 
+      # Deduplicates a list of instruments using the segment/security tuple.
+      #
+      # @param list [Array<Hash>]
+      # @return [Array<Hash>]
       def uniq(list)
         seen = {}
         list.each_with_object([]) do |i, out|

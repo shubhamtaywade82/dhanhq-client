@@ -5,11 +5,18 @@ require "date"
 module TA
   # Retrieves historical data from the DhanHQ API with retry semantics.
   class Fetcher
+    # @param throttle_seconds [Numeric] delay between API calls.
+    # @param max_retries [Integer] number of retry attempts after rate limits.
     def initialize(throttle_seconds: 3.0, max_retries: 3)
       @throttle_seconds = throttle_seconds.to_f
       @max_retries = max_retries.to_i
     end
 
+    # Fetches intraday data in a single request when possible.
+    #
+    # @param params [Hash]
+    # @param interval [Symbol, String]
+    # @return [Hash]
     def intraday(params, interval)
       with_retries(":intraday/#{interval}") do
         DhanHQ::Models::HistoricalData.intraday(
@@ -23,6 +30,11 @@ module TA
       end
     end
 
+    # Fetches intraday data in 90-day windows to satisfy API limits.
+    #
+    # @param params [Hash]
+    # @param interval [Symbol, String]
+    # @return [Hash]
     def intraday_windowed(params, interval)
       from_d = Date.parse(params[:from_date])
       to_d   = Date.parse(params[:to_date])
@@ -47,12 +59,20 @@ module TA
 
     private
 
+    # Sleeps for the configured throttle window with jitter.
+    #
+    # @param multiplier [Numeric]
+    # @return [void]
     def sleep_with_jitter(multiplier = 1.0)
       base = @throttle_seconds * multiplier
       jitter = rand * 0.3
       sleep(base + jitter)
     end
 
+    # Executes the provided block with retry semantics for rate limits.
+    #
+    # @param _label [String]
+    # @return [Object]
     def with_retries(_label)
       retries = 0
       begin

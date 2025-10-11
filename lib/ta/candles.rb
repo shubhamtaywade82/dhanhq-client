@@ -7,6 +7,10 @@ module TA
   module Candles
     module_function
 
+    # Coerces timestamps from various primitives into Time objects.
+    #
+    # @param val [String, Numeric, Time]
+    # @return [Time]
     def parse_time_like(val)
       return Time.at(val) if val.is_a?(Numeric)
 
@@ -16,6 +20,10 @@ module TA
       Time.parse(s)
     end
 
+    # Builds OHLCV candles from API series payloads.
+    #
+    # @param series [Hash]
+    # @return [Array<Hash>]
     def from_series(series)
       ts = series["timestamp"] || series[:timestamp]
       open = series["open"] || series[:open]
@@ -34,6 +42,11 @@ module TA
       []
     end
 
+    # Resamples one-minute candles to the requested resolution.
+    #
+    # @param candles [Array<Hash>]
+    # @param minutes [Integer]
+    # @return [Array<Hash>]
     def resample(candles, minutes)
       return candles if minutes.to_i == 1
 

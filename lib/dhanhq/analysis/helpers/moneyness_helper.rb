@@ -6,6 +6,13 @@ module DhanHQ
     module MoneynessHelper
       module_function
 
+      # Picks the appropriate option moneyness given indicator context.
+      #
+      # @param indicators [Hash]
+      # @param min_adx [Numeric]
+      # @param strong_adx [Numeric]
+      # @param bias [Symbol, nil]
+      # @return [Symbol]
       def pick_moneyness(indicators:, min_adx:, strong_adx:, bias: nil)
         # Mark bias as intentionally observed for future rules
         bias&.to_sym

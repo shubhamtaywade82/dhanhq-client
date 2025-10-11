@@ -8,7 +8,7 @@ module DhanHQ
     module Orders
       # Establishes an order WebSocket connection and yields each update.
       #
-      # @yield [Hash] the payload emitted for an order update
+      # @yieldparam payload [Hash] payload emitted for an order update
       def self.connect(&)
         Client.new.start.on(:update, &)
       end

@@ -7,6 +7,7 @@ module DhanHQ
     # Maintains the current subscription state and performs diffing so that the
     # client only sends incremental subscribe/unsubscribe requests.
     class SubState
+      # @return [void]
       def initialize
         @set   = Concurrent::Set.new
         @mutex = Mutex.new
@@ -53,6 +54,10 @@ module DhanHQ
 
       private
 
+      # Generates the composite cache key for an instrument.
+      #
+      # @param instrument [Hash]
+      # @return [String]
       def key_for(instrument)
         "#{instrument[:ExchangeSegment]}:#{instrument[:SecurityId]}"
       end

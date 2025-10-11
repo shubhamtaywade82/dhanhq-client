@@ -9,6 +9,8 @@ module DhanHQ
     attr_accessor :client_id, :access_token, :base_url, :ws_version
 
     # default logger so calls like DhanHQ.logger&.info never explode
+    #
+    # @return [Logger] the configured logger instance used across the gem.
     def logger
       @logger ||= Logger.new($stdout, level: Logger::INFO)
     end
@@ -16,6 +18,10 @@ module DhanHQ
     attr_writer :logger
 
     # same API style as your README
+    #
+    # @yield [config] yields the singleton configuration object to the caller.
+    # @yieldparam config [Module] the DhanHQ module acting as a configuration store.
+    # @return [void]
     def configure
       yield self
       # ensure a logger is present even if user didn’t set one
@@ -23,6 +29,8 @@ module DhanHQ
     end
 
     # if you support env bootstrap
+    #
+    # @return [void]
     def configure_with_env
       self.client_id    = ENV.fetch("CLIENT_ID", nil)
       self.access_token = ENV.fetch("ACCESS_TOKEN", nil)

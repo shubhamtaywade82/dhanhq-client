@@ -161,6 +161,10 @@ module DhanHQ
 
       private
 
+      # Reduces a subscription snapshot to the minimal payload sent over the wire.
+      #
+      # @param snapshot [Hash]
+      # @return [Hash]
       def prune(snapshot)
         {
           ExchangeSegment: snapshot[:ExchangeSegment],
@@ -168,6 +172,11 @@ module DhanHQ
         }
       end
 
+      # Executes all registered callbacks for the supplied event.
+      #
+      # @param event [Symbol]
+      # @param payload [Object]
+      # @return [void]
       def emit(event, payload)
         begin
           @callbacks[event].dup
@@ -176,6 +185,9 @@ module DhanHQ
         end.each { |cb| cb.call(payload) }
       end
 
+      # Ensures we only install a single at-exit hook per client instance.
+      #
+      # @return [void]
       def install_at_exit_once!
         return if defined?(@at_exit_installed) && @at_exit_installed
 

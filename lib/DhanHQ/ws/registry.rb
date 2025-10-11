@@ -40,7 +40,9 @@ module DhanHQ
       end
     end
 
-    # convenience API
+    # Convenience API for disconnecting every locally registered client.
+    #
+    # @return [void]
     def self.disconnect_all_local!
       Registry.stop_all
     end
