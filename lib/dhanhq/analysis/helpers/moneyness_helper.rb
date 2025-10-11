@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Analysis
+    # Provides helpers for selecting option moneyness based on indicators.
     module MoneynessHelper
       module_function
 

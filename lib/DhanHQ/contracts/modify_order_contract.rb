@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Contracts
+    # Validates payloads used to modify an existing order.
     class ModifyOrderContract < Dry::Validation::Contract
       params do
         required(:dhanClientId).filled(:string)

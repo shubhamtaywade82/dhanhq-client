@@ -29,9 +29,6 @@ RSpec/ExampleLength:
 RSpec/MultipleMemoizedHelpers:
   Max: 10
 
-Style/Documentation:
-  Enabled: false
-
 Layout/LineLength:
   Max: 140
 

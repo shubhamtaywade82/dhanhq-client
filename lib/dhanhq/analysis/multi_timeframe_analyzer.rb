@@ -5,9 +5,11 @@ require "dry/validation"
 
 module DhanHQ
   module Analysis
+    # Builds a narrative summary of market bias from multi-timeframe indicators.
     class MultiTimeframeAnalyzer
       RSI_UP_MOMENTUM   = %i[bullish overbought].freeze
       RSI_DOWN_MOMENTUM = %i[bearish oversold].freeze
+      # Ensures analyzer inputs follow the expected schema.
       class InputContract < Dry::Validation::Contract
         params do
           required(:meta).filled(:hash)

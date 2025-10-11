@@ -2,6 +2,7 @@
 
 require "logger"
 
+# DhanHQ exposes configuration helpers and global client settings.
 module DhanHQ
   class << self
     # keep whatever you already have; add these if missing:

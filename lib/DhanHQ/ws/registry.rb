@@ -3,6 +3,7 @@
 require "concurrent"
 
 module DhanHQ
+  # Provides WebSocket helpers shared across channel-specific clients.
   module WS
     # Tracks the set of active WebSocket clients so they can be collectively
     # disconnected when required.

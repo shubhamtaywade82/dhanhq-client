@@ -6,6 +6,7 @@ require_relative "../contracts/options_buying_advisor_contract"
 
 module DhanHQ
   module Analysis
+    # Generates option buying recommendations from indicator snapshots.
     class OptionsBuyingAdvisor
       DEFAULT_CONFIG = {
         timeframe_weights: { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 },

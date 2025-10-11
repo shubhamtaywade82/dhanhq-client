@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Analysis
+    # Calculates a consolidated bias score across multiple timeframes.
     class BiasAggregator
       DEFAULT_WEIGHTS = { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 }.freeze
 

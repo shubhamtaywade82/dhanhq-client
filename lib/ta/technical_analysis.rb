@@ -23,6 +23,7 @@ require_relative "indicators"
 require_relative "fetcher"
 
 module TA
+  # Aggregates candle data and computes technical indicators across intervals.
   class TechnicalAnalysis
     DEFAULTS = {
       rsi_period: 14,

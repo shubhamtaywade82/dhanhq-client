@@ -8,6 +8,7 @@ require "thread" # rubocop:disable Lint/RedundantRequireStatement
 module DhanHQ
   module WS
     module Orders
+      # Handles the low-level WebSocket loop and reconnection logic.
       class Connection
         COOL_OFF_429 = 60
         MAX_BACKOFF  = 90

@@ -3,6 +3,7 @@
 require "date"
 
 module TA
+  # Supplies helpers for working with trading-day calendars.
   module MarketCalendar
     MARKET_HOLIDAYS = [
       Date.new(2025, 8, 15),

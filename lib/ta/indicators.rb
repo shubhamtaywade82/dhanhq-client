@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module TA
+  # Provides indicator calculations with fallbacks for external gems.
   module Indicators
     module_function
 

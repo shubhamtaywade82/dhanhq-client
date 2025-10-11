@@ -3,6 +3,7 @@
 require "date"
 
 module TA
+  # Retrieves historical data from the DhanHQ API with retry semantics.
   class Fetcher
     def initialize(throttle_seconds: 3.0, max_retries: 3)
       @throttle_seconds = throttle_seconds.to_f

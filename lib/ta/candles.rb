@@ -3,6 +3,7 @@
 require "time"
 
 module TA
+  # Utilities for working with candle time series data.
   module Candles
     module_function
 

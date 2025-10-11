@@ -4,9 +4,13 @@ require_relative "orders/client"
 
 module DhanHQ
   module WS
+    # Namespaces helpers related to the orders WebSocket channel.
     module Orders
-      def self.connect(&on_update)
-        Client.new.start.on(:update, &on_update)
+      # Establishes an order WebSocket connection and yields each update.
+      #
+      # @yield [Hash] the payload emitted for an order update
+      def self.connect(&)
+        Client.new.start.on(:update, &)
       end
     end
   end
