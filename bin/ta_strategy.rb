@@ -37,7 +37,7 @@ module MarketCalendar
 
   def self.weekday?(date)
     w = date.wday # 0=Sun, 6=Sat
-    w >= 1 && w <= 5
+    w.between?(1, 5)
   end
 
   def self.trading_day?(date)
@@ -276,7 +276,7 @@ module TAAdapters
 
     k = 2.0 / (period + 1)
     series.each_with_index.reduce(nil) do |ema_prev, (v, i)|
-      if i == 0
+      if i.zero?
         v.to_f
       else
         (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))

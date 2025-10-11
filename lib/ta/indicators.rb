@@ -1,29 +1,46 @@
 # frozen_string_literal: true
 
 module TA
+  # Provides indicator calculations with fallbacks for external gems.
   module Indicators
     module_function
 
+    # Calculates the exponential moving average for the provided series.
+    #
+    # @param series [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Float, nil]
     def ema(series, period)
       return nil if series.nil? || series.empty?
 
       k = 2.0 / (period + 1)
       series.each_with_index.reduce(nil) do |ema_prev, (v, i)|
-        i == 0 ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
+        i.zero? ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
       end
     end
 
+    # Computes the Relative Strength Index.
+    #
+    # @param series [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>, nil]
     def rsi(series, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:RSI)
         return RubyTechnicalAnalysis::RSI.new(series: series, period: period).call
       end
-      if defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:rsi)
-        return TechnicalAnalysis.rsi(series, period: period)
-      end
+      return TechnicalAnalysis.rsi(series, period: period) if defined?(TechnicalAnalysis) &&
+                                                              TechnicalAnalysis.respond_to?(:rsi)
 
       simple_rsi(series, period)
     end
 
+    # Computes the Moving Average Convergence Divergence values.
+    #
+    # @param series [Enumerable<Numeric>]
+    # @param fast [Integer]
+    # @param slow [Integer]
+    # @param signal [Integer]
+    # @return [Hash]
     def macd(series, fast, slow, signal)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:MACD)
         out = RubyTechnicalAnalysis::MACD.new(series: series, fast_period: fast, slow_period: slow,
@@ -53,6 +70,13 @@ module TA
       simple_macd(series, fast, slow, signal)
     end
 
+    # Calculates the Average Directional Index.
+    #
+    # @param high [Enumerable<Numeric>]
+    # @param low [Enumerable<Numeric>]
+    # @param close [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>, Numeric]
     def adx(high, low, close, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:ADX)
         return RubyTechnicalAnalysis::ADX.new(high: high, low: low, close: close, period: period).call
@@ -64,6 +88,13 @@ module TA
       simple_adx(high, low, close, period)
     end
 
+    # Calculates the Average True Range.
+    #
+    # @param high [Enumerable<Numeric>]
+    # @param low [Enumerable<Numeric>]
+    # @param close [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>, Numeric]
     def atr(high, low, close, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:ATR)
         return RubyTechnicalAnalysis::ATR.new(high: high, low: low, close: close, period: period).call
@@ -75,6 +106,11 @@ module TA
       simple_atr(high, low, close, period)
     end
 
+    # Lightweight RSI implementation used when external gems are unavailable.
+    #
+    # @param series [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>]
     def simple_rsi(series, period)
       gains = []
       losses = []
@@ -96,6 +132,13 @@ module TA
       rsi_vals
     end
 
+    # Fallback MACD implementation.
+    #
+    # @param series [Enumerable<Numeric>]
+    # @param fast [Integer]
+    # @param slow [Integer]
+    # @param signal [Integer]
+    # @return [Hash]
     def simple_macd(series, fast, slow, signal)
       e_fast = ema(series, fast)
       e_slow = ema(series, slow)
@@ -107,6 +150,12 @@ module TA
       { macd: macd_line, signal: signal_line, hist: macd_line - signal_line }
     end
 
+    # Computes true ranges for ATR/ADX calculations.
+    #
+    # @param high [Enumerable<Numeric>]
+    # @param low [Enumerable<Numeric>]
+    # @param close [Enumerable<Numeric>]
+    # @return [Array<Float>]
     def true_ranges(high, low, close)
       trs = []
       close.each_with_index do |_c, i|
@@ -120,6 +169,13 @@ module TA
       trs
     end
 
+    # Simple ATR implementation used when faster dependencies are missing.
+    #
+    # @param high [Enumerable<Numeric>]
+    # @param low [Enumerable<Numeric>]
+    # @param close [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>]
     def simple_atr(high, low, close, period)
       trs = true_ranges(high, low, close)
       out = []
@@ -137,6 +193,13 @@ module TA
       out
     end
 
+    # Simple ADX implementation used when faster dependencies are missing.
+    #
+    # @param high [Enumerable<Numeric>]
+    # @param low [Enumerable<Numeric>]
+    # @param close [Enumerable<Numeric>]
+    # @param period [Integer]
+    # @return [Array<Float>]
     def simple_adx(high, low, close, period)
       plus_dm = [0]
       minus_dm = [0]

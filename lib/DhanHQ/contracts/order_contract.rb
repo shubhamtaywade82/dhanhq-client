@@ -49,9 +49,7 @@ module DhanHQ
       end
 
       rule(:trigger_price) do
-        if %w[STOP_LOSS STOP_LOSS_MARKET].include?(values[:order_type]) && !value
-          key.failure("must be present for STOP_LOSS orders")
-        end
+        key.failure("must be present for STOP_LOSS orders") if %w[STOP_LOSS STOP_LOSS_MARKET].include?(values[:order_type]) && !value
       end
 
       rule(:amo_time) do
@@ -93,9 +91,7 @@ module DhanHQ
       end
 
       rule do
-        if !values[:price] && !values[:quantity] && !values[:trigger_price]
-          key.failure("at least one modification field required")
-        end
+        key.failure("at least one modification field required") if !values[:price] && !values[:quantity] && !values[:trigger_price]
       end
     end
   end

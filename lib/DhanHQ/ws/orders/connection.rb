@@ -8,10 +8,13 @@ require "thread" # rubocop:disable Lint/RedundantRequireStatement
 module DhanHQ
   module WS
     module Orders
+      # Handles the low-level WebSocket loop and reconnection logic.
       class Connection
         COOL_OFF_429 = 60
         MAX_BACKOFF  = 90
 
+        # @param url [String] WebSocket endpoint URL.
+        # @yield [Hash] parsed JSON payload from the server.
         def initialize(url:, &on_json)
           @url           = url
           @on_json       = on_json
@@ -20,16 +23,25 @@ module DhanHQ
           @cooloff_until = nil
         end
 
+        # Starts the background session loop.
+        #
+        # @return [DhanHQ::WS::Orders::Connection] self
         def start
           Thread.new { loop_run }
           self
         end
 
+        # Requests a graceful shutdown of the connection.
+        #
+        # @return [void]
         def stop
           @stop = true
           @ws&.close
         end
 
+        # Forces the socket closed without additional signalling.
+        #
+        # @return [void]
         def disconnect!
           # spec does not list a separate disconnect message; just close
           @ws&.close
@@ -37,22 +49,25 @@ module DhanHQ
 
         private
 
+        # Runs the reconnection loop with exponential backoff.
+        #
+        # @return [void]
         def loop_run
           backoff = 2.0
           until @stop
-            failed  = false
-            got_429 = false
+            failed = false
+            saw_too_many_requests = false
             sleep (@cooloff_until - Time.now).ceil if @cooloff_until && Time.now < @cooloff_until
 
             begin
-              failed, got_429 = run_session
+              failed, saw_too_many_requests = run_session
             rescue StandardError => e
               DhanHQ.logger&.error("[DhanHQ::WS::Orders] crashed #{e.class} #{e.message}")
               failed = true
             ensure
               break if @stop
 
-              if got_429
+              if saw_too_many_requests
                 @cooloff_until = Time.now + COOL_OFF_429
                 DhanHQ.logger&.warn("[DhanHQ::WS::Orders] cooling off #{COOL_OFF_429}s due to 429")
               end
@@ -70,10 +85,13 @@ module DhanHQ
           end
         end
 
+        # Opens a single EventMachine session and returns connection state.
+        #
+        # @return [Array(Boolean, Boolean)]
         def run_session
-          failed  = false
-          got_429 = false
-          latch   = Queue.new
+          failed = false
+          saw_too_many_requests = false
+          latch = Queue.new
 
           runner = proc do |stopper|
             @ws = Faye::WebSocket::Client.new(@url, nil, headers: default_headers)
@@ -84,18 +102,16 @@ module DhanHQ
             end
 
             @ws.on :message do |ev|
-              begin
-                msg = JSON.parse(ev.data, symbolize_names: true)
-                @on_json&.call(msg)
-              rescue StandardError => e
-                DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
-              end
+              msg = JSON.parse(ev.data, symbolize_names: true)
+              @on_json&.call(msg)
+            rescue StandardError => e
+              DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
             end
 
             @ws.on :close do |ev|
               DhanHQ.logger&.warn("[DhanHQ::WS::Orders] close #{ev.code} #{ev.reason}")
-              failed  = (ev.code != 1000)
-              got_429 = ev.reason.to_s.include?("429")
+              failed = (ev.code != 1000)
+              saw_too_many_requests = ev.reason.to_s.include?("429")
               latch << true
               stopper.call
             end
@@ -116,13 +132,19 @@ module DhanHQ
 
           latch.pop
 
-          [failed, got_429]
+          [failed, saw_too_many_requests]
         end
 
+        # Builds headers for the WebSocket handshake.
+        #
+        # @return [Hash]
         def default_headers
           { "User-Agent" => "dhanhq-ruby/#{defined?(DhanHQ::VERSION) ? DhanHQ::VERSION : "dev"} Ruby/#{RUBY_VERSION}" }
         end
 
+        # Sends the login payload based on configuration.
+        #
+        # @return [void]
         def send_login
           cfg = DhanHQ.configuration
           if cfg.ws_user_type.to_s.upcase == "PARTNER"

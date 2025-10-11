@@ -3,6 +3,7 @@
 require "concurrent"
 
 module DhanHQ
+  # Provides WebSocket helpers shared across channel-specific clients.
   module WS
     # Tracks the set of active WebSocket clients so they can be collectively
     # disconnected when required.
@@ -29,16 +30,19 @@ module DhanHQ
         #
         # @return [void]
         def stop_all
-          @clients.dup.each do |c|
-            c.stop
-          rescue StandardError
+          @clients.dup.each do |client|
+            client.stop
+          rescue StandardError => e
+            DhanHQ.logger&.warn("[DhanHQ::WS] failed to stop client #{client.class}: #{e.message}")
           end
           @clients.clear
         end
       end
     end
 
-    # convenience API
+    # Convenience API for disconnecting every locally registered client.
+    #
+    # @return [void]
     def self.disconnect_all_local!
       Registry.stop_all
     end

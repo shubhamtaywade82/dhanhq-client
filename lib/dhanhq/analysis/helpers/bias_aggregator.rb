@@ -2,9 +2,12 @@
 
 module DhanHQ
   module Analysis
+    # Calculates a consolidated bias score across multiple timeframes.
     class BiasAggregator
       DEFAULT_WEIGHTS = { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 }.freeze
 
+      # @param indicators [Hash] raw indicator data keyed by timeframe symbol.
+      # @param config [Hash] configuration overrides such as timeframe weights.
       def initialize(indicators, config = {})
         @indicators = indicators || {}
         @weights = config[:timeframe_weights] || DEFAULT_WEIGHTS
@@ -12,6 +15,9 @@ module DhanHQ
         @strong_adx = (config[:strong_adx] || 35).to_f
       end
 
+      # Aggregates bias and confidence across the configured timeframes.
+      #
+      # @return [Hash] summary containing :bias, :confidence, :refs, and :notes.
       def call
         score = 0.0
         wsum = 0.0
@@ -43,20 +49,20 @@ module DhanHQ
 
       private
 
+      # Scores a single timeframe snapshot.
+      #
+      # @param val [Hash]
+      # @return [Float, nil]
       def score_tf(val)
         rsi = val[:rsi]
         macd = val[:macd] || {}
         hist = macd[:hist]
         adx = val[:adx]
 
-        rsi_component = case rsi
-                        when nil then 0.5
-                        else
-                          return 0.65 if rsi >= 55
-                          return 0.35 if rsi <= 45
+        return 0.65 if rsi && rsi >= 55
+        return 0.35 if rsi && rsi <= 45
 
-                          0.5
-                        end
+        rsi_component = 0.5
 
         macd_component = case hist
                          when nil then 0.5

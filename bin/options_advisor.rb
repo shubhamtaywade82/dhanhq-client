@@ -70,7 +70,7 @@ raise "--security-id is required" if opts[:security_id].to_s.strip.empty?
 
 DhanHQ.configure_with_env
 
-warn "[debug] opts: #{opts.reject { |k, _| k == :print_creds }.inspect}" if opts[:debug]
+warn "[debug] opts: #{opts.except(:print_creds).inspect}" if opts[:debug]
 
 # Resolve spot via MarketFeed.ltp if not provided
 if opts[:spot].nil?

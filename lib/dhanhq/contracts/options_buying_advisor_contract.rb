@@ -4,6 +4,7 @@ require "dry/validation"
 
 module DhanHQ
   module Contracts
+    # Validates payloads consumed by the OptionsBuyingAdvisor.
     class OptionsBuyingAdvisorContract < Dry::Validation::Contract
       params do
         required(:meta).hash do

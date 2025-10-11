@@ -6,6 +6,7 @@ require_relative "../contracts/options_buying_advisor_contract"
 
 module DhanHQ
   module Analysis
+    # Generates option buying recommendations from indicator snapshots.
     class OptionsBuyingAdvisor
       DEFAULT_CONFIG = {
         timeframe_weights: { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 },
@@ -22,11 +23,16 @@ module DhanHQ
         min_confidence: 0.58
       }.freeze
 
+      # @param data [Hash] indicator and metadata payload.
+      # @param config [Hash] optional overrides for recommendation heuristics.
       def initialize(data:, config: {})
         @data   = deep_symbolize(data || {})
         @config = deep_merge(DEFAULT_CONFIG, config || {})
       end
 
+      # Computes a recommendation or returns a no-trade reason.
+      #
+      # @return [Hash]
       def call
         validate!
         return unsupported("unsupported instrument") unless index_instrument?(@data[:meta])
@@ -36,9 +42,7 @@ module DhanHQ
         bias = BiasAggregator.new(@data[:indicators], @config).call
         # Neutral override: if higher TF trend is strong and short-term momentum aligns, allow a modest-confidence entry
         bias = neutral_override(bias) if bias[:bias] == :neutral
-        if bias[:bias] == :neutral || bias[:confidence].to_f < @config[:min_confidence].to_f
-          return no_trade("neutral/low confidence")
-        end
+        return no_trade("neutral/low confidence") if bias[:bias] == :neutral || bias[:confidence].to_f < @config[:min_confidence].to_f
 
         side = bias[:bias] == :bullish ? :ce : :pe
         moneyness = MoneynessHelper.pick_moneyness(indicators: @data[:indicators],
@@ -54,6 +58,9 @@ module DhanHQ
       private
 
       # If bias is neutral, try to infer a directional tilt using strong higher timeframe ADX and M5/M15 momentum
+      #
+      # @param bias [Hash]
+      # @return [Hash]
       def neutral_override(bias)
         ind = @data[:indicators] || {}
         m60 = ind[:m60] || {}
@@ -85,6 +92,9 @@ module DhanHQ
         bias
       end
 
+      # Fetches option chain data if not already provided.
+      #
+      # @return [void]
       def ensure_option_chain!
         return if Array(@data[:option_chain]).any?
 
@@ -112,6 +122,10 @@ module DhanHQ
         @data[:option_chain] ||= []
       end
 
+      # Normalizes leg data to a consistent structure.
+      #
+      # @param cepe [Hash]
+      # @return [Hash]
       def normalize_leg(cepe)
         {
           ltp: cepe["last_price"], bid: cepe["best_bid_price"], ask: cepe["best_ask_price"],
@@ -121,15 +135,27 @@ module DhanHQ
         }
       end
 
+      # Validates the source data using the Dry::Validation contract.
+      #
+      # @return [void]
       def validate!
         res = DhanHQ::Contracts::OptionsBuyingAdvisorContract.new.call(@data)
         raise ArgumentError, res.errors.to_h.inspect unless res.success?
       end
 
+      # Determines if the instrument refers to an index symbol.
+      #
+      # @param meta [Hash]
+      # @return [Boolean]
       def index_instrument?(meta)
         meta[:instrument].to_s == "INDEX" || meta[:exchange_segment].to_s == "IDX_I"
       end
 
+      # Chooses the most appropriate strike given the bias and option chain.
+      #
+      # @param side [Symbol]
+      # @param moneyness [Symbol]
+      # @return [Hash, nil]
       def select_strike(side:, moneyness:)
         chain = Array(@data[:option_chain])
         return nil if chain.empty?
@@ -153,6 +179,11 @@ module DhanHQ
         best
       end
 
+      # Computes the bid/ask spread percentage.
+      #
+      # @param bid [Numeric]
+      # @param ask [Numeric]
+      # @return [Float, nil]
       def spread_pct(bid, ask)
         return nil if bid.to_f <= 0.0 || ask.to_f <= 0.0
 
@@ -162,6 +193,11 @@ module DhanHQ
         ((ask.to_f - bid.to_f) / mid) * 100.0
       end
 
+      # Selects the best candidate based on delta proximity, spread, and OI.
+      #
+      # @param best [Hash, nil]
+      # @param cand [Hash]
+      # @return [Hash]
       def rank_pick(best, cand)
         return cand unless best
 
@@ -171,10 +207,22 @@ module DhanHQ
         cand_score < best_score ? cand : best
       end
 
+      # Calculates delta distance from a target center.
+      #
+      # @param delta [Numeric]
+      # @param center [Numeric]
+      # @return [Float]
       def delta_distance(delta, center)
         (delta.to_f - center).abs
       end
 
+      # Builds the final recommendation payload.
+      #
+      # @param side [Symbol]
+      # @param moneyness [Symbol]
+      # @param bias [Hash]
+      # @param strike_pick [Hash]
+      # @return [Hash]
       def build_recommendation(side:, moneyness:, bias:, strike_pick:)
         risk = compute_risk(strike_pick[:leg])
         {
@@ -201,6 +249,9 @@ module DhanHQ
         }
       end
 
+      # Converts ATR into absolute rupee hint.
+      #
+      # @return [Float, nil]
       def atr_to_rupees
         m15 = @data.dig(:indicators, :m15, :atr)
         return nil unless m15
@@ -208,6 +259,10 @@ module DhanHQ
         (m15.to_f * @config[:atr_to_rupees_factor].to_f).round(2)
       end
 
+      # Computes risk parameters for the selected leg.
+      #
+      # @param leg [Hash]
+      # @return [Hash]
       def compute_risk(leg)
         entry = leg[:ltp].to_f
         sl = (entry * (1.0 - @config.dig(:risk, :sl_pct).to_f)).round(2)
@@ -221,20 +276,43 @@ module DhanHQ
         }
       end
 
+      # Returns a standard unsupported response.
+      #
+      # @param reason [String]
+      # @return [Hash]
       def unsupported(reason)
         { decision: :no_trade, reason: reason }
       end
 
+      # Returns a standard no-trade response.
+      #
+      # @param reason [String]
+      # @return [Hash]
       def no_trade(reason)
         { decision: :no_trade, reason: reason }
       end
 
-      def deep_merge(a, b)
-        return a unless b
+      # Recursively merges nested hash values.
+      #
+      # @param base_hash [Hash]
+      # @param override_hash [Hash]
+      # @return [Hash]
+      def deep_merge(base_hash, override_hash)
+        return base_hash unless override_hash
 
-        a.merge(b) { |_, av, bv| av.is_a?(Hash) && bv.is_a?(Hash) ? deep_merge(av, bv) : bv }
+        base_hash.merge(override_hash) do |_, base_value, override_value|
+          if base_value.is_a?(Hash) && override_value.is_a?(Hash)
+            deep_merge(base_value, override_value)
+          else
+            override_value
+          end
+        end
       end
 
+      # Deep-symbolizes keys within nested structures.
+      #
+      # @param obj [Object]
+      # @return [Object]
       def deep_symbolize(obj)
         case obj
         when Hash
