@@ -44,36 +44,35 @@ module DhanHQ
       private
 
       def score_tf(val)
-        rsi = val[:rsi]
+        rsi  = val[:rsi]
         macd = val[:macd] || {}
         hist = macd[:hist]
-        adx = val[:adx]
+        adx  = val[:adx]
 
-        rsi_component = case rsi
-                        when nil then 0.5
+        rsi_component = if rsi.nil?
+                          0.5
+                        elsif rsi >= 55
+                          0.65
+                        elsif rsi <= 45
+                          0.35
                         else
-                          return 0.65 if rsi >= 55
-                          return 0.35 if rsi <= 45
-
                           0.5
                         end
 
-        macd_component = case hist
-                         when nil then 0.5
+        macd_component = if hist.nil?
+                           0.5
                          else
                            hist >= 0 ? 0.6 : 0.4
                          end
 
-        adx_component = case adx
-                        when nil then 0.5
+        adx_component = if adx.nil?
+                          0.5
+                        elsif adx >= @strong_adx
+                          0.65
+                        elsif adx >= @min_adx
+                          0.55
                         else
-                          if adx >= @strong_adx
-                            0.65
-                          elsif adx >= @min_adx
-                            0.55
-                          else
-                            0.45
-                          end
+                          0.45
                         end
 
         (rsi_component * 0.4) + (macd_component * 0.3) + (adx_component * 0.3)

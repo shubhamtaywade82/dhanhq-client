@@ -9,7 +9,7 @@ module TA
 
       k = 2.0 / (period + 1)
       series.each_with_index.reduce(nil) do |ema_prev, (v, i)|
-        i == 0 ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
+        i.zero? ? v.to_f : (v.to_f * k) + ((ema_prev || v.to_f) * (1 - k))
       end
     end
 

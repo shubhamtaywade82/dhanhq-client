@@ -174,10 +174,10 @@ end
 # ---- Stats printer ----
 stop = Concurrent::AtomicBoolean.new(false)
 printer = Thread.new do
-  prev = Hash[counters.map { |k, v| [k, v.value] }]
+  prev = counters.transform_values(&:value)
   until stop.true?
     sleep opts[:print_every]
-    now = Hash[counters.map { |k, v| [k, v.value] }]
+    now = counters.transform_values(&:value)
     # Compute per-mode diffs only for active modes to avoid nil math
     diffs = {}
     now.each { |k, v| diffs[k] = v - (prev[k] || 0) }

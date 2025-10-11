@@ -122,7 +122,7 @@ module TA
     end
 
     def normalize_from_date(from_date, to_date, days_back)
-      if (from_date.nil? || from_date.to_s.strip.empty?) && days_back && days_back.to_i.positive?
+      if (from_date.nil? || from_date.to_s.strip.empty?) && days_back&.to_i&.positive?
         to_d = Date.parse(to_date)
         n_back = [days_back.to_i - 1, 0].max
         return MarketCalendar.trading_days_ago(to_d, n_back).strftime("%Y-%m-%d")

@@ -84,12 +84,10 @@ module DhanHQ
             end
 
             @ws.on :message do |ev|
-              begin
-                msg = JSON.parse(ev.data, symbolize_names: true)
-                @on_json&.call(msg)
-              rescue StandardError => e
-                DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
-              end
+              msg = JSON.parse(ev.data, symbolize_names: true)
+              @on_json&.call(msg)
+            rescue StandardError => e
+              DhanHQ.logger&.error("[DhanHQ::WS::Orders] bad JSON #{e.class}: #{e.message}")
             end
 
             @ws.on :close do |ev|
