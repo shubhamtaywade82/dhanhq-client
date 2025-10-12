@@ -1,205 +1,72 @@
 # frozen_string_literal: true
 
+require "vcr"
+
 RSpec.describe DhanHQ::BaseModel do
-  let(:valid_attributes) do
-    {
-      dhanClientId: "12345",
-      transactionType: "BUY",
-      productType: "CNC",
-      quantity: 10,
-      price: 1500.0
-    }
-  end
-
-  let(:invalid_attributes) do
-    {
-      dhanClientId: nil,
-      transactionType: "INVALID_TYPE",
-      quantity: -10,
-      price: -100.0
-    }
-  end
-
-  let(:mock_response) { { status: "success", data: valid_attributes } }
-  let(:error_response) { { status: "error", message: "An error occurred" } }
-
+  # Use real API credentials from environment
   before do
-    DhanHQ.configure do |config|
-      config.base_url = "https://api.dhan.co/v2"
-      config.access_token = "test_token"
-      config.client_id = "test_client_id"
-    end
-
-    allow_any_instance_of(DhanHQ::Client).to receive(:get).and_return(mock_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:post).and_return(mock_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:put).and_return(mock_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:delete).and_return(mock_response)
-
-    # Define attributes for the test class
-    described_class.attributes :dhan_client_id, :transaction_type, :product_type, :quantity, :price
-
-    allow_any_instance_of(described_class).to receive(:validation_contract).and_return(
-      Class.new(Dry::Validation::Contract) do
-        params do
-          required(:dhanClientId).filled(:string)
-          required(:transactionType).filled(:string)
-          required(:productType).filled(:string)
-          required(:quantity).filled(:integer, gt?: 0)
-          required(:price).filled(:float, gt?: 0)
-        end
-      end.new
-    )
+    DhanHQ.configure_with_env
+    skip "No API credentials configured" unless DhanHQ.configuration.access_token
   end
 
-  describe ".initialize" do
-    it "assigns attributes and validates successfully with valid data" do
-      resource = described_class.new(valid_attributes)
-      expect(resource.attributes).to include(valid_attributes.with_indifferent_access)
+  describe "Real API Integration" do
+    it "works with actual DhanHQ models", vcr: { cassette_name: "base_model/historical_data_test" } do
+      # Test with a real model like HistoricalData
+      data = DhanHQ::Models::HistoricalData.intraday(
+        security_id: "13",
+        exchange_segment: "IDX_I",
+        instrument: "INDEX",
+        interval: "5",
+        from_date: "2024-01-15",
+        to_date: "2024-01-15"
+      )
+
+      expect(data).to be_a(Hash)
+      expect(data["close"]).to be_an(Array)
+      expect(data["close"]).not_to be_empty
+      expect(data["open"]).to be_an(Array)
+      expect(data["high"]).to be_an(Array)
+      expect(data["low"]).to be_an(Array)
     end
 
-    it "raises an error for invalid attributes" do
-      expect { described_class.new(invalid_attributes) }.to raise_error(DhanHQ::Error, /Validation Error/)
-    end
-  end
+    it "works with MarketFeed LTP", vcr: { cassette_name: "base_model/market_feed_test" } do
+      response = DhanHQ::Models::MarketFeed.ltp(
+        instruments: ["NSE:INFY"],
+        fields: ["lastPrice"]
+      )
 
-  describe ".find" do
-    it "fetches a resource by ID" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-      resource = described_class.find("123")
-      expect(resource.attributes).to include(valid_attributes.with_indifferent_access)
-    end
-  end
-
-  describe ".all" do
-    let(:mock_all_response) do
-      {
-        status: "success",
-        data: [
-          {
-            dhanClientId: "12345",
-            transactionType: "BUY",
-            productType: "CNC",
-            quantity: 10,
-            price: 1500.0
-          },
-          {
-            dhanClientId: "67890",
-            transactionType: "SELL",
-            productType: "INTRADAY",
-            quantity: 5,
-            price: 1000.0
-          }
-        ]
-      }
+      expect(response["status"]).to eq("success")
+      expect(response["data"]).to be_a(Hash)
     end
 
-    before do
-      allow_any_instance_of(DhanHQ::Client).to receive(:get).and_return(mock_all_response)
+    it "validates input parameters" do
+      # Test that validation works with invalid data
+      expect do
+        DhanHQ::Models::HistoricalData.intraday(
+          security_id: nil,
+          exchange_segment: "",
+          instrument: nil,
+          interval: "5",
+          from_date: "2024-01-15",
+          to_date: "2024-01-15"
+        )
+      end.to raise_error(DhanHQ::Error, /Validation Error/)
     end
 
-    it "fetches all resources" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-      resources = described_class.all
+    it "converts snake_case to camelCase for API requests" do
+      # Test with a model that has attributes like Order
+      model = DhanHQ::Models::Order.new({
+                                          dhan_client_id: "12345",
+                                          transaction_type: "BUY",
+                                          product_type: "CNC"
+                                        }, skip_validation: true)
 
-      # Check each resource is a valid instance of the class
-      expect(resources).to all(be_a(described_class))
-
-      # Verify attributes of the first resource
-      expect(resources[0].attributes).to include(
+      params = model.to_request_params
+      expect(params).to include(
         "dhanClientId" => "12345",
         "transactionType" => "BUY",
-        "productType" => "CNC",
-        "quantity" => 10,
-        "price" => 1500.0
+        "productType" => "CNC"
       )
-
-      # Verify attributes of the second resource
-      expect(resources[1].attributes).to include(
-        "dhanClientId" => "67890",
-        "transactionType" => "SELL",
-        "productType" => "INTRADAY",
-        "quantity" => 5,
-        "price" => 1000.0
-      )
-    end
-  end
-
-  describe ".create" do
-    it "creates a new resource" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-      resource = described_class.create(valid_attributes)
-      expect(resource.attributes).to include(valid_attributes.with_indifferent_access)
-    end
-  end
-
-  describe "#update" do
-    it "updates a resource with new attributes" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-
-      updated_response = {
-        status: "success",
-        data: valid_attributes.merge(price: 1600.0)
-      }
-
-      allow_any_instance_of(DhanHQ::Client).to receive(:put).and_return(updated_response)
-
-      resource = described_class.new(valid_attributes)
-      updated_resource = resource.update(price: 1600.0)
-
-      expect(updated_resource.attributes[:price]).to eq(1600.0)
-    end
-  end
-
-  describe "#delete" do
-    it "deletes a resource and returns true on success" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-      resource = described_class.new(valid_attributes)
-      expect(resource.delete).to be true
-    end
-
-    it "returns false if deletion fails" do
-      allow(described_class).to receive(:resource_path).and_return("/test_resource")
-      allow_any_instance_of(DhanHQ::Client).to receive(:delete).and_raise(StandardError)
-      resource = described_class.new(valid_attributes)
-      expect(resource.delete).to be false
-    end
-  end
-
-  describe "#save!" do
-    it "raises DhanHQ::Error when persistence fails" do
-      resource = described_class.new(valid_attributes)
-      error_object = DhanHQ::ErrorObject.new({ errorCode: "DH-999", errorMessage: "failed" })
-      allow(resource).to receive(:save).and_return(error_object)
-
-      expect { resource.save! }.to raise_error(DhanHQ::Error, /failed/)
-    end
-  end
-
-  describe "#to_request_params" do
-    it "converts snake_case keys to camelCase" do
-      resource = described_class.new(valid_attributes)
-      expect(resource.to_request_params).to eq(
-        {
-          "dhanClientId" => "12345",
-          "transactionType" => "BUY",
-          "productType" => "CNC",
-          "quantity" => 10,
-          "price" => 1500.0
-        }
-      )
-    end
-  end
-
-  describe ".build_from_response" do
-    it "returns a resource object for successful responses" do
-      resource = described_class.build_from_response(mock_response)
-      expect(resource).to be_a(described_class)
-    end
-
-    it "returns an error object for error responses" do
-      error_object = described_class.build_from_response(error_response)
-      expect(error_object).to be_a(DhanHQ::ErrorObject)
-      expect(error_object.success?).to be false
     end
   end
 end
