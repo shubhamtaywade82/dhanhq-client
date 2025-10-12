@@ -25,24 +25,21 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
 
       expect(response).to be_a(Hash)
       expect(response[:data]).to be_a(Hash)
-
-      # e.g. response might look like:
-      # {
-      #   data: {
-      #     NSE_EQ: { 1333 => { last_price: 1234.5 } },
-      #     BSE_EQ: { 532540 => { last_price: 234.5 } }
-      #   },
-      #   status: "success"
-      # }
-
-      # Verify structure:
       expect(response[:status]).to eq("success")
+    end
+
+    it "returns data for expected exchange segments" do
+      response = described_class.ltp(params)
+
       expect(response[:data].keys).to include("NSE_EQ", "BSE_EQ")
+    end
+
+    it "returns valid price data structure" do
+      response = described_class.ltp(params)
 
       nse_eq_data = response[:data]["NSE_EQ"]
       expect(nse_eq_data).to be_a(Hash)
 
-      # For each securityId, you can check :last_price is a Float
       nse_eq_data.each do |sec_id, sec_data|
         expect(sec_id).to be_a(String).or be_a(Integer)
         expect(sec_data).to include(:last_price)
@@ -64,25 +61,19 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
       expect(response).to be_a(Hash)
       expect(response[:status]).to eq("success")
       expect(response[:data]).to be_a(Hash)
+    end
 
-      # e.g. response[:data] => {
-      #   "NSE_EQ" => {
-      #       "11536" => { last_price: 4525.55, ohlc: {...} },
-      #   }
-      # }
-      expect(response[:status]).to eq("success")
+    it "returns data for expected exchange segments" do
+      response = described_class.ohlc(params)
+
       expect(response[:data].keys).to include("NSE_EQ")
+    end
+
+    it "returns valid OHLC data structure" do
+      response = described_class.ohlc(params)
 
       nse_eq_data = response[:data]["NSE_EQ"]
       expect(nse_eq_data).to be_a(Hash)
-
-      # data = response[:data]["NSE_EQ"]["11536"]
-      # expect(data[:last_price]).to be_a(Float)
-      # expect(data[:ohlc]).to be_a(Hash)
-      # expect(data[:ohlc][:open]).to be_a(Float)
-      # expect(data[:ohlc][:close]).to be_a(Float)
-      # expect(data[:ohlc][:high]).to be_a(Float)
-      # expect(data[:ohlc][:low]).to be_a(Float)
     end
   end
 
@@ -120,27 +111,30 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
       # expect(first_bid).to include(:quantity, :price)
     end
   end
-end
 
-RSpec.describe DhanHQ::Models::MarketFeed, "unit" do
-  let(:resource_double) { instance_double(DhanHQ::Resources::MarketFeed) }
+  describe "unit tests" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::MarketFeed) }
 
-  before do
-    allow(described_class).to receive(:resource).and_return(resource_double)
-  end
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
 
-  it "delegates ltp" do
-    expect(resource_double).to receive(:ltp).with(:payload).and_return({})
-    expect(described_class.ltp(:payload)).to eq({})
-  end
+    it "delegates ltp" do
+      allow(resource_double).to receive(:ltp).with(:payload).and_return({})
+      expect(described_class.ltp(:payload)).to eq({})
+      expect(resource_double).to have_received(:ltp).with(:payload)
+    end
 
-  it "delegates ohlc" do
-    expect(resource_double).to receive(:ohlc).with(:payload).and_return({})
-    expect(described_class.ohlc(:payload)).to eq({})
-  end
+    it "delegates ohlc" do
+      allow(resource_double).to receive(:ohlc).with(:payload).and_return({})
+      expect(described_class.ohlc(:payload)).to eq({})
+      expect(resource_double).to have_received(:ohlc).with(:payload)
+    end
 
-  it "delegates quote" do
-    expect(resource_double).to receive(:quote).with(:payload).and_return({})
-    expect(described_class.quote(:payload)).to eq({})
+    it "delegates quote" do
+      allow(resource_double).to receive(:quote).with(:payload).and_return({})
+      expect(described_class.quote(:payload)).to eq({})
+      expect(resource_double).to have_received(:quote).with(:payload)
+    end
   end
 end

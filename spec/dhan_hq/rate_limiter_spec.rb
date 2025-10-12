@@ -10,7 +10,9 @@ RSpec.describe DhanHQ::RateLimiter do
 
   before do
     # Prevent actual background threads from running
+    # rubocop:disable RSpec/AnyInstance
     allow_any_instance_of(described_class).to receive(:start_cleanup_threads)
+    # rubocop:enable RSpec/AnyInstance
   end
 
   describe "#initialize" do
@@ -208,10 +210,11 @@ RSpec.describe DhanHQ::RateLimiter do
         rate_limiter.throttle! # first call should not sleep
 
         Timecop.travel(1) # second request only 1 second later
-        expect(rate_limiter).to receive(:sleep) do |duration|
-          expect(duration).to be_within(0.1).of(3.0)
+        allow(rate_limiter).to receive(:sleep) do |duration|
+          expect(duration).to be_within(0.1).of(2.0) # 3 - 1 = 2 seconds
         end
         rate_limiter.throttle!
+        expect(rate_limiter).to have_received(:sleep)
       ensure
         Timecop.return
       end

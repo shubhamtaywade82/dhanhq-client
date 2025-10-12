@@ -33,7 +33,9 @@ RSpec.describe DhanHQ::Models::SuperOrder do
 
     it "returns model with id and status when orderId present" do
       allow(resource_double).to receive(:create).and_return({ "orderId" => "OID-1", "orderStatus" => "PENDING" })
+      # rubocop:disable RSpec/VerifiedDoubles
       dummy = double(order_id: "OID-1", order_status: "PENDING")
+      # rubocop:enable RSpec/VerifiedDoubles
       allow(described_class).to receive(:new).with(order_id: "OID-1", order_status: "PENDING", skip_validation: true)
                                              .and_return(dummy)
 
@@ -53,9 +55,10 @@ RSpec.describe DhanHQ::Models::SuperOrder do
     end
 
     it "returns true when update echoes orderId" do
-      expect(resource_double).to receive(:update).with("OID-1", { price: 100 }).and_return({ "orderId" => "OID-1" })
+      allow(resource_double).to receive(:update).with("OID-1", { price: 100 }).and_return({ "orderId" => "OID-1" })
 
       expect(order.modify(price: 100)).to be(true)
+      expect(resource_double).to have_received(:update).with("OID-1", { price: 100 })
     end
 
     it "returns false otherwise" do
