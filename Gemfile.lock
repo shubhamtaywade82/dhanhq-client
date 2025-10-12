@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    DhanHQ (2.1.3)
+    DhanHQ (2.1.4)
       activesupport
       base64
       bindata
