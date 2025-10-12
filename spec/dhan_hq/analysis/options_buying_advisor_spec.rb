@@ -15,10 +15,16 @@ RSpec.describe DhanHQ::Analysis::OptionsBuyingAdvisor do
         m60: { rsi: 62.0, adx: 40.0, atr: 60.0, macd: { macd: 2.5, signal: 2.0, hist: 0.5 } }
       },
       option_chain: [
-        { strike: 24_900, ce: { ltp: 120.0, bid: 119.0, ask: 121.0, iv: 12.0, oi: 20_000, volume: 5000, delta: 0.5, tradable: true },
-          pe: { ltp: 100.0, bid: 99.0, ask: 101.0, iv: 14.0, oi: 15_000, volume: 4000, delta: -0.5, tradable: true } },
-        { strike: 24_950, ce: { ltp: 90.0, bid: 89.0, ask: 91.0, iv: 13.0, oi: 18_000, volume: 4500, delta: 0.4, tradable: true },
-          pe: { ltp: 110.0, bid: 109.0, ask: 111.0, iv: 15.0, oi: 10_000, volume: 3000, delta: -0.6, tradable: true } }
+        {
+          strike: 24_900,
+          ce: { ltp: 120.0, bid: 119.0, ask: 121.0, iv: 12.0, oi: 20_000, volume: 5000, delta: 0.5, tradable: true },
+          pe: { ltp: 100.0, bid: 99.0, ask: 101.0, iv: 14.0, oi: 15_000, volume: 4000, delta: -0.5, tradable: true }
+        },
+        {
+          strike: 24_950,
+          ce: { ltp: 90.0, bid: 89.0, ask: 91.0, iv: 13.0, oi: 18_000, volume: 4500, delta: 0.4, tradable: true },
+          pe: { ltp: 110.0, bid: 109.0, ask: 111.0, iv: 15.0, oi: 10_000, volume: 3000, delta: -0.6, tradable: true }
+        }
       ]
     }
   end

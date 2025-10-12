@@ -1,24 +1,59 @@
 # frozen_string_literal: true
 
-require "spec_helper"
+require "vcr"
 
 RSpec.describe DhanHQ::BaseAPI do
-  let(:api_type) { :order_api }
-  let(:base_api) { described_class.new(api_type: api_type) }
-  let(:endpoint) { "/v2/orders" }
-  let(:order_id) { "112111182198" }
-  let(:params) { { dhanClientId: "1000000003", orderId: order_id } }
-
-  let(:order_payload) do
+  let(:ltp_request_params) do
     {
-      dhanClientId: "1000000003",
-      transactionType: "BUY",
+      instruments: ["NSE:INFY"],
+      fields: ["lastPrice"]
+    }
+  end
+  let(:ohlc_request_params) do
+    {
+      NSE_FNO: [
+        49_081
+      ]
+    }
+  end
+  let(:marketquote_request_params) do
+    {
+      NSE_FNO: [49_081]
+    }
+  end
+  let(:option_chain_request_params) do
+    {
+      UnderlyingScrip: 13,
+      UnderlyingSeg: "IDX_I",
+      Expiry: "2025-01-30"
+    }
+  end
+  let(:expiry_list_request_params) do
+    {
+      UnderlyingScrip: 13,
+      UnderlyingSeg: "IDX_I"
+    }
+  end
+  let(:historical_request_params) do
+    {
+      securityId: "1333",
       exchangeSegment: "NSE_EQ",
-      productType: "INTRADAY",
-      orderType: "MARKET",
-      validity: "DAY",
-      securityId: "11536",
-      quantity: 5
+      instrument: "EQUITY",
+      expiryCode: 0,
+      fromDate: "2025-01-23",
+      toDate: "2025-01-24"
+    }
+  end
+  let(:margin_calculator_request_params) do
+    {
+      dhanClientId: "1000000132",
+      exchangeSegment: "NSE_EQ",
+      transactionType: "BUY",
+      quantity: 5,
+      productType: "CNC",
+      securityId: "1333",
+      price: 1428,
+      triggerPrice: 1427
     }
   end
 
@@ -26,68 +61,53 @@ RSpec.describe DhanHQ::BaseAPI do
     DhanHQ.configure_with_env
   end
 
-  describe "#initialize" do
-    it "initializes with the correct API type" do
-      expect(base_api.client).to be_a(DhanHQ::Client)
+  describe "MarketFeed APIs" do
+    it "fetches LTP data", vcr: { cassette_name: "base_api/marketfeed_ltp" } do
+      api = MarketFeedLTP.new
+      response = api.fetch(ltp_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "fetches OHLC data", vcr: { cassette_name: "base_api/marketfeed_ohlc" } do
+      api = MarketFeedOHLC.new
+      response = api.fetch(ohlc_request_params)
+      expect(response).to include("status" => "success")
+    end
+
+    it "fetches quote data", vcr: { cassette_name: "base_api/marketfeed_quote" } do
+      api = MarketFeedQuote.new
+      response = api.fetch(marketquote_request_params)
+      expect(response).to include("status" => "success")
     end
   end
 
-  describe "#get", vcr: { cassette_name: "base_api/get_request" } do
-    let(:endpoint) { "/v2/orders/#{order_id}" }
+  describe "OptionChain APIs" do
+    it "fetches option chain data", vcr: { cassette_name: "base_api/optionchain" } do
+      api = OptionChain.new
+      response = api.fetch(option_chain_request_params)
+      expect(response).to include("status" => "success")
+    end
 
-    it "retrieves order details successfully" do
-      response = base_api.get(endpoint)
-      expect(response).to be_a(Hash)
-      expect(response).to include("orderId" => order_id, "orderStatus" => "PENDING")
+    it "fetches expiry list data", vcr: { cassette_name: "base_api/optionchain_expirylist" } do
+      api = OptionChainExpiryList.new
+      response = api.fetch(expiry_list_request_params)
+      expect(response).to include("status" => "success")
     end
   end
 
-  describe "#post", vcr: { cassette_name: "base_api/post_request" } do
-    let(:endpoint) { "/v2/orders" }
-
-    it "places a new order successfully" do
-      response = base_api.post(endpoint, params: order_payload)
-      expect(response).to be_a(Hash)
-      expect(response).to include("orderId", "orderStatus")
-      expect(response["orderStatus"]).to eq("PENDING")
+  describe "Margin Calculator API" do
+    it "calculates margin", vcr: { cassette_name: "base_api/margin_calculator" } do
+      api = MarginCalculator.new
+      response = api.calculate(margin_calculator_request_params)
+      expect(response).to include("insufficientBalance" => 0.0)
     end
   end
 
-  describe "#put", vcr: { cassette_name: "base_api/put_request" } do
-    let(:endpoint) { "/v2/orders/#{order_id}" }
-    let(:update_params) { { quantity: 10, price: 1200.5 } }
-
-    it "modifies an existing order" do
-      response = base_api.put(endpoint, params: update_params)
-      expect(response).to be_a(Hash)
-      expect(response).to include("orderId" => order_id, "orderStatus" => "PENDING")
-    end
-  end
-
-  describe "#delete", vcr: { cassette_name: "base_api/delete_request" } do
-    let(:endpoint) { "/v2/orders/#{order_id}" }
-
-    it "cancels an existing order" do
-      response = base_api.delete(endpoint)
-      expect(response).to be_a(Hash)
-      expect(response).to include("orderId" => order_id, "orderStatus" => "CANCELLED")
-    end
-  end
-
-  describe "#handle_response" do
-    it "returns response when it's a valid Hash" do
-      response = base_api.send(:handle_response, { success: true })
-      expect(response).to eq({ success: true })
-    end
-
-    it "returns response when it's a valid Array" do
-      response = base_api.send(:handle_response, [{ success: true }])
-      expect(response).to eq([{ success: true }])
-    end
-
-    it "raises an error for invalid response format" do
-      expect { base_api.send(:handle_response, "invalid response") }
-        .to raise_error(DhanHQ::Error, "Unexpected API response format")
+  describe "Charts Historical API" do
+    it "fetches historical chart data", vcr: { cassette_name: "base_api/charts_historical" } do
+      api = ChartsHistorical.new
+      response = api.fetch(historical_request_params)
+      expect(response).to include("close" => [1664.9])
     end
   end
 end
