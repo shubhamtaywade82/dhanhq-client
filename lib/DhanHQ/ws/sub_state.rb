@@ -53,7 +53,7 @@ module DhanHQ
 
       private
 
-      def key_for(i) = "#{i[:ExchangeSegment]}:#{i[:SecurityId]}"
+      def key_for(instrument) = "#{instrument[:ExchangeSegment]}:#{instrument[:SecurityId]}"
     end
   end
 end

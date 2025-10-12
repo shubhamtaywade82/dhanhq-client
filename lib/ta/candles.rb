@@ -3,6 +3,7 @@
 require "time"
 
 module TA
+  # Candle data processing and resampling utilities
   module Candles
     module_function
 

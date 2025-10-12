@@ -101,13 +101,15 @@ RSpec.describe DhanHQ::Client do
     end
 
     it "sets params for GET request" do
-      expect(req).to receive(:params=).with({ query: "value" })
+      allow(req).to receive(:params=)
       client.send(:prepare_payload, req, { query: "value" }, :get)
+      expect(req).to have_received(:params=).with({ query: "value" })
     end
 
     it "sets body for POST request" do
-      expect(req).to receive(:body=).with(order_payload.to_json)
+      allow(req).to receive(:body=)
       client.send(:prepare_payload, req, order_payload, :post)
+      expect(req).to have_received(:body=).with(order_payload.to_json)
     end
   end
 

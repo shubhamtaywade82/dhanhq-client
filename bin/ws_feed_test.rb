@@ -14,7 +14,7 @@ begin
 rescue StandardError
   nil
 end
-require "DhanHQ"
+require "dhan_hq"
 
 # ---- Config & CLI ----
 opts = {
@@ -82,8 +82,8 @@ class TickCache
 
   class << self
     # Keyed by "SEG:SID"
-    def put(t)
-      MAP["#{t[:segment]}:#{t[:security_id]}"] = t.merge(updated_at: Time.now.to_i)
+    def put(ticker)
+      MAP["#{ticker[:segment]}:#{ticker[:security_id]}"] = ticker.merge(updated_at: Time.now.to_i)
     end
 
     def get(segment, sid)

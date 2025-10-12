@@ -6,6 +6,8 @@ require "optparse"
 require "json"
 require "time"
 require "date"
+
+OHLCV_FIELDS = %w[open high low close volume timestamp].freeze
 begin
   require "dotenv/load"
 rescue StandardError => e
@@ -24,7 +26,7 @@ rescue LoadError => e
   warn "technical-analysis not available: #{e.message}"
 end
 
-require "DhanHQ"
+require "dhan_hq"
 
 # Simple market calendar to choose valid trading days (no Rails/Time.zone)
 module MarketCalendar
@@ -140,11 +142,12 @@ def fetch_intraday_windowed(params, interval)
 
   merged = { "open" => [], "high" => [], "low" => [], "close" => [], "volume" => [], "timestamp" => [] }
   cursor = from_d
+
   while cursor <= to_d
     chunk_to = [cursor + max_span, to_d].min
     chunk_params = params.merge(from_date: cursor.strftime("%Y-%m-%d"), to_date: chunk_to.strftime("%Y-%m-%d"))
     part = fetch_intraday(chunk_params, interval)
-    %w[open high low close volume timestamp].each do |k|
+    OHLCV_FIELDS.each do |k|
       ary = (part[k] || part[k.to_sym]) || []
       merged[k].concat(Array(ary))
     end
@@ -205,6 +208,7 @@ def closes(candles) = candles.map { |c| c[:c] }
 def highs(candles)  = candles.map { |c| c[:h] }
 def lows(candles)   = candles.map { |c| c[:l] }
 
+# Technical Analysis adapters for computing indicators
 module TAAdapters
   module_function
 
@@ -430,10 +434,11 @@ if opts[:data_file]
     fifteen_min = to_candles(raw)
     sixty_min = resample(fifteen_min, 60)
   when 25
-    twentyfive_min = to_candles(raw)
     # No exact 60 from 25; prefer fetching/resampling from 1m if needed
+    # For 25-minute data, we don't have lower timeframes - they remain undefined
   when 60
     sixty_min = to_candles(raw)
+    # For 60-minute data, lower timeframes are not available
   else
     one_min = to_candles(raw)
     five_min = resample(one_min, 5)
@@ -442,8 +447,8 @@ if opts[:data_file]
     sixty_min = resample(one_min, 60)
   end
 else
-  raw_1 = fetch_intraday_windowed(opts, 1)
-  one_min = to_candles(raw_1)
+  raw_one_min = fetch_intraday_windowed(opts, 1)
+  one_min = to_candles(raw_one_min)
   five_min = resample(one_min, 5)
   fifteen_min = resample(one_min, 15)
   twentyfive_min = resample(one_min, 25)
@@ -451,7 +456,8 @@ else
 end
 
 if opts[:debug]
-  puts "sizes m1=#{one_min.size} m5=#{five_min.size} m15=#{fifteen_min.size} m25=#{twentyfive_min.size} m60=#{sixty_min.size}"
+  puts "sizes m1=#{one_min.size} m5=#{five_min.size} m15=#{fifteen_min.size} " \
+       "m25=#{twentyfive_min.size} m60=#{sixty_min.size}"
   puts "last m1=#{one_min.last.inspect}" if one_min.any?
   puts "last m5=#{five_min.last.inspect}" if five_min.any?
   puts "last m15=#{fifteen_min.last.inspect}" if fifteen_min.any?

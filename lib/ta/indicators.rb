@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module TA
+  # Technical indicator calculations with fallback implementations
   module Indicators
     module_function
 

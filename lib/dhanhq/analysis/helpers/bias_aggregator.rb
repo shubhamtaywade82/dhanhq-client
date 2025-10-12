@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Analysis
+    # Aggregates indicator scores across timeframes into a single bias and confidence score
     class BiasAggregator
       DEFAULT_WEIGHTS = { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 }.freeze
 

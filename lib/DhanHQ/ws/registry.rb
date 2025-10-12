@@ -3,6 +3,7 @@
 require "concurrent"
 
 module DhanHQ
+  # WebSocket registry for managing connections and subscriptions
   module WS
     # Tracks the set of active WebSocket clients so they can be collectively
     # disconnected when required.

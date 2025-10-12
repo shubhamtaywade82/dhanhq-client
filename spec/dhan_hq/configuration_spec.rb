@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "DhanHQ"
+require "dhan_hq"
 
 RSpec.describe DhanHQ::Configuration do
   let(:config) { described_class.new }

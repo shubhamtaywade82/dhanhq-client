@@ -31,16 +31,18 @@ RSpec.describe DhanHQ::TestResource do
     }
   end
 
+  let(:client_double) { instance_double(DhanHQ::Client) }
+
   before do
     VCR.turn_off!
     DhanHQ.configure do |config|
       config.access_token = "test_access_token"
       config.client_id = "test_client_id"
     end
-    allow_any_instance_of(DhanHQ::Client).to receive(:get).and_return(api_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:post).and_return(api_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:put).and_return(update_response)
-    allow_any_instance_of(DhanHQ::Client).to receive(:delete).and_return(api_response)
+
+    allow(described_class).to receive(:api).and_return(client_double)
+    allow(client_double).to receive_messages(get: api_response, post: api_response, put: update_response,
+                                             delete: api_response)
   end
 
   after { VCR.turn_on! }
@@ -108,25 +110,40 @@ RSpec.describe DhanHQ::TestResource do
   describe "#to_request_params" do
     it "converts snake_case keys to camelCase for API requests" do
       resource = described_class.new(valid_attributes)
-      expect(resource.to_request_params).to eq(
-        {
-          "dhanClientId" => "1000000003",
-          "correlationId" => "123abc678",
-          "transactionType" => "BUY",
-          "exchangeSegment" => "NSE_EQ",
-          "productType" => "INTRADAY",
-          "orderType" => "MARKET",
-          "validity" => "DAY",
-          "securityId" => "11536",
-          "quantity" => 5,
-          "disclosedQuantity" => nil,
-          "price" => nil,
-          "triggerPrice" => nil,
-          "afterMarketOrder" => false,
-          "amoTime" => nil,
-          "boProfitValue" => nil,
-          "boStopLossValue" => nil
-        }
+      params = resource.to_request_params
+
+      expect(params).to be_a(Hash)
+      expect(params["dhanClientId"]).to eq("1000000003")
+      expect(params["correlationId"]).to eq("123abc678")
+      expect(params["transactionType"]).to eq("BUY")
+    end
+
+    it "includes all required fields in camelCase format" do
+      resource = described_class.new(valid_attributes)
+      params = resource.to_request_params
+
+      expect(params).to include(
+        "exchangeSegment" => "NSE_EQ",
+        "productType" => "INTRADAY",
+        "orderType" => "MARKET",
+        "validity" => "DAY",
+        "securityId" => "11536",
+        "quantity" => 5
+      )
+    end
+
+    it "handles optional fields correctly" do
+      resource = described_class.new(valid_attributes)
+      params = resource.to_request_params
+
+      expect(params).to include(
+        "disclosedQuantity" => nil,
+        "price" => nil,
+        "triggerPrice" => nil,
+        "afterMarketOrder" => false,
+        "amoTime" => nil,
+        "boProfitValue" => nil,
+        "boStopLossValue" => nil
       )
     end
   end

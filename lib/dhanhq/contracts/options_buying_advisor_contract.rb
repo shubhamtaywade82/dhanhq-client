@@ -4,6 +4,7 @@ require "dry/validation"
 
 module DhanHQ
   module Contracts
+    # Validation contract for options buying advisor input
     class OptionsBuyingAdvisorContract < Dry::Validation::Contract
       params do
         required(:meta).hash do

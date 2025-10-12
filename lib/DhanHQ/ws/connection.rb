@@ -94,7 +94,7 @@ module DhanHQ
         backoff = 2.0
         until @stop
           failed = false
-          got_429 = false # rubocop:disable Naming/VariableNumber
+          got_429 = false
 
           # respect any active cool-off window
           sleep (@cooloff_until - Time.now).ceil if @cooloff_until && Time.now < @cooloff_until

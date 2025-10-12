@@ -3,6 +3,7 @@
 require "date"
 
 module TA
+  # Historical data fetching with windowing and throttling
   class Fetcher
     def initialize(throttle_seconds: 3.0, max_retries: 3)
       @throttle_seconds = throttle_seconds.to_f

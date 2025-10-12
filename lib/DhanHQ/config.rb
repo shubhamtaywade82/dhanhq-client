@@ -2,6 +2,7 @@
 
 require "logger"
 
+# DhanHQ Ruby SDK for trading and market data
 module DhanHQ
   class << self
     # keep whatever you already have; add these if missing:

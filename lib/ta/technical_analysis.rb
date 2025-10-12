@@ -16,13 +16,14 @@ rescue LoadError => e
   warn "technical-analysis not available: #{e.message}"
 end
 
-require "DhanHQ"
+require "dhan_hq"
 require_relative "market_calendar"
 require_relative "candles"
 require_relative "indicators"
 require_relative "fetcher"
 
 module TA
+  # Main technical analysis orchestrator for multi-timeframe indicator computation
   class TechnicalAnalysis
     DEFAULTS = {
       rsi_period: 14,

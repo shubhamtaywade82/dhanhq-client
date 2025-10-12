@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "DhanHQ"
+require "dhan_hq"
 
 RSpec.describe DhanHQ::Analysis::MultiTimeframeAnalyzer do
   let(:valid_data) do

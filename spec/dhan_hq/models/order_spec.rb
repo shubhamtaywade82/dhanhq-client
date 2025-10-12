@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable RSpec/StubbedMock, RSpec/MessageSpies, RSpec/MultipleExpectations, RSpec/ExampleLength, Layout/LineLength
 RSpec.describe DhanHQ::Models::Order do
   subject(:order_model) { described_class }
 
@@ -461,3 +462,4 @@ RSpec.describe DhanHQ::Models::Order do
     end
   end
 end
+# rubocop:enable RSpec/StubbedMock, RSpec/MessageSpies, RSpec/MultipleExpectations, RSpec/ExampleLength, Layout/LineLength

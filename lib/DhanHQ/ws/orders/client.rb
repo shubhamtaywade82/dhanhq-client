@@ -6,6 +6,7 @@ require_relative "connection"
 module DhanHQ
   module WS
     module Orders
+      # WebSocket client for real-time order updates
       class Client
         def initialize(url: nil)
           @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }

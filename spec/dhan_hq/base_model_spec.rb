@@ -10,8 +10,7 @@ RSpec.describe DhanHQ::BaseModel do
   end
 
   describe "Real API Integration" do
-    it "works with actual DhanHQ models", vcr: { cassette_name: "base_model/historical_data_test" } do
-      # Test with a real model like HistoricalData
+    it "fetches historical data successfully", vcr: { cassette_name: "base_model/historical_data_test" } do
       data = DhanHQ::Models::HistoricalData.intraday(
         security_id: "13",
         exchange_segment: "IDX_I",
@@ -24,6 +23,18 @@ RSpec.describe DhanHQ::BaseModel do
       expect(data).to be_a(Hash)
       expect(data["close"]).to be_an(Array)
       expect(data["close"]).not_to be_empty
+    end
+
+    it "returns proper OHLC data structure", vcr: { cassette_name: "base_model/historical_data_test" } do
+      data = DhanHQ::Models::HistoricalData.intraday(
+        security_id: "13",
+        exchange_segment: "IDX_I",
+        instrument: "INDEX",
+        interval: "5",
+        from_date: "2024-01-15",
+        to_date: "2024-01-15"
+      )
+
       expect(data["open"]).to be_an(Array)
       expect(data["high"]).to be_an(Array)
       expect(data["low"]).to be_an(Array)

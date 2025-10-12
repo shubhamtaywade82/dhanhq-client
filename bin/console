@@ -3,7 +3,7 @@
 
 require "bundler/setup"
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
-require "DhanHQ"
+require "dhan_hq"
 require "ta/technical_analysis"
 
 # You can add fixtures and/or initialization code here to make experimenting

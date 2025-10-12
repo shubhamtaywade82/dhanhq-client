@@ -83,5 +83,34 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
 
       expect(described_class.fetch_expiry_list(params)).to eq([])
     end
+
+    it "validates required parameters for fetch" do
+      expect { described_class.fetch({}) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect { described_class.fetch({ underlying_scrip: 13 }) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect do
+        described_class.fetch({ underlying_scrip: 13,
+                                underlying_seg: "IDX_I" })
+      end.to raise_error(DhanHQ::Error, /Validation Error/)
+    end
+
+    it "validates required parameters for fetch_expiry_list" do
+      expect { described_class.fetch_expiry_list({}) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect do
+        described_class.fetch_expiry_list({ underlying_scrip: 13 })
+      end.to raise_error(DhanHQ::Error, /Validation Error/)
+    end
+
+    it "validates expiry format for fetch" do
+      invalid_params = { underlying_scrip: 13, underlying_seg: "IDX_I", expiry: "invalid-date" }
+      expect { described_class.fetch(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)
+    end
+
+    it "accepts valid parameters for fetch_expiry_list without expiry" do
+      valid_expiry_params = { underlying_scrip: 13, underlying_seg: "IDX_I" }
+      allow(resource_double).to receive(:expirylist).with(valid_expiry_params)
+                                                    .and_return({ status: "success", data: %w[2025-02-06] })
+
+      expect { described_class.fetch_expiry_list(valid_expiry_params) }.not_to raise_error
+    end
   end
 end

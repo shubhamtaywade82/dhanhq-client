@@ -6,6 +6,7 @@ require_relative "../contracts/options_buying_advisor_contract"
 
 module DhanHQ
   module Analysis
+    # Options buying advisor for INDEX options (NIFTY/BANKNIFTY/SENSEX)
     class OptionsBuyingAdvisor
       DEFAULT_CONFIG = {
         timeframe_weights: { m1: 0.1, m5: 0.2, m15: 0.25, m25: 0.15, m60: 0.3 },
@@ -229,10 +230,10 @@ module DhanHQ
         { decision: :no_trade, reason: reason }
       end
 
-      def deep_merge(a, b)
-        return a unless b
+      def deep_merge(first_hash, second_hash)
+        return first_hash unless second_hash
 
-        a.merge(b) { |_, av, bv| av.is_a?(Hash) && bv.is_a?(Hash) ? deep_merge(av, bv) : bv }
+        first_hash.merge(second_hash) { |_, av, bv| av.is_a?(Hash) && bv.is_a?(Hash) ? deep_merge(av, bv) : bv }
       end
 
       def deep_symbolize(obj)

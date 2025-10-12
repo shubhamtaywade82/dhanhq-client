@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Contracts
+    # Validation contract for order modification requests
     class ModifyOrderContract < Dry::Validation::Contract
       params do
         required(:dhanClientId).filled(:string)

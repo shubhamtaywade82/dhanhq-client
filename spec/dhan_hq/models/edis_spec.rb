@@ -21,34 +21,38 @@ RSpec.describe DhanHQ::Models::Edis do
     describe ".form" do
       it "delegates to the resource" do
         params = { isin: "INE0ABCDE", qty: 1, exchange: "NSE", segment: "EQ", bulk: false }
-        expect(resource_double).to receive(:form).with(params).and_return({})
+        allow(resource_double).to receive(:form).with(params).and_return({})
 
         expect(described_class.form(params)).to eq({})
+        expect(resource_double).to have_received(:form).with(params)
       end
     end
 
     describe ".bulk_form" do
       it "delegates to the resource" do
         params = { isin: %w[INE0ABCDE INE0XYZ12], exchange: "NSE", segment: "EQ" }
-        expect(resource_double).to receive(:bulk_form).with(params).and_return({})
+        allow(resource_double).to receive(:bulk_form).with(params).and_return({})
 
         expect(described_class.bulk_form(params)).to eq({})
+        expect(resource_double).to have_received(:bulk_form).with(params)
       end
     end
 
     describe ".tpin" do
       it "fetches the tpin" do
-        expect(resource_double).to receive(:tpin).and_return({ status: "queued" })
+        allow(resource_double).to receive(:tpin).and_return({ status: "queued" })
 
         expect(described_class.tpin).to eq({ status: "queued" })
+        expect(resource_double).to have_received(:tpin)
       end
     end
 
     describe ".inquire" do
       it "requests status for the given isin" do
-        expect(resource_double).to receive(:inquire).with("ALL").and_return([])
+        allow(resource_double).to receive(:inquire).with("ALL").and_return([])
 
         expect(described_class.inquire("ALL")).to eq([])
+        expect(resource_double).to have_received(:inquire).with("ALL")
       end
     end
   end

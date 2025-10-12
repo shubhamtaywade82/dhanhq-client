@@ -6,7 +6,7 @@ module DhanHQ
   module Contracts
     # **Validation contract for fetching option chain data**
     #
-    # Validates request parameters for fetching option chains & expiry lists.
+    # Validates request parameters for fetching option chains.
     class OptionChainContract < BaseContract
       params do
         required(:underlying_scrip).filled(:integer) # Security ID
@@ -25,6 +25,16 @@ module DhanHQ
         rescue ArgumentError
           key.failure("is not a valid date")
         end
+      end
+    end
+
+    # **Validation contract for fetching option chain expiry list**
+    #
+    # Validates request parameters for fetching expiry lists (expiry not required).
+    class OptionChainExpiryListContract < BaseContract
+      params do
+        required(:underlying_scrip).filled(:integer) # Security ID
+        required(:underlying_seg).filled(:string, included_in?: %w[IDX_I NSE_FNO BSE_FNO MCX_FO])
       end
     end
   end

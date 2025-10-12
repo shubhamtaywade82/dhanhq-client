@@ -17,16 +17,29 @@ RSpec.describe DhanHQ::Models::LedgerEntry, vcr: {
     it "retrieves ledger entries for the given date range" do
       entries = described_class.all(from_date: from_date, to_date: to_date)
       expect(entries).to be_an(Array)
+    end
 
-      # Each entry should be a LedgerEntry
+    it "returns valid ledger entry objects" do
+      entries = described_class.all(from_date: from_date, to_date: to_date)
+
+      expect(entries).to all(be_a(described_class))
+    end
+
+    it "has expected ledger entry attributes" do
+      entries = described_class.all(from_date: from_date, to_date: to_date)
+
       entries.each do |entry|
-        expect(entry).to be_a(described_class)
-
-        # Check typical fields from the API:
         expect(entry.dhan_client_id).to be_a(String).or be_nil
         expect(entry.narration).to be_a(String).or be_nil
         expect(entry.voucherdate).to be_a(String).or be_nil
         expect(entry.exchange).to be_a(String).or be_nil
+      end
+    end
+
+    it "has additional ledger entry fields" do
+      entries = described_class.all(from_date: from_date, to_date: to_date)
+
+      entries.each do |entry|
         expect(entry.voucherdesc).to be_a(String).or be_nil
         expect(entry.vouchernumber).to be_a(String).or be_nil
         expect(entry.debit).to be_a(String).or be_nil
@@ -35,26 +48,26 @@ RSpec.describe DhanHQ::Models::LedgerEntry, vcr: {
       end
     end
   end
-end
 
-RSpec.describe DhanHQ::Models::LedgerEntry, "unit" do
-  let(:resource_double) { instance_double(DhanHQ::Resources::Statements) }
+  describe "unit tests" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::Statements) }
 
-  before do
-    described_class.instance_variable_set(:@resource, nil)
-    allow(described_class).to receive(:resource).and_return(resource_double)
-  end
+    before do
+      described_class.instance_variable_set(:@resource, nil)
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
 
-  it "returns [] when response not array" do
-    allow(resource_double).to receive(:ledger).and_return("unexpected")
+    it "returns [] when response not array" do
+      allow(resource_double).to receive(:ledger).and_return("unexpected")
 
-    expect(described_class.all(from_date: "2024-01-01", to_date: "2024-01-02")).to eq([])
-  end
+      expect(described_class.all(from_date: "2024-01-01", to_date: "2024-01-02")).to eq([])
+    end
 
-  it "exposes a hash representation" do
-    allow(resource_double).to receive(:ledger).and_return([{ "dhanClientId" => "110" }])
+    it "exposes a hash representation" do
+      allow(resource_double).to receive(:ledger).and_return([{ "dhanClientId" => "110" }])
 
-    entry = described_class.all(from_date: "2024-01-01", to_date: "2024-01-02").first
-    expect(entry.to_h[:dhan_client_id]).to eq("110")
+      entry = described_class.all(from_date: "2024-01-01", to_date: "2024-01-02").first
+      expect(entry.to_h[:dhan_client_id]).to eq("110")
+    end
   end
 end

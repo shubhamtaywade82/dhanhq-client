@@ -34,6 +34,8 @@ module DhanHQ
         # @param params [Hash] The request parameters (snake_case format)
         # @return [Array<String>] The list of expiry dates
         def fetch_expiry_list(params)
+          validate_params!(params, DhanHQ::Contracts::OptionChainExpiryListContract)
+
           response = resource.expirylist(params)
           response[:status] == "success" ? response[:data] : []
         end

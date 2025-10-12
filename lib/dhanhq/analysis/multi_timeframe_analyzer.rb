@@ -5,7 +5,9 @@ require "dry/validation"
 
 module DhanHQ
   module Analysis
+    # Analyzes multi-timeframe indicator data to produce a consolidated bias summary
     class MultiTimeframeAnalyzer
+      # Input validation contract for multi-timeframe analyzer
       class InputContract < Dry::Validation::Contract
         params do
           required(:meta).filled(:hash)

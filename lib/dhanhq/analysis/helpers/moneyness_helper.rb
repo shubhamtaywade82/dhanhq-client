@@ -2,6 +2,7 @@
 
 module DhanHQ
   module Analysis
+    # Helper module to determine the recommended moneyness (ITM/ATM/OTM) based on market conditions
     module MoneynessHelper
       module_function
 
