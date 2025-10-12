@@ -53,7 +53,7 @@ environment variables (Rails credentials can be copied into ENV on boot):
 
 ```ruby
 # config/initializers/dhanhq.rb
-require 'DhanHQ'
+require 'dhan_hq'
 
 if (creds = Rails.application.credentials.dig(:dhanhq))
   ENV['CLIENT_ID']        ||= creds[:client_id]

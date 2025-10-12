@@ -1,5 +1,29 @@
 ## [Unreleased]
 
+## [2.1.5] - 2025-01-27
+
+### ⚠️ BREAKING CHANGES
+- **Changed require statement**: `require 'DhanHQ'` → `require 'dhan_hq'`
+  - This affects all Ruby files that require the gem
+  - Update all `require 'DhanHQ'` statements to `require 'dhan_hq'` in your codebase
+  - The gem name remains `DhanHQ` in your Gemfile, only the require statement changes
+
+### Added
+- **OptionChain validation**: Added proper parameter validation for `OptionChain.fetch` and `OptionChain.fetch_expiry_list` methods
+  - `OptionChain.fetch` requires `underlying_scrip`, `underlying_seg`, and `expiry` parameters
+  - `OptionChain.fetch_expiry_list` requires only `underlying_scrip` and `underlying_seg` parameters
+  - Validates exchange segments against `%w[IDX_I NSE_FNO BSE_FNO MCX_FO]`
+  - Validates expiry format as `YYYY-MM-DD` and ensures it's a valid date
+
+### Fixed
+- **RuboCop compliance**: Fixed all RuboCop offenses (179 → 0 offenses)
+- **Documentation**: Updated all documentation examples to use `require 'dhan_hq'`
+- **Code quality**: Added comprehensive validation tests for OptionChain methods
+
+### Changed
+- **File structure**: Renamed main library file from `lib/DhanHQ.rb` to `lib/dhan_hq.rb` for better Ruby conventions
+- **Require paths**: Updated all internal require statements to use snake_case naming
+
 ## [2.1.0] - 2025-09-20
 
 - Add REST coverage for EDIS (`/edis/form`, `/edis/bulkform`, `/edis/tpin`, `/edis/inquire/{isin}`) and the account kill-switch endpoint.

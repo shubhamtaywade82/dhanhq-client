@@ -7,6 +7,26 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 * REST coverage: Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed
 * **WebSocket**: subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
 
+## ⚠️ BREAKING CHANGE NOTICE
+
+**IMPORTANT**: Starting from version 2.1.5, the require statement has changed:
+
+```ruby
+# OLD (deprecated)
+require 'DhanHQ'
+
+# NEW (current)
+require 'dhan_hq'
+```
+
+**Migration**: Update all your `require 'DhanHQ'` statements to `require 'dhan_hq'` in your codebase. This change affects:
+- All Ruby files that require the gem
+- Documentation examples
+- Scripts and automation tools
+- Rails applications using this gem
+
+The gem name remains `DhanHQ` in your Gemfile, only the require statement changes.
+
 ---
 
 ## Installation
@@ -36,7 +56,7 @@ gem install DhanHQ
 ### From ENV / .env
 
 ```ruby
-require 'DhanHQ'
+require 'dhan_hq'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
@@ -155,7 +175,7 @@ initializers, service objects, workers, and ActionCable wiring tailored for the
 ### Start, subscribe, stop
 
 ```ruby
-require 'DhanHQ'
+require 'dhan_hq'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
@@ -215,7 +235,7 @@ Receive live updates whenever your orders transition between states (placed → 
 ### Standalone Ruby script
 
 ```ruby
-require 'DhanHQ'
+require 'dhan_hq'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }

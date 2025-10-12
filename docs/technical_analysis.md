@@ -19,6 +19,7 @@ This guide explains how to use the technical analysis modules bundled with this 
 ## Quick Start: Compute Indicators
 
 ```ruby
+require "dhan_hq"
 require "ta"
 
 DhanHQ.configure_with_env

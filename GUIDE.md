@@ -32,7 +32,7 @@ bundle install
 Bootstrap from environment variables:
 
 ```ruby
-require 'DhanHQ'
+require 'dhan_hq'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
