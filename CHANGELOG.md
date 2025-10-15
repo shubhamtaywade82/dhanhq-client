@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Changed
+- Align Super Order documentation across README, README1, and GUIDE with the latest API contract (place, modify, cancel, list).
+
 ## [2.1.5] - 2025-01-27
 
 ### ⚠️ BREAKING CHANGES
