@@ -24,6 +24,7 @@
 - **Documentation**: Updated all documentation examples to use `require 'dhan_hq'`
 - **Documentation**: Correct Super Order examples to use snake_case parameters for `DhanHQ::Models` helpers
 - **Documentation**: Normalise Super Order path placeholders and response fields to snake_case for consistency
+- **Documentation**: Clarified that model helpers auto-inject `dhan_client_id`, removing the need to add it manually in Ruby payloads
 - **Code quality**: Added comprehensive validation tests for OptionChain methods
 
 ### Changed
