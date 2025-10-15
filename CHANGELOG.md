@@ -21,6 +21,7 @@
 ### Fixed
 - **RuboCop compliance**: Fixed all RuboCop offenses (179 → 0 offenses)
 - **Documentation**: Updated all documentation examples to use `require 'dhan_hq'`
+- **Documentation**: Correct Super Order examples to use snake_case parameters for `DhanHQ::Models` helpers
 - **Code quality**: Added comprehensive validation tests for OptionChain methods
 
 ### Changed
