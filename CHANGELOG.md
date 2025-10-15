@@ -2,6 +2,7 @@
 
 ### Changed
 - Align Super Order documentation across README, README1, and GUIDE with the latest API contract (place, modify, cancel, list).
+- Normalise remaining documentation examples to snake_case, including order update WebSocket callbacks and kill switch response guidance.
 
 ## [2.1.5] - 2025-01-27
 

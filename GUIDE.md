@@ -606,14 +606,20 @@ All helpers accept snake_case keys; the client camelizes them before calling `/v
 ### Kill Switch
 
 ```ruby
-DhanHQ::Models::KillSwitch.activate    # => {"killSwitchStatus"=>"ACTIVATE"}
-DhanHQ::Models::KillSwitch.deactivate  # => {"killSwitchStatus"=>"DEACTIVATE"}
+activate_payload   = DhanHQ::Models::KillSwitch.activate
+deactivate_payload = DhanHQ::Models::KillSwitch.deactivate
+
+DhanHQ::Models::KillSwitch.snake_case(activate_payload)
+# => { kill_switch_status: "ACTIVATE" }
+
+DhanHQ::Models::KillSwitch.snake_case(deactivate_payload)
+# => { kill_switch_status: "DEACTIVATE" }
 
 # Explicit status update
 DhanHQ::Models::KillSwitch.update("ACTIVATE")
 ```
 
-Only `"ACTIVATE"` and `"DEACTIVATE"` are accepted—any other value raises `DhanHQ::Error`.
+Only `"ACTIVATE"` and `"DEACTIVATE"` are accepted—any other value raises `DhanHQ::Error`. Use the `snake_case` helper to normalise API responses when you prefer underscore keys.
 
 ---
 

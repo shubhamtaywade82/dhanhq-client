@@ -243,8 +243,10 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 ou = DhanHQ::WS::Orders::Client.new.start
 
 ou.on(:update) do |payload|
-  data = payload[:Data] || {}
-  puts "ORDER #{data[:OrderNo]} #{data[:Status]} traded=#{data[:TradedQty]} avg=#{data[:AvgTradedPrice]}"
+  # normalise the broker payload to snake_case before consuming it
+  normalized = DhanHQ::Models::Order.snake_case(payload)
+  data = DhanHQ::Models::Order.snake_case(normalized.fetch(:data, {}))
+  puts "ORDER #{data[:order_no]} #{data[:status]} traded=#{data[:traded_qty]} avg=#{data[:avg_traded_price]}"
 end
 
 # Keep the script alive (CTRL+C to exit)
