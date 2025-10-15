@@ -158,7 +158,7 @@ puts order.order_status  # => "TRADED" / "PENDING" / ...
 
 - Required: the instance must have an `order_id` and `dhan_client_id`.
 - At least one of `order_type`, `quantity`, `price`, `trigger_price`, `disclosed_quantity`, `validity` must change.
-- Payload is camelised automatically before hitting `/v2/orders/{orderId}`.
+- Payload is camelised automatically before hitting `/v2/orders/{order_id}`.
 
 ```ruby
 order.modify(price: 154.2, trigger_price: 149.5)
@@ -215,8 +215,8 @@ DhanHQ::Models::Order.resource.slicing(payload)
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/super/orders` | Create a new super order |
-| `PUT` | `/super/orders/{order-id}` | Modify a pending super order |
-| `DELETE` | `/super/orders/{order-id}/{order-leg}` | Cancel a pending super order leg |
+| `PUT` | `/super/orders/{order_id}` | Modify a pending super order |
+| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg |
 | `GET` | `/super/orders` | Retrieve the list of all super orders |
 
 #### Place Super Order
@@ -284,7 +284,7 @@ Modify while the order is `PENDING` or `PART_TRADED`. Entry leg updates adjust t
 
 ```bash
 curl --request PUT \
-  --url https://api.dhan.co/v2/super/orders/{order-id} \
+  --url https://api.dhan.co/v2/super/orders/{order_id} \
   --header 'Content-Type: application/json' \
   --header 'access-token: JWT' \
   --data '{Request JSON}'
@@ -330,7 +330,7 @@ Response:
 
 ```bash
 curl --request DELETE \
-  --url https://api.dhan.co/v2/super/orders/{order-id}/{order-leg} \
+  --url https://api.dhan.co/v2/super/orders/{order_id}/{order_leg} \
   --header 'Content-Type: application/json' \
   --header 'access-token: JWT'
 ```
@@ -339,8 +339,8 @@ Path parameters:
 
 | Field | Description | Example |
 | --- | --- | --- |
-| `order-id` | Super order identifier. | `11211182198` |
-| `order-leg` | Leg to cancel (`ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`). | `ENTRY_LEG` |
+| `order_id` | Super order identifier. | `11211182198` |
+| `order_leg` | Leg to cancel (`ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`). | `ENTRY_LEG` |
 
 Response:
 

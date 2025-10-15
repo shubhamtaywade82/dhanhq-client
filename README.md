@@ -408,8 +408,8 @@ This gem exposes the full REST surface to create, modify, cancel, and list super
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/super/orders` | Create a new super order |
-| `PUT` | `/super/orders/{order-id}` | Modify a pending super order |
-| `DELETE` | `/super/orders/{order-id}/{order-leg}` | Cancel a pending super order leg |
+| `PUT` | `/super/orders/{order_id}` | Modify a pending super order |
+| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg |
 | `GET` | `/super/orders` | Retrieve the list of all super orders |
 
 ### Place Super Order
@@ -487,7 +487,7 @@ Use the modify endpoint to update any leg while the super order remains in `PEND
 
 ```bash
 curl --request PUT \
-  --url https://api.dhan.co/v2/super/orders/{order-id} \
+  --url https://api.dhan.co/v2/super/orders/{order_id} \
   --header 'Content-Type: application/json' \
   --header 'access-token: JWT' \
   --data '{Request JSON}'
@@ -547,7 +547,7 @@ Cancel a pending or active super order leg using the order ID. Cancelling the en
 
 ```bash
 curl --request DELETE \
-  --url https://api.dhan.co/v2/super/orders/{order-id}/{order-leg} \
+  --url https://api.dhan.co/v2/super/orders/{order_id}/{order_leg} \
   --header 'Content-Type: application/json' \
   --header 'access-token: JWT'
 ```
@@ -556,8 +556,8 @@ curl --request DELETE \
 
 | Field | Description | Example |
 | --- | --- | --- |
-| `order-id` | Super order identifier. | `11211182198` |
-| `order-leg` | Leg to cancel. `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. | `ENTRY_LEG` |
+| `order_id` | Super order identifier. | `11211182198` |
+| `order_leg` | Leg to cancel. `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. | `ENTRY_LEG` |
 
 #### Response
 
