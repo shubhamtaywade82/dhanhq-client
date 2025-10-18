@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Changed
+- Align Super Order documentation across README, README1, and GUIDE with the latest API contract (place, modify, cancel, list).
+- Normalise remaining documentation examples to snake_case, including order update WebSocket callbacks and kill switch response guidance.
+
 ## [2.1.5] - 2025-01-27
 
 ### ⚠️ BREAKING CHANGES
@@ -18,6 +22,9 @@
 ### Fixed
 - **RuboCop compliance**: Fixed all RuboCop offenses (179 → 0 offenses)
 - **Documentation**: Updated all documentation examples to use `require 'dhan_hq'`
+- **Documentation**: Correct Super Order examples to use snake_case parameters for `DhanHQ::Models` helpers
+- **Documentation**: Normalise Super Order path placeholders and response fields to snake_case for consistency
+- **Documentation**: Clarified that model helpers auto-inject `dhan_client_id`, removing the need to add it manually in Ruby payloads
 - **Code quality**: Added comprehensive validation tests for OptionChain methods
 
 ### Changed
