@@ -25,6 +25,8 @@ module DhanHQ
   class InputExceptionError < Error; end
   # DH-811, DH-812, DH-813, DH-814
   class InvalidRequestError < Error; end
+  # Validation errors for input parameters
+  class ValidationError < Error; end
 
   # Order and market data errors
   class OrderError < Error; end

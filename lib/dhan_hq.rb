@@ -30,6 +30,7 @@ require_relative "DhanHQ/contracts/historical_data_contract"
 require_relative "DhanHQ/contracts/margin_calculator_contract"
 require_relative "DhanHQ/contracts/position_conversion_contract"
 require_relative "DhanHQ/contracts/slice_order_contract"
+require_relative "DhanHQ/contracts/trade_contract"
 
 # Resources
 require_relative "DhanHQ/resources/option_chain"
