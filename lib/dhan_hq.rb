@@ -31,6 +31,7 @@ require_relative "DhanHQ/contracts/margin_calculator_contract"
 require_relative "DhanHQ/contracts/position_conversion_contract"
 require_relative "DhanHQ/contracts/slice_order_contract"
 require_relative "DhanHQ/contracts/trade_contract"
+require_relative "DhanHQ/contracts/expired_options_data_contract"
 
 # Resources
 require_relative "DhanHQ/resources/option_chain"
@@ -49,6 +50,7 @@ require_relative "DhanHQ/resources/instruments"
 require_relative "DhanHQ/resources/edis"
 require_relative "DhanHQ/resources/kill_switch"
 require_relative "DhanHQ/resources/profile"
+require_relative "DhanHQ/resources/expired_options_data"
 
 # Models
 require_relative "DhanHQ/models/order"
@@ -68,6 +70,7 @@ require_relative "DhanHQ/models/edis"
 require_relative "DhanHQ/models/kill_switch"
 require_relative "DhanHQ/models/profile"
 require_relative "DhanHQ/models/order_update"
+require_relative "DhanHQ/models/expired_options_data"
 
 require_relative "DhanHQ/constants"
 require_relative "DhanHQ/ws"
