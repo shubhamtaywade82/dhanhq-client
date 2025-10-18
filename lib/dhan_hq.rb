@@ -67,6 +67,7 @@ require_relative "DhanHQ/models/margin"
 require_relative "DhanHQ/models/edis"
 require_relative "DhanHQ/models/kill_switch"
 require_relative "DhanHQ/models/profile"
+require_relative "DhanHQ/models/order_update"
 
 require_relative "DhanHQ/constants"
 require_relative "DhanHQ/ws"
