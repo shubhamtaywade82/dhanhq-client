@@ -4,8 +4,8 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 
 * ActiveRecord-style models: `find`, `all`, `where`, `save`, `update`, `cancel`
 * Validations & errors exposed via ActiveModel-like interfaces
-* REST coverage: Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed
-* **WebSocket**: subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
+* REST coverage: Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed, ExpiredOptionsData
+* **WebSocket**: Orders, Market Feed, Market Depth - subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
 
 ## ⚠️ BREAKING CHANGE NOTICE
 
@@ -146,155 +146,154 @@ initializers, service objects, workers, and ActionCable wiring tailored for the
 
 ---
 
-## WebSocket Market Feed (NEW)
+## WebSocket Integration (Orders, Market Feed, Market Depth)
 
-### What you get
+The DhanHQ gem provides comprehensive WebSocket integration with three distinct WebSocket types, featuring improved architecture, security, and reliability:
 
-* **Modes**
+### Key Features
 
-  * `:ticker` → LTP + LTT
-  * `:quote`  → OHLCV + totals (recommended default)
-  * `:full`   → quote + **OI** + **best-5 depth**
-* **Normalized ticks** (Hash):
+- **🔒 Secure Logging** - Sensitive information (access tokens) are automatically sanitized from logs
+- **⚡ Rate Limit Protection** - Built-in protection against 429 errors with proper connection management
+- **🔄 Automatic Reconnection** - Exponential backoff with 60-second cool-off periods
+- **🧵 Thread-Safe Operation** - Safe for Rails applications and multi-threaded environments
+- **📊 Comprehensive Examples** - Ready-to-use examples for all WebSocket types
+- **🛡️ Error Handling** - Robust error handling and connection management
 
-  ```ruby
-  {
-    kind: :quote,                 # :ticker | :quote | :full | :oi | :prev_close | :misc
-    segment: "NSE_FNO",           # string enum
-    security_id: "12345",
-    ltp: 101.5,
-    ts:  1723791300,              # LTT epoch (sec) if present
-    vol: 123456,                  # quote/full
-    atp: 100.9,                   # quote/full
-    day_open: 100.1, day_high: 102.4, day_low: 99.5, day_close: nil,
-    oi: 987654,                   # full or OI packet
-    bid: 101.45, ask: 101.55      # from depth (mode :full)
-  }
-  ```
-
-### Start, subscribe, stop
-
-```ruby
-require 'dhan_hq'
-
-DhanHQ.configure_with_env
-DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
-
-ws = DhanHQ::WS::Client.new(mode: :quote).start
-
-ws.on(:tick) do |t|
-  puts "[#{t[:segment]}:#{t[:security_id]}] LTP=#{t[:ltp]} kind=#{t[:kind]}"
-end
-
-# Subscribe instruments (≤100 per frame; send multiple frames if needed)
-ws.subscribe_one(segment: "IDX_I",   security_id: "13")     # NIFTY index value
-ws.subscribe_one(segment: "NSE_FNO", security_id: "12345")  # an option
-
-# Unsubscribe
-ws.unsubscribe_one(segment: "NSE_FNO", security_id: "12345")
-
-# Graceful disconnect (sends broker disconnect code 12, no reconnect)
-ws.disconnect!
-
-# Or hard stop (no broker message, just closes and halts loop)
-ws.stop
-
-# Safety: kill all local sockets (useful in IRB)
-DhanHQ::WS.disconnect_all_local!
-```
-
-### Under the hood
-
-* **Request codes** (per Dhan docs)
-
-  * Subscribe: **15** (ticker), **17** (quote), **21** (full)
-  * Unsubscribe: **16**, **18**, **22**
-  * Disconnect: **12**
-* **Limits**
-
-  * Up to **100 instruments per SUB/UNSUB** message (client auto-chunks)
-  * Up to 5 WS connections per user (per Dhan)
-* **Backoff & 429 cool-off**
-
-  * Exponential backoff with jitter
-  * Handshake **429** triggers a **60s cool-off** before retry
-* **Reconnect & resubscribe**
-
-  * On reconnect the client resends the **current subscription snapshot** (idempotent)
-* **Graceful shutdown**
-
-  * `ws.disconnect!` or `ws.stop` prevents reconnects
-  * An `at_exit` hook stops all registered WS clients to avoid leaked sockets
-
----
-
-## Order Update WebSocket (NEW)
+### 1. Orders WebSocket - Real-time Order Updates
 
 Receive live updates whenever your orders transition between states (placed → traded → cancelled, etc.).
 
-### Standalone Ruby script
-
 ```ruby
-require 'dhan_hq'
-
-DhanHQ.configure_with_env
-DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }
-
-ou = DhanHQ::WS::Orders::Client.new.start
-
-ou.on(:update) do |payload|
-  # normalise the broker payload to snake_case before consuming it
-  normalized = DhanHQ::Models::Order.snake_case(payload)
-  data = DhanHQ::Models::Order.snake_case(normalized.fetch(:data, {}))
-  puts "ORDER #{data[:order_no]} #{data[:status]} traded=#{data[:traded_qty]} avg=#{data[:avg_traded_price]}"
+# Simple connection
+DhanHQ::WS::Orders.connect do |order_update|
+  puts "Order Update: #{order_update.order_no} - #{order_update.status}"
+  puts "  Symbol: #{order_update.symbol}"
+  puts "  Quantity: #{order_update.quantity}"
+  puts "  Traded Qty: #{order_update.traded_qty}"
+  puts "  Price: #{order_update.price}"
+  puts "  Execution: #{order_update.execution_percentage}%"
 end
 
-# Keep the script alive (CTRL+C to exit)
-sleep
-
-# Later, stop the socket
-ou.stop
+# Advanced usage with multiple event handlers
+client = DhanHQ::WS::Orders.client
+client.on(:update) { |order| puts "📝 Order updated: #{order.order_no}" }
+client.on(:status_change) { |change| puts "🔄 Status: #{change[:previous_status]} -> #{change[:new_status]}" }
+client.on(:execution) { |exec| puts "✅ Executed: #{exec[:new_traded_qty]} shares" }
+client.on(:order_rejected) { |order| puts "❌ Rejected: #{order.order_no}" }
+client.start
 ```
 
-Or, if you just need a quick callback:
+### 2. Market Feed WebSocket - Live Market Data
+
+Subscribe to real-time market data for indices and stocks.
 
 ```ruby
-DhanHQ::WS::Orders.connect do |payload|
-  # handle :update callbacks only
+# Ticker data (LTP updates) - Recommended for most use cases
+market_client = DhanHQ::WS.connect(mode: :ticker) do |tick|
+  timestamp = tick[:ts] ? Time.at(tick[:ts]) : Time.now
+  puts "Market Data: #{tick[:segment]}:#{tick[:security_id]} = #{tick[:ltp]} at #{timestamp}"
+end
+
+# Subscribe to major Indian indices
+market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
+market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
+market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
+market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+
+# Quote data (LTP + volume + OHLC)
+DhanHQ::WS.connect(mode: :quote) do |quote|
+  puts "#{quote[:symbol]}: LTP=#{quote[:ltp]}, Volume=#{quote[:vol]}"
+end
+
+# Full market data
+DhanHQ::WS.connect(mode: :full) do |full|
+  puts "#{full[:symbol]}: #{full.inspect}"
 end
 ```
 
-### Rails bot integration
+### 3. Market Depth WebSocket - Real-time Market Depth
 
-Mirror the market-feed supervisor by adding an Order Update hub singleton that hydrates your local DB and hands off to execution services.
+Get real-time market depth data including bid/ask levels and order book information.
 
-1. **Service** – `app/services/live/order_update_hub.rb`
+```ruby
+# Subscribe to market depth for specific symbols with correct exchange segments and security IDs
+symbols = [
+  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
+  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+]
 
-   ```ruby
-   Live::OrderUpdateHub.instance.start!
-   ```
+DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
+  puts "Market Depth: #{depth_data[:symbol]}"
+  puts "  Best Bid: #{depth_data[:best_bid]}"
+  puts "  Best Ask: #{depth_data[:best_ask]}"
+  puts "  Spread: #{depth_data[:spread]}"
+  puts "  Bid Levels: #{depth_data[:bids].size}"
+  puts "  Ask Levels: #{depth_data[:asks].size}"
+end
+```
 
-   The hub wires `DhanHQ::WS::Orders::Client` to:
+### Unified WebSocket Architecture
 
-   * Upsert local `BrokerOrder` rows so UIs always reflect current broker status.
-   * Auto-subscribe traded entry legs on your existing `Live::WsHub` (if defined).
-   * Refresh `Execution::PositionGuard` (if present) with fill prices/qty for trailing exits.
+All WebSocket connections provide:
+- **Automatic reconnection** with exponential backoff
+- **Thread-safe operation** for Rails applications
+- **Consistent event handling** patterns
+- **Built-in error handling** and logging
+- **429 rate limiting** protection with cool-off periods
+- **Secure logging** with automatic credential sanitization
 
-2. **Initializer** – `config/initializers/order_update_hub.rb`
+### Connection Management
 
-   ```ruby
-   if ENV["ENABLE_WS"] == "true"
-     Rails.application.config.to_prepare do
-       Live::OrderUpdateHub.instance.start!
-     end
+```ruby
+# Sequential connections to avoid rate limiting (recommended)
+orders_client = DhanHQ::WS::Orders.connect { |order| puts "Order: #{order.order_no}" }
+orders_client.stop
+sleep(2)  # Wait between connections
 
-     at_exit { Live::OrderUpdateHub.instance.stop! }
-   end
-   ```
+market_client = DhanHQ::WS.connect(mode: :ticker) { |tick| puts "Market: #{tick[:symbol]}" }
+market_client.stop
+sleep(2)
 
-   Flip `ENABLE_WS=true` in your Procfile or `.env` to boot the hub alongside the existing feed supervisor. On shutdown the client is stopped cleanly to avoid leaked sockets.
+depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) { |depth| puts "Depth: #{depth[:symbol]}" }
+depth_client.stop
 
-The hub is resilient to missing dependencies—if you do not have a `BrokerOrder` model, it safely skips persistence while keeping downstream callbacks alive.
+# Check connection status
+puts "Orders connected: #{orders_client.connected?}"
+puts "Market connected: #{market_client.connected?}"
+puts "Depth connected: #{depth_client.connected?}"
+
+# Graceful shutdown
+DhanHQ::WS.disconnect_all_local!
+```
+
+### Examples
+
+The gem includes comprehensive examples in the `examples/` directory:
+
+- `market_feed_example.rb` - Market Feed WebSocket with major indices
+- `order_update_example.rb` - Order Update WebSocket with event handling
+- `market_depth_example.rb` - Market Depth WebSocket with RELIANCE and TCS
+- `comprehensive_websocket_examples.rb` - All three WebSocket types
+
+Run examples:
+
+```bash
+# Individual examples
+bundle exec ruby examples/market_feed_example.rb
+bundle exec ruby examples/order_update_example.rb
+bundle exec ruby examples/market_depth_example.rb
+
+# Comprehensive example
+bundle exec ruby examples/comprehensive_websocket_examples.rb
+```
+
+### Comprehensive Documentation
+
+The gem includes detailed documentation for different integration scenarios:
+
+- **[WebSocket Integration Guide](docs/websocket_integration.md)** - Complete guide covering all WebSocket types
+- **[Rails Integration Guide](docs/rails_websocket_integration.md)** - Rails-specific patterns and best practices
+- **[Standalone Ruby Guide](docs/standalone_ruby_websocket_integration.md)** - Scripts, daemons, and CLI tools
 
 ---
 
@@ -407,12 +406,12 @@ This gem exposes the full REST surface to create, modify, cancel, and list super
 
 ### Endpoints
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `POST` | `/super/orders` | Create a new super order |
-| `PUT` | `/super/orders/{order_id}` | Modify a pending super order |
-| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg |
-| `GET` | `/super/orders` | Retrieve the list of all super orders |
+| Method   | Path                                   | Description                           |
+| -------- | -------------------------------------- | ------------------------------------- |
+| `POST`   | `/super/orders`                        | Create a new super order              |
+| `PUT`    | `/super/orders/{order_id}`             | Modify a pending super order          |
+| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg      |
+| `GET`    | `/super/orders`                        | Retrieve the list of all super orders |
 
 ### Place Super Order
 
@@ -449,20 +448,20 @@ curl --request POST \
 
 #### Parameters
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `dhan_client_id` | string *(required)* | User specific identification generated by Dhan. When you call through `DhanHQ::Models::SuperOrder`, the gem injects your configured client id so you can omit this key locally. |
-| `correlation_id` | string | Caller generated correlation identifier |
-| `transaction_type` | enum string *(required)* | Trading side. `BUY` or `SELL`. |
-| `exchange_segment` | enum string *(required)* | Exchange segment (see appendix). |
-| `product_type` | enum string *(required)* | Product type. `CNC`, `INTRADAY`, `MARGIN`, or `MTF`. |
-| `order_type` | enum string *(required)* | Order type. `LIMIT` or `MARKET`. |
-| `security_id` | string *(required)* | Exchange standard security identifier. |
-| `quantity` | integer *(required)* | Number of shares for the order. |
-| `price` | float *(required)* | Price at which the entry leg is placed. |
-| `target_price` | float *(required)* | Target price for the super order. |
-| `stop_loss_price` | float *(required)* | Stop-loss price for the super order. |
-| `trailing_jump` | float *(required)* | Price jump size used to trail the stop-loss. |
+| Field              | Type                     | Description                                                                                                                                                                     |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dhan_client_id`   | string *(required)*      | User specific identification generated by Dhan. When you call through `DhanHQ::Models::SuperOrder`, the gem injects your configured client id so you can omit this key locally. |
+| `correlation_id`   | string                   | Caller generated correlation identifier                                                                                                                                         |
+| `transaction_type` | enum string *(required)* | Trading side. `BUY` or `SELL`.                                                                                                                                                  |
+| `exchange_segment` | enum string *(required)* | Exchange segment (see appendix).                                                                                                                                                |
+| `product_type`     | enum string *(required)* | Product type. `CNC`, `INTRADAY`, `MARGIN`, or `MTF`.                                                                                                                            |
+| `order_type`       | enum string *(required)* | Order type. `LIMIT` or `MARKET`.                                                                                                                                                |
+| `security_id`      | string *(required)*      | Exchange standard security identifier.                                                                                                                                          |
+| `quantity`         | integer *(required)*     | Number of shares for the order.                                                                                                                                                 |
+| `price`            | float *(required)*       | Price at which the entry leg is placed.                                                                                                                                         |
+| `target_price`     | float *(required)*       | Target price for the super order.                                                                                                                                               |
+| `stop_loss_price`  | float *(required)*       | Stop-loss price for the super order.                                                                                                                                            |
+| `trailing_jump`    | float *(required)*       | Price jump size used to trail the stop-loss.                                                                                                                                    |
 
 > 🐍 When you call `DhanHQ::Models::SuperOrder.create`, pass snake_case keys as shown above. The client automatically camelizes
 > them before posting to Dhan's REST API and injects your configured `dhan_client_id`, so you can omit that key in Ruby code.
@@ -476,9 +475,9 @@ curl --request POST \
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `order_id` | string | Order identifier generated by Dhan |
+| Field          | Type        | Description                                         |
+| -------------- | ----------- | --------------------------------------------------- |
+| `order_id`     | string      | Order identifier generated by Dhan                  |
 | `order_status` | enum string | Latest status. `TRANSIT`, `PENDING`, or `REJECTED`. |
 
 ### Modify Super Order
@@ -513,17 +512,17 @@ curl --request PUT \
 
 #### Parameters
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `dhan_client_id` | string *(required)* | User specific identification generated by Dhan. Automatically added when you call through the Ruby models. |
-| `order_id` | string *(required)* | Super order identifier generated by Dhan. |
-| `order_type` | enum string *(conditionally required)* | `LIMIT` or `MARKET`. Required when modifying `ENTRY_LEG`. |
-| `leg_name` | enum string *(required)* | `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. Entry leg updates entire order while status is `PENDING` or `PART_TRADED`. |
-| `quantity` | integer *(conditionally required)* | Quantity update for `ENTRY_LEG`. |
-| `price` | float *(conditionally required)* | Entry price update for `ENTRY_LEG`. |
-| `target_price` | float *(conditionally required)* | Target price update for `ENTRY_LEG` or `TARGET_LEG`. |
-| `stop_loss_price` | float *(conditionally required)* | Stop-loss price update for `ENTRY_LEG` or `STOP_LOSS_LEG`. |
-| `trailing_jump` | float *(conditionally required)* | Trailing jump update for `ENTRY_LEG` or `STOP_LOSS_LEG`. Omit or set to `0` to cancel trailing. |
+| Field             | Type                                   | Description                                                                                                               |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `dhan_client_id`  | string *(required)*                    | User specific identification generated by Dhan. Automatically added when you call through the Ruby models.                |
+| `order_id`        | string *(required)*                    | Super order identifier generated by Dhan.                                                                                 |
+| `order_type`      | enum string *(conditionally required)* | `LIMIT` or `MARKET`. Required when modifying `ENTRY_LEG`.                                                                 |
+| `leg_name`        | enum string *(required)*               | `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. Entry leg updates entire order while status is `PENDING` or `PART_TRADED`. |
+| `quantity`        | integer *(conditionally required)*     | Quantity update for `ENTRY_LEG`.                                                                                          |
+| `price`           | float *(conditionally required)*       | Entry price update for `ENTRY_LEG`.                                                                                       |
+| `target_price`    | float *(conditionally required)*       | Target price update for `ENTRY_LEG` or `TARGET_LEG`.                                                                      |
+| `stop_loss_price` | float *(conditionally required)*       | Stop-loss price update for `ENTRY_LEG` or `STOP_LOSS_LEG`.                                                                |
+| `trailing_jump`   | float *(conditionally required)*       | Trailing jump update for `ENTRY_LEG` or `STOP_LOSS_LEG`. Omit or set to `0` to cancel trailing.                           |
 
 > ℹ️ Once the entry leg status becomes `TRADED`, only the `TARGET_LEG` and `STOP_LOSS_LEG` can be modified (price and trailing jump).
 
@@ -536,9 +535,9 @@ curl --request PUT \
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `order_id` | string | Order identifier generated by Dhan |
+| Field          | Type        | Description                                                   |
+| -------------- | ----------- | ------------------------------------------------------------- |
+| `order_id`     | string      | Order identifier generated by Dhan                            |
 | `order_status` | enum string | Latest status. `TRANSIT`, `PENDING`, `REJECTED`, or `TRADED`. |
 
 ### Cancel Super Order
@@ -556,10 +555,10 @@ curl --request DELETE \
 
 #### Path parameters
 
-| Field | Description | Example |
-| --- | --- | --- |
-| `order_id` | Super order identifier. | `11211182198` |
-| `order_leg` | Leg to cancel. `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. | `ENTRY_LEG` |
+| Field       | Description                                                   | Example       |
+| ----------- | ------------------------------------------------------------- | ------------- |
+| `order_id`  | Super order identifier.                                       | `11211182198` |
+| `order_leg` | Leg to cancel. `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. | `ENTRY_LEG`   |
 
 #### Response
 
@@ -570,9 +569,9 @@ curl --request DELETE \
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `order_id` | string | Order identifier generated by Dhan |
+| Field          | Type        | Description                                                      |
+| -------------- | ----------- | ---------------------------------------------------------------- |
+| `order_id`     | string      | Order identifier generated by Dhan                               |
 | `order_status` | enum string | Latest status. `TRANSIT`, `PENDING`, `REJECTED`, or `CANCELLED`. |
 
 ### Super Order List
@@ -644,35 +643,35 @@ curl --request GET \
 
 #### Parameters
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `dhan_client_id` | string | User specific identification generated by Dhan. |
-| `order_id` | string | Order identifier generated by Dhan. |
-| `correlation_id` | string | Correlation identifier supplied by the caller. |
-| `order_status` | enum string | Latest status. `TRANSIT`, `PENDING`, `CLOSED`, `REJECTED`, `CANCELLED`, `PART_TRADED`, or `TRADED`. |
-| `transaction_type` | enum string | Trading side. `BUY` or `SELL`. |
-| `exchange_segment` | enum string | Exchange segment. |
-| `product_type` | enum string | Product type. `CNC`, `INTRADAY`, `MARGIN`, or `MTF`. |
-| `order_type` | enum string | Order type. `LIMIT` or `MARKET`. |
-| `validity` | enum string | Order validity. `DAY`. |
-| `trading_symbol` | string | Trading symbol reference. |
-| `security_id` | string | Exchange security identifier. |
-| `quantity` | integer | Ordered quantity. |
-| `remaining_quantity` | integer | Quantity pending execution. |
-| `ltp` | float | Last traded price. |
-| `price` | float | Order price. |
-| `after_market_order` | boolean | Indicates if the order was placed after market hours. |
-| `leg_name` | enum string | Leg identifier: `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`. |
-| `trailing_jump` | float | Trailing jump for stop-loss. |
-| `exchange_order_id` | string | Exchange-generated order identifier. |
-| `create_time` | string | Order creation timestamp. |
-| `update_time` | string | Latest update timestamp. |
-| `exchange_time` | string | Exchange timestamp. |
-| `oms_error_description` | string | OMS error description when applicable. |
-| `average_traded_price` | float | Average traded price. |
-| `filled_qty` | integer | Quantity traded on the exchange. |
-| `triggered_quantity` | integer | Quantity triggered for stop-loss or target legs. |
-| `leg_details` | array | Nested leg details for the super order. |
+| Field                   | Type        | Description                                                                                         |
+| ----------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| `dhan_client_id`        | string      | User specific identification generated by Dhan.                                                     |
+| `order_id`              | string      | Order identifier generated by Dhan.                                                                 |
+| `correlation_id`        | string      | Correlation identifier supplied by the caller.                                                      |
+| `order_status`          | enum string | Latest status. `TRANSIT`, `PENDING`, `CLOSED`, `REJECTED`, `CANCELLED`, `PART_TRADED`, or `TRADED`. |
+| `transaction_type`      | enum string | Trading side. `BUY` or `SELL`.                                                                      |
+| `exchange_segment`      | enum string | Exchange segment.                                                                                   |
+| `product_type`          | enum string | Product type. `CNC`, `INTRADAY`, `MARGIN`, or `MTF`.                                                |
+| `order_type`            | enum string | Order type. `LIMIT` or `MARKET`.                                                                    |
+| `validity`              | enum string | Order validity. `DAY`.                                                                              |
+| `trading_symbol`        | string      | Trading symbol reference.                                                                           |
+| `security_id`           | string      | Exchange security identifier.                                                                       |
+| `quantity`              | integer     | Ordered quantity.                                                                                   |
+| `remaining_quantity`    | integer     | Quantity pending execution.                                                                         |
+| `ltp`                   | float       | Last traded price.                                                                                  |
+| `price`                 | float       | Order price.                                                                                        |
+| `after_market_order`    | boolean     | Indicates if the order was placed after market hours.                                               |
+| `leg_name`              | enum string | Leg identifier: `ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`.                                      |
+| `trailing_jump`         | float       | Trailing jump for stop-loss.                                                                        |
+| `exchange_order_id`     | string      | Exchange-generated order identifier.                                                                |
+| `create_time`           | string      | Order creation timestamp.                                                                           |
+| `update_time`           | string      | Latest update timestamp.                                                                            |
+| `exchange_time`         | string      | Exchange timestamp.                                                                                 |
+| `oms_error_description` | string      | OMS error description when applicable.                                                              |
+| `average_traded_price`  | float       | Average traded price.                                                                               |
+| `filled_qty`            | integer     | Quantity traded on the exchange.                                                                    |
+| `triggered_quantity`    | integer     | Quantity triggered for stop-loss or target legs.                                                    |
+| `leg_details`           | array       | Nested leg details for the super order.                                                             |
 
 > ✅ `CLOSED` indicates the entry leg plus either target or stop-loss leg completed for the entire quantity. `TRIGGERED` appears on target and stop-loss legs to show which leg fired; inspect `triggered_quantity` for the executed quantity.
 

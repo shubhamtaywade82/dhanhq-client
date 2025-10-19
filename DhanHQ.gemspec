@@ -38,6 +38,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "base64"
   spec.add_dependency "bindata"
   spec.add_dependency "concurrent-ruby"
+  spec.add_dependency "csv"
   spec.add_dependency "dry-validation"
   spec.add_dependency "eventmachine"
   spec.add_dependency "faraday"

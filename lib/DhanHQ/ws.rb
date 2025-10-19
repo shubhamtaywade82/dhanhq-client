@@ -2,12 +2,13 @@
 
 require_relative "ws/client"
 require_relative "ws/orders"
+require_relative "ws/market_depth"
 
 module DhanHQ
   # Namespace for the WebSocket streaming client helpers.
   #
-  # The helpers provide a simple façade around {DhanHQ::WS::Client} so that
-  # applications can start streaming market data with a single method call.
+  # The helpers provide a simple façade around WebSocket clients so that
+  # applications can start streaming data with single method calls.
   module WS
     # Establishes a WebSocket connection and yields decoded ticks.
     #

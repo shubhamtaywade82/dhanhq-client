@@ -31,19 +31,19 @@ module DhanHQ
         when :ticker
           {
             kind: :ticker, segment: segstr, security_id: sid,
-            ltp: pkt[:ltp].to_f, ts: pkt[:ltt].to_i
+            ltp: pkt[:ltp].to_f, ts: pkt[:ltt]&.to_i
           }
         when :quote
           {
             kind: :quote, segment: segstr, security_id: sid,
-            ltp: pkt[:ltp].to_f, ts: pkt[:ltt].to_i, atp: pkt[:atp].to_f,
+            ltp: pkt[:ltp].to_f, ts: pkt[:ltt]&.to_i, atp: pkt[:atp].to_f,
             vol: pkt[:volume].to_i, ts_buy_qty: pkt[:total_buy_qty].to_i, ts_sell_qty: pkt[:total_sell_qty].to_i,
             day_open: pkt[:day_open]&.to_f, day_high: pkt[:day_high]&.to_f, day_low: pkt[:day_low]&.to_f, day_close: pkt[:day_close]&.to_f
           }
         when :full
           out = {
             kind: :full, segment: segstr, security_id: sid,
-            ltp: pkt[:ltp].to_f, ts: pkt[:ltt].to_i, atp: pkt[:atp].to_f,
+            ltp: pkt[:ltp].to_f, ts: pkt[:ltt]&.to_i, atp: pkt[:atp].to_f,
             vol: pkt[:volume].to_i, ts_buy_qty: pkt[:total_buy_qty].to_i, ts_sell_qty: pkt[:total_sell_qty].to_i,
             oi: pkt[:open_interest]&.to_i, oi_high: pkt[:highest_open_interest]&.to_i, oi_low: pkt[:lowest_open_interest]&.to_i,
             day_open: pkt[:day_open]&.to_f, day_high: pkt[:day_high]&.to_f, day_low: pkt[:day_low]&.to_f, day_close: pkt[:day_close]&.to_f

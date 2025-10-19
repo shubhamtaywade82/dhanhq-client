@@ -40,6 +40,18 @@ module DhanHQ
     # @return [String]
     attr_accessor :ws_order_url
 
+    # Websocket market feed endpoint.
+    # @return [String]
+    attr_accessor :ws_market_feed_url
+
+    # Websocket market depth endpoint.
+    # @return [String]
+    attr_accessor :ws_market_depth_url
+
+    # Market depth level (20 or 200).
+    # @return [Integer]
+    attr_accessor :market_depth_level
+
     # Websocket user type for order updates.
     # @return [String] "SELF" or "PARTNER".
     attr_accessor :ws_user_type
@@ -63,7 +75,10 @@ module DhanHQ
       @access_token = ENV.fetch("ACCESS_TOKEN", nil)
       @base_url       = ENV.fetch("DHAN_BASE_URL", "https://api.dhan.co/v2")
       @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
-      @ws_order_url   = ENV.fetch("DHAN_WS_ORDER_URL", "wss://api-order-update.dhan.co")
+      @ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", "wss://api-order-update.dhan.co")
+      @ws_market_feed_url = ENV.fetch("DHAN_WS_MARKET_FEED_URL", "wss://api-feed.dhan.co")
+      @ws_market_depth_url = ENV.fetch("DHAN_WS_MARKET_DEPTH_URL", "wss://depth-api-feed.dhan.co/twentydepth")
+      @market_depth_level = ENV.fetch("DHAN_MARKET_DEPTH_LEVEL", "20").to_i
       @ws_user_type   = ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
       @partner_id     = ENV.fetch("DHAN_PARTNER_ID", nil)
       @partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", nil)

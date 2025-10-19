@@ -11,12 +11,13 @@ module DhanHQ
       # Provides comprehensive order state tracking and event handling
       # rubocop:disable Metrics/ClassLength
       class Client
-        def initialize(url: nil)
+        def initialize(url: nil, **options)
           @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
-          @started   = Concurrent::AtomicBoolean.new(false)
+          @started = Concurrent::AtomicBoolean.new(false)
           @order_tracker = Concurrent::Map.new
-          cfg        = DhanHQ.configuration
-          @url       = url || cfg.ws_order_url
+          cfg = DhanHQ.configuration
+          @url = url || cfg.ws_order_url
+          @connection_options = options
         end
 
         ##
@@ -26,9 +27,11 @@ module DhanHQ
           return self if @started.true?
 
           @started.make_true
-          @conn = Connection.new(url: @url) do |msg|
-            handle_message(msg)
-          end
+          @conn = Connection.new(url: @url, **@connection_options)
+          @conn.on(:open) { emit(:open, true) }
+          @conn.on(:close) { |payload| emit(:close, payload) }
+          @conn.on(:error) { |error| emit(:error, error) }
+          @conn.on(:message) { |msg| handle_message(msg) }
           @conn.start
           DhanHQ::WS::Registry.register(self) if defined?(DhanHQ::WS::Registry)
           self

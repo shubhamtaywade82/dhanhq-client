@@ -50,9 +50,16 @@ module DhanHQ
       # @param hash [Hash]
       # @return [Hash] Normalized instrument hash.
       def self.normalize_instrument(hash)
-        seg = to_request_string(hash[:ExchangeSegment] || hash["ExchangeSegment"])
+        raw_segment = hash[:ExchangeSegment] || hash["ExchangeSegment"]
         sid = (hash[:SecurityId] || hash["SecurityId"]).to_s
-        { ExchangeSegment: seg, SecurityId: sid }
+        seg = to_request_string(raw_segment)
+        # Some instruments—especially indices—require IDX_I even when the caller
+        # supplies only the security token. Fall back to documented defaults.
+        if seg.nil? || seg.empty?
+          fallback = default_segment_for_security_id(sid)
+          seg = fallback unless fallback.nil?
+        end
+        { ExchangeSegment: seg.to_s, SecurityId: sid }
       end
 
       # Normalizes all instruments in the provided list.
@@ -69,6 +76,15 @@ module DhanHQ
       # @return [String]
       def self.from_code(code_byte)
         CODE_TO_STRING[code_byte] || code_byte.to_s
+      end
+
+      # Known security ids that must be subscribed on the index segment.
+      INDEX_SECURITY_IDS = %w[13 25 51].freeze
+
+      def self.default_segment_for_security_id(security_id)
+        return "IDX_I" if INDEX_SECURITY_IDS.include?(security_id.to_s)
+
+        nil
       end
     end
   end
