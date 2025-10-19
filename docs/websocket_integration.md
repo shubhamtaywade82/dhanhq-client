@@ -73,11 +73,17 @@ orders_client.stop
 ### 4. Market Depth WebSocket
 
 ```ruby
-# Real-time market depth for stocks
-symbols = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
-]
+# Real-time market depth for stocks (using dynamic symbol resolution with underlying_symbol)
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
+symbols = []
+if reliance
+  symbols << { symbol: "RELIANCE", exchange_segment: reliance.exchange_segment, security_id: reliance.security_id }
+end
+if tcs
+  symbols << { symbol: "TCS", exchange_segment: tcs.exchange_segment, security_id: tcs.security_id }
+end
 
 depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
   puts "Market Depth: #{depth_data[:symbol]}"
@@ -148,16 +154,48 @@ client.unsubscribe_one(segment: "IDX_I", security_id: "13")
 #### Finding Correct Security IDs
 
 ```ruby
-# Find instruments by segment
+# Method 1: Using the new .find method (recommended)
+# For equity instruments, uses underlying_symbol (e.g., "RELIANCE" instead of "RELIANCE INDUSTRIES LTD")
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+nifty = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+
+puts "RELIANCE Security ID: #{reliance.security_id}"  # 2885
+puts "TCS Security ID: #{tcs.security_id}"          # 11536
+puts "NIFTY Security ID: #{nifty.security_id}"       # 13
+
+# Method 2: Using .find_anywhere for cross-segment search
+reliance_anywhere = DhanHQ::Models::Instrument.find_anywhere("RELIANCE")
+puts "RELIANCE found in: #{reliance_anywhere.exchange_segment}:#{reliance_anywhere.security_id}"
+
+# Method 3: Manual search (legacy)
 nse_instruments = DhanHQ::Models::Instrument.by_segment("NSE_EQ")
 idx_instruments = DhanHQ::Models::Instrument.by_segment("IDX_I")
 
-# Search for specific symbols
-reliance = nse_instruments.select { |i| i.symbol_name == "RELIANCE INDUSTRIES LTD" }
-nifty = idx_instruments.select { |i| i.symbol_name == "NIFTY" }
+reliance_manual = nse_instruments.select { |i| i.symbol_name == "RELIANCE INDUSTRIES LTD" }
+nifty_manual = idx_instruments.select { |i| i.symbol_name == "NIFTY" }
 
-puts "RELIANCE Security ID: #{reliance.first.security_id}"  # 2885
-puts "NIFTY Security ID: #{nifty.first.security_id}"       # 13
+puts "RELIANCE Security ID: #{reliance_manual.first.security_id}"  # 2885
+puts "NIFTY Security ID: #{nifty_manual.first.security_id}"       # 13
+```
+
+#### Advanced Symbol Search Options
+
+```ruby
+# Exact match search
+reliance_exact = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE INDUSTRIES LTD", exact_match: true)
+
+# Case sensitive search
+reliance_case = DhanHQ::Models::Instrument.find("NSE_EQ", "reliance industries ltd", case_sensitive: true)
+
+# Search across specific segments only
+reliance_limited = DhanHQ::Models::Instrument.find_anywhere("RELIANCE", segments: ["NSE_EQ", "BSE_EQ"])
+
+# Find multiple instruments
+symbols = ["RELIANCE INDUSTRIES LTD", "TATA CONSULTANCY SERV LT", "NIFTY", "BANKNIFTY"]
+instruments = symbols.map do |symbol|
+  DhanHQ::Models::Instrument.find_anywhere(symbol, exact_match: true)
+end.compact
 ```
 
 ### Order Update WebSocket
@@ -235,13 +273,34 @@ The Market Depth WebSocket provides real-time market depth data including bid/as
 #### Basic Usage
 
 ```ruby
-# Define symbols with correct exchange segments and security IDs
-symbols = [
+# Method 1: Using the new .find method (recommended)
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
+symbols = []
+if reliance
+  symbols << { symbol: "RELIANCE", exchange_segment: reliance.exchange_segment, security_id: reliance.security_id }
+end
+if tcs
+  symbols << { symbol: "TCS", exchange_segment: tcs.exchange_segment, security_id: tcs.security_id }
+end
+
+depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
+  puts "Market Depth: #{depth_data[:symbol]}"
+  puts "  Best Bid: #{depth_data[:best_bid]}"
+  puts "  Best Ask: #{depth_data[:best_ask]}"
+  puts "  Spread: #{depth_data[:spread]}"
+  puts "  Bid Levels: #{depth_data[:bids].size}"
+  puts "  Ask Levels: #{depth_data[:asks].size}"
+end
+
+# Method 2: Direct specification (legacy)
+symbols_direct = [
   { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
   { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
 ]
 
-depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
+depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols_direct) do |depth_data|
   puts "Market Depth: #{depth_data[:symbol]}"
   puts "  Best Bid: #{depth_data[:best_bid]}"
   puts "  Best Ask: #{depth_data[:best_ask]}"
@@ -282,16 +341,175 @@ client.subscribe(symbols)
 #### Finding Correct Symbols
 
 ```ruby
-# Find correct exchange segment and security ID
+# Method 1: Using the new .find method (recommended)
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
+puts "RELIANCE: #{reliance.exchange_segment}:#{reliance.security_id}"  # NSE:2885
+puts "TCS: #{tcs.exchange_segment}:#{tcs.security_id}"                 # NSE:11536
+
+# Method 2: Using .find_anywhere for cross-segment search
+reliance_anywhere = DhanHQ::Models::Instrument.find_anywhere("RELIANCE")
+tcs_anywhere = DhanHQ::Models::Instrument.find_anywhere("TCS")
+
+puts "RELIANCE found in: #{reliance_anywhere.exchange_segment}:#{reliance_anywhere.security_id}"
+puts "TCS found in: #{tcs_anywhere.exchange_segment}:#{tcs_anywhere.security_id}"
+
+# Method 3: Manual search (legacy)
 nse_instruments = DhanHQ::Models::Instrument.by_segment("NSE_EQ")
 
-# Search for specific stocks
-reliance = nse_instruments.select { |i| i.symbol_name == "RELIANCE INDUSTRIES LTD" }
-tcs = nse_instruments.select { |i| i.symbol_name == "TATA CONSULTANCY SERV LT" }
+reliance_manual = nse_instruments.select { |i| i.underlying_symbol == "RELIANCE" }
+tcs_manual = nse_instruments.select { |i| i.underlying_symbol == "TCS" }
 
-puts "RELIANCE: NSE_EQ:#{reliance.first.security_id}"  # NSE_EQ:2885
-puts "TCS: NSE_EQ:#{tcs.first.security_id}"           # NSE_EQ:11536
+puts "RELIANCE: NSE_EQ:#{reliance_manual.first.security_id}"  # NSE_EQ:2885
+puts "TCS: NSE_EQ:#{tcs_manual.first.security_id}"           # NSE_EQ:11536
 ```
+
+## Instrument Model with Trading Fields
+
+The DhanHQ Instrument model now includes comprehensive trading fields essential for order validation, risk management, and compliance monitoring.
+
+### Available Trading Fields
+
+```ruby
+# Find an instrument with all trading fields
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+
+# Core identification fields
+puts "Symbol: #{reliance.symbol_name}"                    # RELIANCE INDUSTRIES LTD
+puts "Underlying Symbol: #{reliance.underlying_symbol}"  # RELIANCE
+puts "Security ID: #{reliance.security_id}"              # 2885
+puts "ISIN: #{reliance.isin}"                            # INE002A01018
+puts "Instrument Type: #{reliance.instrument_type}"      # ES
+
+# Trading permission and restrictions
+puts "Buy/Sell Indicator: #{reliance.buy_sell_indicator}" # A (Allowed)
+puts "Bracket Flag: #{reliance.bracket_flag}"            # N (Not Allowed)
+puts "Cover Flag: #{reliance.cover_flag}"                # N (Not Allowed)
+puts "ASM/GSM Flag: #{reliance.asm_gsm_flag}"           # N (No Restrictions)
+puts "ASM/GSM Category: #{reliance.asm_gsm_category}"    # NA
+
+# Margin and leverage information
+puts "Buy CO Min Margin %: #{reliance.buy_co_min_margin_per}"   # 0.0
+puts "Sell CO Min Margin %: #{reliance.sell_co_min_margin_per}" # 0.0
+puts "MTF Leverage: #{reliance.mtf_leverage}"                  # 4.545455
+
+# Expiry information
+puts "Expiry Flag: #{reliance.expiry_flag}"              # NA (No Expiry)
+puts "Expiry Date: #{reliance.expiry_date}"              # nil
+```
+
+### Trading Field Usage Examples
+
+#### Order Validation
+```ruby
+def validate_order(instrument, order_type)
+  # Check if trading is allowed
+  return false unless instrument.buy_sell_indicator == "A"
+
+  # Check order type support
+  case order_type
+  when :bracket
+    return false unless instrument.bracket_flag == "Y"
+  when :cover
+    return false unless instrument.cover_flag == "Y"
+  end
+
+  # Check ASM/GSM restrictions
+  if instrument.asm_gsm_flag == "Y"
+    puts "Warning: ASM/GSM applied - #{instrument.asm_gsm_category}"
+  end
+
+  true
+end
+
+# Usage
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+if validate_order(reliance, :bracket)
+  puts "Bracket order allowed for RELIANCE"
+else
+  puts "Bracket order not allowed for RELIANCE"
+end
+```
+
+#### Margin Calculations
+```ruby
+def calculate_margin(instrument, quantity, price)
+  total_value = quantity * price * instrument.lot_size
+
+  # Calculate margin requirements
+  buy_margin = total_value * (instrument.buy_co_min_margin_per / 100.0)
+  sell_margin = total_value * (instrument.sell_co_min_margin_per / 100.0)
+
+  # Calculate MTF leverage
+  mtf_value = instrument.mtf_leverage > 0 ? total_value * instrument.mtf_leverage : 0
+
+  {
+    total_value: total_value,
+    buy_margin: buy_margin,
+    sell_margin: sell_margin,
+    mtf_value: mtf_value,
+    mtf_leverage: instrument.mtf_leverage
+  }
+end
+
+# Usage
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+margin_info = calculate_margin(reliance, 10, 2500)
+puts "Total Value: ₹#{margin_info[:total_value]}"
+puts "MTF Leverage: #{margin_info[:mtf_leverage]}x"
+puts "MTF Value: ₹#{margin_info[:mtf_value]}"
+```
+
+#### Risk Management
+```ruby
+def assess_risk(instrument)
+  risk_factors = []
+
+  # Check ASM/GSM status
+  if instrument.asm_gsm_flag == "Y"
+    risk_factors << "ASM/GSM Applied: #{instrument.asm_gsm_category}"
+  end
+
+  # Check expiry
+  if instrument.expiry_flag == "Y"
+    risk_factors << "Instrument has expiry: #{instrument.expiry_date}"
+  end
+
+  # Check high leverage
+  if instrument.mtf_leverage > 5.0
+    risk_factors << "High MTF leverage: #{instrument.mtf_leverage}x"
+  end
+
+  risk_factors
+end
+
+# Usage
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+risks = assess_risk(reliance)
+if risks.any?
+  puts "Risk factors:"
+  risks.each { |risk| puts "  - #{risk}" }
+else
+  puts "No significant risk factors identified"
+end
+```
+
+### Trading Fields Reference
+
+| Field                    | Type   | Description                                    | Example Values              |
+| ------------------------ | ------ | ---------------------------------------------- | --------------------------- |
+| `isin`                   | String | International Securities Identification Number | "INE002A01018"              |
+| `instrument_type`        | String | Instrument classification                      | "ES", "INDEX", "FUT", "OPT" |
+| `expiry_flag`            | String | Whether instrument has expiry                  | "Y", "N", "NA"              |
+| `bracket_flag`           | String | Whether bracket orders are allowed             | "Y", "N"                    |
+| `cover_flag`             | String | Whether cover orders are allowed               | "Y", "N"                    |
+| `asm_gsm_flag`           | String | Additional Surveillance Measure flag           | "Y", "N"                    |
+| `asm_gsm_category`       | String | ASM/GSM category classification                | "ASM", "GSM", "NA"          |
+| `buy_sell_indicator`     | String | Whether instrument allows buy/sell             | "A", "N"                    |
+| `buy_co_min_margin_per`  | Float  | Buy CO minimum margin percentage               | 0.0, 20.0                   |
+| `sell_co_min_margin_per` | Float  | Sell CO minimum margin percentage              | 0.0, 20.0                   |
+| `mtf_leverage`           | Float  | Margin Trading Facility leverage               | 0.0, 4.545455               |
 
 ## Rails Integration
 
@@ -393,13 +611,13 @@ class OrderUpdateService
     order = Order.find_by(order_no: order_update.order_no)
     if order
       order.update!(
-        status: order_update.status,
-        traded_qty: order_update.traded_qty,
-        avg_price: order_update.avg_traded_price
-      )
+      status: order_update.status,
+      traded_qty: order_update.traded_qty,
+      avg_price: order_update.avg_traded_price
+    )
 
       # Broadcast to user
-      ActionCable.server.broadcast(
+    ActionCable.server.broadcast(
         "order_updates_#{order.user_id}",
         {
           order_no: order_update.order_no,

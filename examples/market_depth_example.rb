@@ -38,11 +38,32 @@ puts "================================="
 # Create a single market depth WebSocket connection
 puts "Creating Market Depth WebSocket connection..."
 
+# Find instruments using the new .find method (now uses underlying_symbol for equity)
+reliance_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
 # Define symbols with correct exchange segments and security IDs
-symbols = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
-]
+symbols = []
+if reliance_instrument
+  symbols << { symbol: "RELIANCE", exchange_segment: reliance_instrument.exchange_segment,
+               security_id: reliance_instrument.security_id }
+  puts "✅ Found RELIANCE: #{reliance_instrument.symbol_name} (#{reliance_instrument.exchange_segment}:#{reliance_instrument.security_id})"
+else
+  puts "❌ Could not find RELIANCE INDUSTRIES LTD"
+end
+
+if tcs_instrument
+  symbols << { symbol: "TCS", exchange_segment: tcs_instrument.exchange_segment,
+               security_id: tcs_instrument.security_id }
+  puts "✅ Found TCS: #{tcs_instrument.symbol_name} (#{tcs_instrument.exchange_segment}:#{tcs_instrument.security_id})"
+else
+  puts "❌ Could not find TATA CONSULTANCY SERV LT"
+end
+
+if symbols.empty?
+  puts "❌ No symbols found. Exiting..."
+  exit(1)
+end
 
 depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
   puts "Market Depth: #{depth_data[:symbol]}"
@@ -115,8 +136,9 @@ puts ""
 puts "Summary:"
 puts "- Successfully demonstrated Market Depth WebSocket"
 puts "- Real-time bid/ask level tracking:"
-puts "  * RELIANCE (Reliance Industries) - NSE_EQ:2885"
-puts "  * TCS (Tata Consultancy Services) - NSE_EQ:11536"
+puts "  * RELIANCE (Reliance Industries) - dynamically resolved using .find method"
+puts "  * TCS (Tata Consultancy Services) - dynamically resolved using .find method"
 puts "- Order book depth visualization"
 puts "- Used single connection to avoid rate limiting (429 errors)"
 puts "- Proper connection cleanup prevents resource leaks"
+puts "- Dynamic symbol resolution using DhanHQ::Models::Instrument.find"

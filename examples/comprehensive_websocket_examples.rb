@@ -92,11 +92,23 @@ puts "=================================="
 
 puts "Creating Market Depth WebSocket connection..."
 
+# Find instruments using the new .find method (now uses underlying_symbol for equity)
+reliance_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
 # Define symbols with correct exchange segments and security IDs
-symbols = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
-]
+symbols = []
+if reliance_instrument
+  symbols << { symbol: "RELIANCE", exchange_segment: reliance_instrument.exchange_segment,
+               security_id: reliance_instrument.security_id }
+  puts "✅ Found RELIANCE: #{reliance_instrument.symbol_name} (#{reliance_instrument.exchange_segment}:#{reliance_instrument.security_id})"
+end
+
+if tcs_instrument
+  symbols << { symbol: "TCS", exchange_segment: tcs_instrument.exchange_segment,
+               security_id: tcs_instrument.security_id }
+  puts "✅ Found TCS: #{tcs_instrument.symbol_name} (#{tcs_instrument.exchange_segment}:#{tcs_instrument.security_id})"
+end
 
 depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
   puts "Market Depth: #{depth_data[:symbol]}"
@@ -130,7 +142,7 @@ puts "Summary:"
 puts "- Successfully demonstrated all three WebSocket types:"
 puts "  * Market Feed: Real-time index data (NIFTY, BANKNIFTY, NIFTYIT, SENSEX)"
 puts "  * Order Update: Real-time order status tracking"
-puts "  * Market Depth: Real-time bid/ask levels (RELIANCE:NSE_EQ:2885, TCS:NSE_EQ:11536)"
+puts "  * Market Depth: Real-time bid/ask levels (RELIANCE, TCS) - dynamically resolved"
 puts "- Used sequential connections to avoid rate limiting (429 errors)"
 puts "- Proper connection cleanup prevents resource leaks"
 puts "- No multiple connection issues!"

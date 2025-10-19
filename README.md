@@ -158,6 +158,7 @@ The DhanHQ gem provides comprehensive WebSocket integration with three distinct 
 - **🧵 Thread-Safe Operation** - Safe for Rails applications and multi-threaded environments
 - **📊 Comprehensive Examples** - Ready-to-use examples for all WebSocket types
 - **🛡️ Error Handling** - Robust error handling and connection management
+- **🔍 Dynamic Symbol Resolution** - Easy instrument lookup using `.find()` method
 
 ### 1. Orders WebSocket - Real-time Order Updates
 
@@ -216,11 +217,17 @@ end
 Get real-time market depth data including bid/ask levels and order book information.
 
 ```ruby
-# Subscribe to market depth for specific symbols with correct exchange segments and security IDs
-symbols = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
-]
+# Real-time market depth for stocks (using dynamic symbol resolution with underlying_symbol)
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+
+symbols = []
+if reliance
+  symbols << { symbol: "RELIANCE", exchange_segment: reliance.exchange_segment, security_id: reliance.security_id }
+end
+if tcs
+  symbols << { symbol: "TCS", exchange_segment: tcs.exchange_segment, security_id: tcs.security_id }
+end
 
 DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
   puts "Market Depth: #{depth_data[:symbol]}"
@@ -287,11 +294,44 @@ bundle exec ruby examples/market_depth_example.rb
 bundle exec ruby examples/comprehensive_websocket_examples.rb
 ```
 
+### Instrument Model with Trading Fields
+
+The Instrument model now includes comprehensive trading fields for order validation, risk management, and compliance:
+
+```ruby
+# Find instrument with trading fields
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+
+# Trading permissions and restrictions
+puts "Trading Allowed: #{reliance.buy_sell_indicator == 'A'}"
+puts "Bracket Orders: #{reliance.bracket_flag == 'Y' ? 'Supported' : 'Not Supported'}"
+puts "Cover Orders: #{reliance.cover_flag == 'Y' ? 'Supported' : 'Not Supported'}"
+puts "ASM/GSM Status: #{reliance.asm_gsm_flag == 'Y' ? reliance.asm_gsm_category : 'No Restrictions'}"
+
+# Margin and leverage information
+puts "ISIN: #{reliance.isin}"
+puts "MTF Leverage: #{reliance.mtf_leverage}x"
+puts "Buy Margin %: #{reliance.buy_co_min_margin_per}%"
+puts "Sell Margin %: #{reliance.sell_co_min_margin_per}%"
+```
+
+**Available Trading Fields:**
+- `isin` - International Securities Identification Number
+- `instrument_type` - Classification (ES, INDEX, FUT, OPT)
+- `expiry_flag` - Whether instrument has expiry
+- `bracket_flag` - Bracket order support
+- `cover_flag` - Cover order support
+- `asm_gsm_flag` - Additional Surveillance Measure status
+- `buy_sell_indicator` - Trading permission
+- `buy_co_min_margin_per` - Buy CO minimum margin percentage
+- `sell_co_min_margin_per` - Sell CO minimum margin percentage
+- `mtf_leverage` - Margin Trading Facility leverage
+
 ### Comprehensive Documentation
 
 The gem includes detailed documentation for different integration scenarios:
 
-- **[WebSocket Integration Guide](docs/websocket_integration.md)** - Complete guide covering all WebSocket types
+- **[WebSocket Integration Guide](docs/websocket_integration.md)** - Complete guide covering all WebSocket types and trading fields
 - **[Rails Integration Guide](docs/rails_websocket_integration.md)** - Rails-specific patterns and best practices
 - **[Standalone Ruby Guide](docs/standalone_ruby_websocket_integration.md)** - Scripts, daemons, and CLI tools
 
