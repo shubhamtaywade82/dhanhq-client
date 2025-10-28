@@ -6,7 +6,7 @@ module DhanHQ
   module Models
     # Model wrapper for fetching instruments by exchange segment.
     class Instrument < BaseModel
-      attributes :security_id, :symbol_name, :display_name, :exchange_segment, :instrument, :series,
+      attributes :security_id, :symbol_name, :display_name, :exchange, :segment, :exchange_segment, :instrument, :series,
                  :lot_size, :tick_size, :expiry_date, :strike_price, :option_type, :underlying_symbol,
                  :isin, :instrument_type, :expiry_flag, :bracket_flag, :cover_flag, :asm_gsm_flag,
                  :asm_gsm_category, :buy_sell_indicator, :buy_co_min_margin_per, :sell_co_min_margin_per,
@@ -112,11 +112,24 @@ module DhanHQ
         end
 
         def normalize_csv_row(row)
+          # Extract exchange and segment from CSV
+          exchange_id = row["EXCH_ID"] || row["EXCHANGE"]
+          segment_code = row["SEGMENT"]
+
+          # Calculate exchange_segment using SEGMENT_MAP from Constants
+          exchange_segment = if exchange_id && segment_code
+                               DhanHQ::Constants::SEGMENT_MAP[[exchange_id, segment_code]]
+                             else
+                               row["EXCH_ID"] # Fallback to original value
+                             end
+
           {
             security_id: row["SECURITY_ID"].to_s,
             symbol_name: row["SYMBOL_NAME"],
             display_name: row["DISPLAY_NAME"],
-            exchange_segment: row["EXCH_ID"],
+            exchange: exchange_id,
+            segment: segment_code,
+            exchange_segment: exchange_segment,
             instrument: row["INSTRUMENT"],
             series: row["SERIES"],
             lot_size: row["LOT_SIZE"]&.to_f,

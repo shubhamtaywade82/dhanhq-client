@@ -138,6 +138,22 @@ module DhanHQ
       /v2/instrument/
     ].freeze
 
+    # Mapping of exchange and segment combinations to canonical exchange segment names.
+    # Used for translating between CSV column values (EXCH_ID, SEGMENT) and API segment names.
+    # Key format: [exchange, segment] => exchange_segment
+    # Example: ["NSE", "E"] => "NSE_EQ"
+    SEGMENT_MAP = {
+      %w[NSE E] => "NSE_EQ",
+      %w[BSE E] => "BSE_EQ",
+      %w[NSE D] => "NSE_FNO",
+      %w[BSE D] => "BSE_FNO",
+      %w[NSE C] => "NSE_CURRENCY",
+      %w[BSE C] => "BSE_CURRENCY",
+      %w[MCX M] => "MCX_COMM",
+      %w[NSE I] => "IDX_I",
+      %w[BSE I] => "IDX_I"
+    }.freeze
+
     # Mapping of DhanHQ error codes to SDK error classes for consistent exception handling.
     DHAN_ERROR_MAPPING = {
       "DH-901" => DhanHQ::InvalidAuthenticationError,
