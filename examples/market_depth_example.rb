@@ -74,14 +74,14 @@ depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
   puts "  Ask Levels: #{depth_data[:asks].size}"
 
   # Show top 3 bid/ask levels if available
-  if depth_data[:bids] && depth_data[:bids].size > 0
+  if depth_data[:bids]&.size&.positive?
     puts "  Top Bids:"
     depth_data[:bids].first(3).each_with_index do |bid, i|
       puts "    #{i + 1}. Price: #{bid[:price]}, Qty: #{bid[:quantity]}"
     end
   end
 
-  if depth_data[:asks] && depth_data[:asks].size > 0
+  if depth_data[:asks]&.size&.positive?
     puts "  Top Asks:"
     depth_data[:asks].first(3).each_with_index do |ask, i|
       puts "    #{i + 1}. Price: #{ask[:price]}, Qty: #{ask[:quantity]}"

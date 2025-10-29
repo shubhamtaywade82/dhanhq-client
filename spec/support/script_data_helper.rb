@@ -131,7 +131,7 @@ module ScriptDataHelper
 
   # Print available securities for debugging
   def self.print_available_securities
-    puts "\n" + ("=" * 60)
+    puts "\n#{"=" * 60}"
     puts "Available Securities for Testing:"
     puts "=" * 60
 

@@ -38,7 +38,8 @@ module DhanHQ
     # @return [DhanHQ::Client] A new client instance.
     def initialize(api_type:)
       DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
-      @rate_limiter = RateLimiter.new(api_type)
+      # Use shared rate limiter instance per API type to ensure proper coordination
+      @rate_limiter = RateLimiter.for(api_type)
 
       raise "RateLimiter initialization failed" unless @rate_limiter
 

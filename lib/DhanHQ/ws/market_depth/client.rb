@@ -213,7 +213,9 @@ module DhanHQ
 
           instrument = find_instrument(symbol_code, segment_hint)
           unless instrument
-            DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth] Unable to locate instrument for #{symbol_code} (segment hint: #{segment_hint || 'AUTO'})")
+            DhanHQ.logger&.warn(
+              "[DhanHQ::WS::MarketDepth] Unable to locate instrument for #{symbol_code} (segment hint: #{segment_hint || "AUTO"})"
+            )
             return nil
           end
 

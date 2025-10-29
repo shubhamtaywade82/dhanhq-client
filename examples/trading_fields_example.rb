@@ -109,7 +109,7 @@ def calculate_margin_requirements(instrument, name, quantity, price)
   puts "   Sell CO Margin Required: ₹#{sell_margin}"
 
   # Calculate MTF leverage
-  if instrument.mtf_leverage > 0
+  if instrument.mtf_leverage.positive?
     mtf_value = total_value * instrument.mtf_leverage
     puts "   MTF Leverage: #{instrument.mtf_leverage}x"
     puts "   MTF Value: ₹#{mtf_value}"

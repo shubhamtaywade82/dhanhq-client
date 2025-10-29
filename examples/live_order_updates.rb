@@ -101,7 +101,7 @@ summary_timer = Thread.new do
       end
     end
 
-    puts "\n" + ("=" * 50)
+    puts "\n#{"=" * 50}"
   end
 end
 

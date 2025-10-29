@@ -33,7 +33,7 @@ RSpec.describe DhanHQ::Client do
     # end
 
     it "raises an error if RateLimiter fails to initialize" do
-      allow(DhanHQ::RateLimiter).to receive(:new).and_return(nil)
+      allow(DhanHQ::RateLimiter).to receive(:for).and_return(nil)
       expect { described_class.new(api_type: api_type) }.to raise_error("RateLimiter initialization failed")
     end
   end

@@ -208,7 +208,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       result = contract.call(params)
 
       expect(result.failure?).to be true
-        expect(result.errors[:required_data]).to include(/must be filled/)
+      expect(result.errors[:required_data]).to include(/must be filled/)
     end
   end
 

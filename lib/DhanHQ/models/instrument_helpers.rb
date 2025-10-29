@@ -8,13 +8,26 @@ module DhanHQ
       ##
       # Fetches last traded price (LTP) for this instrument.
       #
-      # @return [Hash] Market feed LTP response
+      # @return [Float, nil] Last traded price value, or nil if not available
       # @example
       #   instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
-      #   instrument.ltp
+      #   instrument.ltp  # => 26053.9
       def ltp
         params = build_market_feed_params
-        DhanHQ::Models::MarketFeed.ltp(params)
+        response = DhanHQ::Models::MarketFeed.ltp(params)
+
+        # Extract last_price from nested response structure
+        # Response format: {"data" => {"EXCHANGE_SEGMENT" => {"security_id" => {"last_price" => value}}}, "status" => "success"}
+        data = response[:data] || response["data"]
+        return nil unless data
+
+        segment_data = data[exchange_segment] || data[exchange_segment.to_sym]
+        return nil unless segment_data
+
+        security_data = segment_data[security_id] || segment_data[security_id.to_s]
+        return nil unless security_data
+
+        security_data[:last_price] || security_data["last_price"]
       end
 
       ##

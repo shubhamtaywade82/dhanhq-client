@@ -25,8 +25,8 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
         "ce" => {
           "iv" => [0.25, 0.26],
           "oi" => [1000, 1200],
-          "strike" => [18000, 18000],
-          "spot" => [18000, 18050],
+          "strike" => [18_000, 18_000],
+          "spot" => [18_000, 18_050],
           "open" => [354, 360.3],
           "high" => [358, 365],
           "low" => [352, 358],
@@ -177,7 +177,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       it "returns strike data" do
         strikes = expired_options_data.strike_data("CALL")
 
-        expect(strikes).to eq([18000, 18000])
+        expect(strikes).to eq([18_000, 18_000])
       end
     end
 
@@ -185,7 +185,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       it "returns spot data" do
         spots = expired_options_data.spot_data("CALL")
 
-        expect(spots).to eq([18000, 18050])
+        expect(spots).to eq([18_000, 18_050])
       end
     end
 

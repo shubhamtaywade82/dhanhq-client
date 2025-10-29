@@ -13,9 +13,6 @@ module DhanHQ
         # Initialize Orders WebSocket connection
         # @param url [String] WebSocket endpoint URL
         # @param options [Hash] Connection options
-        def initialize(url:, **options)
-          super
-        end
 
         private
 

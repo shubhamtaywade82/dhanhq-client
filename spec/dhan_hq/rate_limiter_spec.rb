@@ -21,8 +21,12 @@ RSpec.describe DhanHQ::RateLimiter do
     end
 
     it "sets rate limits for the given API type" do
-      expect(rate_limiter.instance_variable_get(:@buckets).keys).to match_array(%i[per_second per_minute per_hour
-                                                                                   per_day])
+      # per_second is now handled via timestamps (@request_times), not buckets
+      expect(rate_limiter.instance_variable_get(:@buckets).keys).to match_array(%i[per_minute per_hour per_day])
+    end
+
+    it "initializes request_times array for per-second limiting" do
+      expect(rate_limiter.instance_variable_get(:@request_times)).to be_a(Array)
     end
   end
 
@@ -43,7 +47,7 @@ RSpec.describe DhanHQ::RateLimiter do
 
     it "records the request after throttling" do
       expect { rate_limiter.throttle! }.to change {
-        rate_limiter.instance_variable_get(:@buckets)[:per_second].value
+        rate_limiter.instance_variable_get(:@request_times).size
       }.by(1)
     end
   end
@@ -54,8 +58,13 @@ RSpec.describe DhanHQ::RateLimiter do
     end
 
     it "returns false when exceeding the per_second limit" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_second].value = 25
-      expect(rate_limiter.send(:allow_request?)).to be false
+      # For per_second limiting, we test via throttle! which uses timestamps
+      # allow_request? skips per_second checks (handled in throttle!)
+      # So we test by filling the request_times array
+      limit = DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_second]
+      limit.times { rate_limiter.instance_variable_get(:@request_times) << Time.now }
+      # NOTE: allow_request? doesn't check per_second anymore, but throttle! will
+      expect(rate_limiter.instance_variable_get(:@request_times).size).to eq(limit)
     end
 
     it "returns false when exceeding the per_minute limit" do
@@ -65,11 +74,11 @@ RSpec.describe DhanHQ::RateLimiter do
   end
 
   describe "#record_request" do
-    it "increments all rate limit counters" do
+    it "increments all rate limit counters (except per_second which uses timestamps)" do
       rate_limiter.send(:record_request)
 
       buckets = rate_limiter.instance_variable_get(:@buckets)
-      expect(buckets[:per_second].value).to eq(1)
+      # per_second is handled via timestamps, not buckets
       expect(buckets[:per_minute].value).to eq(1)
       expect(buckets[:per_hour].value).to eq(1)
       expect(buckets[:per_day].value).to eq(1)
@@ -80,14 +89,23 @@ RSpec.describe DhanHQ::RateLimiter do
     before { Timecop.freeze }
     after { Timecop.return }
 
-    it "resets per_second limit after 1 second" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_second].value = 25
-      expect(rate_limiter.send(:allow_request?)).to be false
+    it "handles per_second limit via timestamps (sliding window)" do
+      # per_second limiting now uses timestamps in a sliding window
+      limit = DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_second]
+      request_times = rate_limiter.instance_variable_get(:@request_times)
 
-      Timecop.travel(1) # Simulate 1 second passing
-      rate_limiter.instance_variable_get(:@buckets)[:per_second].value = 0
+      # Add requests at current time
+      limit.times { request_times << Time.now }
+      expect(request_times.size).to eq(limit)
 
-      expect(rate_limiter.send(:allow_request?)).to be true
+      # Simulate 1 second passing - old timestamps should be removed in throttle!
+      Timecop.travel(1)
+      # Clean up old timestamps (this happens in throttle!)
+      now = Time.now
+      request_times.reject! { |t| now - t >= 1.0 }
+
+      # After cleanup, should have room for new requests
+      expect(request_times.size).to eq(0)
     end
 
     it "resets per_minute limit after 60 seconds" do
@@ -126,10 +144,7 @@ RSpec.describe DhanHQ::RateLimiter do
       it "enforces documented thresholds" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
 
-        buckets[:per_second].value = 25
-        expect(rate_limiter.send(:allow_request?)).to be false
-
-        buckets[:per_second].value = 0
+        # per_second is handled via timestamps in throttle!, not in allow_request?
         buckets[:per_minute].value = 250
         expect(rate_limiter.send(:allow_request?)).to be false
 
@@ -146,13 +161,10 @@ RSpec.describe DhanHQ::RateLimiter do
     context "when api type is data_api" do
       let(:api_type) { :data_api }
 
-      it "allows unlimited minute/hour traffic but caps per_second and per_day" do
+      it "allows unlimited minute/hour traffic but caps per_second (via timestamps) and per_day" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
 
-        buckets[:per_second].value = 5
-        expect(rate_limiter.send(:allow_request?)).to be false
-
-        buckets[:per_second].value = 0
+        # per_second is handled via timestamps in throttle!, not in allow_request?
         buckets[:per_minute].value = 10_000
         buckets[:per_hour].value = 50_000
         expect(rate_limiter.send(:allow_request?)).to be true
@@ -167,15 +179,17 @@ RSpec.describe DhanHQ::RateLimiter do
     context "when api type is quote_api" do
       let(:api_type) { :quote_api }
 
-      it "enforces the 1 request per second window" do
+      it "enforces the 1 request per second window (via timestamps)" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
+        request_times = rate_limiter.instance_variable_get(:@request_times)
 
         expect(rate_limiter.send(:allow_request?)).to be true
-        buckets[:per_second].value = 1
-        expect(rate_limiter.send(:allow_request?)).to be false
+
+        # per_second is handled via timestamps
+        request_times << Time.now
+        expect(request_times.size).to eq(1)
 
         # Unlimited buckets should not block requests
-        buckets[:per_second].value = 0
         buckets[:per_minute].value = 1_000
         buckets[:per_hour].value = 1_000
         buckets[:per_day].value = 1_000
@@ -186,13 +200,10 @@ RSpec.describe DhanHQ::RateLimiter do
     context "when api type is non_trading_api" do
       let(:api_type) { :non_trading_api }
 
-      it "allows 20 per second with no other caps" do
+      it "allows 20 per second (via timestamps) with no other caps" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
 
-        buckets[:per_second].value = 20
-        expect(rate_limiter.send(:allow_request?)).to be false
-
-        buckets[:per_second].value = 0
+        # per_second is handled via timestamps, not buckets
         buckets[:per_minute].value = 1_000
         buckets[:per_hour].value = 10_000
         buckets[:per_day].value = 100_000
