@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [2.1.7] - 2025-01-28
+
+### Added
+- **Instrument instance methods**: Added convenience methods to Instrument model for accessing market feed, historical data, and option chain data
+  - `instrument.ltp` - Fetches last traded price using `DhanHQ::Models::MarketFeed.ltp`
+  - `instrument.ohlc` - Fetches OHLC data using `DhanHQ::Models::MarketFeed.ohlc`
+  - `instrument.quote` - Fetches full quote depth using `DhanHQ::Models::MarketFeed.quote`
+  - `instrument.daily(from_date:, to_date:, **options)` - Fetches daily historical data using `DhanHQ::Models::HistoricalData.daily`
+  - `instrument.intraday(from_date:, to_date:, interval:, **options)` - Fetches intraday historical data using `DhanHQ::Models::HistoricalData.intraday`
+  - `instrument.expiry_list` - Fetches expiry list using `DhanHQ::Models::OptionChain.fetch_expiry_list`
+  - `instrument.option_chain(expiry:)` - Fetches option chain using `DhanHQ::Models::OptionChain.fetch`
+  - All methods automatically use the instrument's `security_id`, `exchange_segment`, and `instrument` attributes
+- **InstrumentHelpers module**: Created reusable module to provide these convenience methods
+
 ### Changed
 - Align Super Order documentation across README, README1, and GUIDE with the latest API contract (place, modify, cancel, list).
 - Normalise remaining documentation examples to snake_case, including order update WebSocket callbacks and kill switch response guidance.

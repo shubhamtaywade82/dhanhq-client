@@ -327,6 +327,49 @@ puts "Sell Margin %: #{reliance.sell_co_min_margin_per}%"
 - `sell_co_min_margin_per` - Sell CO minimum margin percentage
 - `mtf_leverage` - Margin Trading Facility leverage
 
+### Instrument Convenience Methods
+
+The Instrument model provides convenient instance methods that automatically use the instrument's attributes (`security_id`, `exchange_segment`, `instrument`) to fetch market data:
+
+```ruby
+# Find an instrument
+instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+
+# Market Feed Methods - automatically uses instrument's attributes
+ltp_data = instrument.ltp        # Last traded price
+ohlc_data = instrument.ohlc     # OHLC data
+quote_data = instrument.quote   # Full quote depth
+
+# Historical Data Methods
+daily_data = instrument.daily(
+  from_date: "2024-01-01",
+  to_date: "2024-01-31",
+  expiry_code: 0  # Optional
+)
+
+intraday_data = instrument.intraday(
+  from_date: "2024-09-11",
+  to_date: "2024-09-15",
+  interval: "15"  # 1, 5, 15, 25, or 60 minutes
+)
+
+# Option Chain Methods
+expiries = instrument.expiry_list  # Get all available expiries
+
+chain = instrument.option_chain(expiry: "2024-02-29")  # Get option chain for specific expiry
+```
+
+**Available Instance Methods:**
+- `instrument.ltp` - Fetches last traded price using `DhanHQ::Models::MarketFeed.ltp`
+- `instrument.ohlc` - Fetches OHLC data using `DhanHQ::Models::MarketFeed.ohlc`
+- `instrument.quote` - Fetches full quote depth using `DhanHQ::Models::MarketFeed.quote`
+- `instrument.daily(from_date:, to_date:, **options)` - Fetches daily historical data using `DhanHQ::Models::HistoricalData.daily`
+- `instrument.intraday(from_date:, to_date:, interval:, **options)` - Fetches intraday historical data using `DhanHQ::Models::HistoricalData.intraday`
+- `instrument.expiry_list` - Fetches expiry list using `DhanHQ::Models::OptionChain.fetch_expiry_list`
+- `instrument.option_chain(expiry:)` - Fetches option chain using `DhanHQ::Models::OptionChain.fetch`
+
+All methods automatically use the instrument's `security_id`, `exchange_segment`, and `instrument` attributes, eliminating the need to manually pass these parameters.
+
 ### Comprehensive Documentation
 
 The gem includes detailed documentation for different integration scenarios:

@@ -511,6 +511,53 @@ end
 | `sell_co_min_margin_per` | Float  | Sell CO minimum margin percentage              | 0.0, 20.0                   |
 | `mtf_leverage`           | Float  | Margin Trading Facility leverage               | 0.0, 4.545455               |
 
+### Instrument Convenience Methods
+
+The Instrument model provides convenient instance methods that automatically use the instrument's attributes (`security_id`, `exchange_segment`, `instrument`) to fetch market data. This eliminates the need to manually construct parameters for each API call.
+
+```ruby
+# Find an instrument first
+instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+
+# Market Feed Methods - automatically uses instrument's attributes
+ltp_data = instrument.ltp        # Last traded price
+ohlc_data = instrument.ohlc     # OHLC data
+quote_data = instrument.quote    # Full quote depth
+
+# Historical Data Methods
+daily_data = instrument.daily(
+  from_date: "2024-01-01",
+  to_date: "2024-01-31",
+  expiry_code: 0  # Optional, only for derivatives
+)
+
+intraday_data = instrument.intraday(
+  from_date: "2024-09-11",
+  to_date: "2024-09-15",
+  interval: "15"  # 1, 5, 15, 25, or 60 minutes
+)
+
+# Option Chain Methods (for F&O instruments)
+fn_instrument = DhanHQ::Models::Instrument.find("NSE_FNO", "NIFTY")
+expiries = fn_instrument.expiry_list  # Get all available expiries
+chain = fn_instrument.option_chain(expiry: "2024-02-29")  # Get option chain for specific expiry
+```
+
+**Available Instance Methods:**
+
+| Method                                                            | Description                      | Underlying API                                  |
+| ----------------------------------------------------------------- | -------------------------------- | ----------------------------------------------- |
+| `instrument.ltp`                                                  | Fetches last traded price        | `DhanHQ::Models::MarketFeed.ltp`                |
+| `instrument.ohlc`                                                 | Fetches OHLC data                | `DhanHQ::Models::MarketFeed.ohlc`               |
+| `instrument.quote`                                                | Fetches full quote depth         | `DhanHQ::Models::MarketFeed.quote`              |
+| `instrument.daily(from_date:, to_date:, **options)`               | Fetches daily historical data    | `DhanHQ::Models::HistoricalData.daily`          |
+| `instrument.intraday(from_date:, to_date:, interval:, **options)` | Fetches intraday historical data | `DhanHQ::Models::HistoricalData.intraday`       |
+| `instrument.expiry_list`                                          | Fetches expiry list              | `DhanHQ::Models::OptionChain.fetch_expiry_list` |
+| `instrument.option_chain(expiry:)`                                | Fetches option chain             | `DhanHQ::Models::OptionChain.fetch`             |
+
+All methods automatically extract `security_id`, `exchange_segment`, and `instrument` from the instrument instance, making it easier to work with market data without manually managing these parameters.
+
 ## Rails Integration
 
 ### Basic Rails Integration

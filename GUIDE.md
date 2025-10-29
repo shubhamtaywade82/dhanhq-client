@@ -42,9 +42,9 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 
 `configure_with_env` reads from `ENV` and raises unless both variables are set:
 
-| Variable | Description |
-| --- | --- |
-| `CLIENT_ID` | Your Dhan trading client id. |
+| Variable       | Description                                          |
+| -------------- | ---------------------------------------------------- |
+| `CLIENT_ID`    | Your Dhan trading client id.                         |
 | `ACCESS_TOKEN` | REST/WebSocket access token generated via Dhan APIs. |
 
 Provide them via `.env`, Rails credentials, or your secret manager of choice
@@ -55,14 +55,14 @@ before the initializer runs.
 Set any of the following environment variables _before_ calling
 `configure_with_env` to customise runtime behaviour:
 
-| Variable | Purpose |
-| --- | --- |
-| `DHAN_LOG_LEVEL` | Change logger verbosity (`INFO` default). |
-| `DHAN_BASE_URL` | Override the REST API host. |
-| `DHAN_WS_VERSION` | Target a specific WebSocket API version. |
-| `DHAN_WS_ORDER_URL` | Customise the order update WebSocket endpoint. |
-| `DHAN_WS_USER_TYPE` | Toggle between `SELF` and `PARTNER` streaming modes. |
-| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when streaming as a partner. |
+| Variable                                  | Purpose                                              |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `DHAN_LOG_LEVEL`                          | Change logger verbosity (`INFO` default).            |
+| `DHAN_BASE_URL`                           | Override the REST API host.                          |
+| `DHAN_WS_VERSION`                         | Target a specific WebSocket API version.             |
+| `DHAN_WS_ORDER_URL`                       | Customise the order update WebSocket endpoint.       |
+| `DHAN_WS_USER_TYPE`                       | Toggle between `SELF` and `PARTNER` streaming modes. |
+| `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when streaming as a partner.                |
 
 ---
 
@@ -106,32 +106,32 @@ order.refresh
 
 Required fields validated by `DhanHQ::Contracts::PlaceOrderContract`:
 
-| Key               | Type    | Allowed Values / Notes |
-| ----------------- | ------- | ---------------------- |
-| `transaction_type`| String  | `BUY`, `SELL` |
-| `exchange_segment`| String  | Use `DhanHQ::Constants::EXCHANGE_SEGMENTS` |
-| `product_type`    | String  | `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO` |
-| `order_type`      | String  | `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET` |
-| `validity`        | String  | `DAY`, `IOC` |
-| `security_id`     | String  | Security identifier from the scrip master |
-| `quantity`        | Integer | Must be > 0 |
+| Key                | Type    | Allowed Values / Notes                             |
+| ------------------ | ------- | -------------------------------------------------- |
+| `transaction_type` | String  | `BUY`, `SELL`                                      |
+| `exchange_segment` | String  | Use `DhanHQ::Constants::EXCHANGE_SEGMENTS`         |
+| `product_type`     | String  | `CNC`, `INTRADAY`, `MARGIN`, `MTF`, `CO`, `BO`     |
+| `order_type`       | String  | `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_MARKET` |
+| `validity`         | String  | `DAY`, `IOC`                                       |
+| `security_id`      | String  | Security identifier from the scrip master          |
+| `quantity`         | Integer | Must be > 0                                        |
 
 Optional fields and special rules:
 
-| Key                   | Type    | Notes |
-| --------------------- | ------- | ----- |
-| `correlation_id`      | String  | ≤ 25 chars; useful for idempotency |
-| `disclosed_quantity`  | Integer | ≥ 0 and ≤ 30% of `quantity` |
-| `trading_symbol`      | String  | Optional label |
-| `price`               | Float   | Mandatory for `LIMIT` |
-| `trigger_price`       | Float   | Mandatory for SL / SLM |
-| `after_market_order`  | Boolean | Require `amo_time` when true |
-| `amo_time`            | String  | `OPEN`, `OPEN_30`, `OPEN_60` (check `DhanHQ::Constants::AMO_TIMINGS` for updates) |
-| `bo_profit_value`     | Float   | Required with `product_type: "BO"` |
-| `bo_stop_loss_value`  | Float   | Required with `product_type: "BO"` |
-| `drv_expiry_date`     | String  | Pass ISO `YYYY-MM-DD` for derivatives |
-| `drv_option_type`     | String  | `CALL`, `PUT`, `NA` |
-| `drv_strike_price`    | Float   | > 0 |
+| Key                  | Type    | Notes                                                                             |
+| -------------------- | ------- | --------------------------------------------------------------------------------- |
+| `correlation_id`     | String  | ≤ 25 chars; useful for idempotency                                                |
+| `disclosed_quantity` | Integer | ≥ 0 and ≤ 30% of `quantity`                                                       |
+| `trading_symbol`     | String  | Optional label                                                                    |
+| `price`              | Float   | Mandatory for `LIMIT`                                                             |
+| `trigger_price`      | Float   | Mandatory for SL / SLM                                                            |
+| `after_market_order` | Boolean | Require `amo_time` when true                                                      |
+| `amo_time`           | String  | `OPEN`, `OPEN_30`, `OPEN_60` (check `DhanHQ::Constants::AMO_TIMINGS` for updates) |
+| `bo_profit_value`    | Float   | Required with `product_type: "BO"`                                                |
+| `bo_stop_loss_value` | Float   | Required with `product_type: "BO"`                                                |
+| `drv_expiry_date`    | String  | Pass ISO `YYYY-MM-DD` for derivatives                                             |
+| `drv_option_type`    | String  | `CALL`, `PUT`, `NA`                                                               |
+| `drv_strike_price`   | Float   | > 0                                                                               |
 
 Example:
 
@@ -212,12 +212,12 @@ DhanHQ::Models::Order.resource.slicing(payload)
 
 #### Endpoints
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `POST` | `/super/orders` | Create a new super order |
-| `PUT` | `/super/orders/{order_id}` | Modify a pending super order |
-| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg |
-| `GET` | `/super/orders` | Retrieve the list of all super orders |
+| Method   | Path                                   | Description                           |
+| -------- | -------------------------------------- | ------------------------------------- |
+| `POST`   | `/super/orders`                        | Create a new super order              |
+| `PUT`    | `/super/orders/{order_id}`             | Modify a pending super order          |
+| `DELETE` | `/super/orders/{order_id}/{order_leg}` | Cancel a pending super order leg      |
+| `GET`    | `/super/orders`                        | Retrieve the list of all super orders |
 
 #### Place Super Order
 
@@ -252,20 +252,20 @@ Request body:
 
 Key parameters:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `dhan_client_id` | string *(required)* | User specific identifier generated by Dhan. Automatically merged when you call through the Ruby model helpers. |
-| `correlation_id` | string | Optional caller supplied correlation id. |
-| `transaction_type` | enum string *(required)* | `BUY` or `SELL`. |
-| `exchange_segment` | enum string *(required)* | Exchange segment. |
-| `product_type` | enum string *(required)* | `CNC`, `INTRADAY`, `MARGIN`, or `MTF`. |
-| `order_type` | enum string *(required)* | `LIMIT` or `MARKET`. |
-| `security_id` | string *(required)* | Exchange security identifier. |
-| `quantity` | integer *(required)* | Entry quantity. |
-| `price` | float *(required)* | Entry price. |
-| `target_price` | float *(required)* | Target price for the super order. |
-| `stop_loss_price` | float *(required)* | Stop-loss price for the super order. |
-| `trailing_jump` | float *(required)* | Trailing jump size. |
+| Field              | Type                     | Notes                                                                                                          |
+| ------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `dhan_client_id`   | string *(required)*      | User specific identifier generated by Dhan. Automatically merged when you call through the Ruby model helpers. |
+| `correlation_id`   | string                   | Optional caller supplied correlation id.                                                                       |
+| `transaction_type` | enum string *(required)* | `BUY` or `SELL`.                                                                                               |
+| `exchange_segment` | enum string *(required)* | Exchange segment.                                                                                              |
+| `product_type`     | enum string *(required)* | `CNC`, `INTRADAY`, `MARGIN`, or `MTF`.                                                                         |
+| `order_type`       | enum string *(required)* | `LIMIT` or `MARKET`.                                                                                           |
+| `security_id`      | string *(required)*      | Exchange security identifier.                                                                                  |
+| `quantity`         | integer *(required)*     | Entry quantity.                                                                                                |
+| `price`            | float *(required)*       | Entry price.                                                                                                   |
+| `target_price`     | float *(required)*       | Target price for the super order.                                                                              |
+| `stop_loss_price`  | float *(required)*       | Stop-loss price for the super order.                                                                           |
+| `trailing_jump`    | float *(required)*       | Trailing jump size.                                                                                            |
 
 > 🐍 Pass snake_case keys when invoking `DhanHQ::Models::SuperOrder.create`—the client camelizes internally before calling the REST API and injects your configured `dhan_client_id`, so the key is optional in Ruby payloads.
 
@@ -308,14 +308,14 @@ Example payload:
 
 Conditional fields:
 
-| Field | Required when | Notes |
-| --- | --- | --- |
-| `order_type` | Updating `ENTRY_LEG` | `LIMIT` or `MARKET`. |
-| `quantity` | Updating `ENTRY_LEG` | Adjusts entry quantity. |
-| `price` | Updating `ENTRY_LEG` | Adjusts entry price. |
-| `target_price` | Updating `ENTRY_LEG` or `TARGET_LEG` | Adjusts target price. |
-| `stop_loss_price` | Updating `ENTRY_LEG` or `STOP_LOSS_LEG` | Adjusts stop-loss price. |
-| `trailing_jump` | Updating `ENTRY_LEG` or `STOP_LOSS_LEG` | Pass `0` or omit to cancel trailing. |
+| Field             | Required when                           | Notes                                |
+| ----------------- | --------------------------------------- | ------------------------------------ |
+| `order_type`      | Updating `ENTRY_LEG`                    | `LIMIT` or `MARKET`.                 |
+| `quantity`        | Updating `ENTRY_LEG`                    | Adjusts entry quantity.              |
+| `price`           | Updating `ENTRY_LEG`                    | Adjusts entry price.                 |
+| `target_price`    | Updating `ENTRY_LEG` or `TARGET_LEG`    | Adjusts target price.                |
+| `stop_loss_price` | Updating `ENTRY_LEG` or `STOP_LOSS_LEG` | Adjusts stop-loss price.             |
+| `trailing_jump`   | Updating `ENTRY_LEG` or `STOP_LOSS_LEG` | Pass `0` or omit to cancel trailing. |
 
 Response:
 
@@ -337,10 +337,10 @@ curl --request DELETE \
 
 Path parameters:
 
-| Field | Description | Example |
-| --- | --- | --- |
-| `order_id` | Super order identifier. | `11211182198` |
-| `order_leg` | Leg to cancel (`ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`). | `ENTRY_LEG` |
+| Field       | Description                                                    | Example       |
+| ----------- | -------------------------------------------------------------- | ------------- |
+| `order_id`  | Super order identifier.                                        | `11211182198` |
+| `order_leg` | Leg to cancel (`ENTRY_LEG`, `TARGET_LEG`, or `STOP_LOSS_LEG`). | `ENTRY_LEG`   |
 
 Response:
 
@@ -470,15 +470,15 @@ Both endpoints return arrays and skip validation because they represent historic
 
 `DhanHQ::Models::HistoricalData` enforces `HistoricalDataContract` before delegating to `/v2/charts`.
 
-| Key                | Type   | Notes |
-| ------------------ | ------ | ----- |
-| `security_id`      | String | Required |
-| `exchange_segment` | String | See `EXCHANGE_SEGMENTS` |
-| `instrument`       | String | Use `DhanHQ::Constants::INSTRUMENTS` |
-| `from_date`        | String | `YYYY-MM-DD` |
-| `to_date`          | String | `YYYY-MM-DD` |
-| `expiry_code`      | Integer| Optional (`0`, `1`, `2`) |
-| `interval`         | String | Optional (`1`, `5`, `15`, `25`, `60`) for intraday |
+| Key                | Type    | Notes                                              |
+| ------------------ | ------- | -------------------------------------------------- |
+| `security_id`      | String  | Required                                           |
+| `exchange_segment` | String  | See `EXCHANGE_SEGMENTS`                            |
+| `instrument`       | String  | Use `DhanHQ::Constants::INSTRUMENTS`               |
+| `from_date`        | String  | `YYYY-MM-DD`                                       |
+| `to_date`          | String  | `YYYY-MM-DD`                                       |
+| `expiry_code`      | Integer | Optional (`0`, `1`, `2`)                           |
+| `interval`         | String  | Optional (`1`, `5`, `15`, `25`, `60`) for intraday |
 
 ```ruby
 bars = DhanHQ::Models::HistoricalData.intraday(
@@ -543,7 +543,55 @@ ohlc  = DhanHQ::Models::MarketFeed.ohlc(payload)
 quote = DhanHQ::Models::MarketFeed.quote(payload)
 ```
 
-These endpoints are rate-limited by Dhan. The client’s internal `RateLimiter` throttles calls—consider batching symbols sensibly.
+These endpoints are rate-limited by Dhan. The client's internal `RateLimiter` throttles calls—consider batching symbols sensibly.
+
+### Instrument Convenience Methods
+
+The Instrument model provides convenient instance methods that automatically use the instrument's attributes (`security_id`, `exchange_segment`, `instrument`) to fetch market data. This eliminates the need to manually construct parameters for each API call.
+
+```ruby
+# Find an instrument first
+instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+# or
+reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+
+# Market Feed Methods - automatically uses instrument's attributes
+ltp_data = instrument.ltp        # Last traded price
+ohlc_data = instrument.ohlc     # OHLC data
+quote_data = instrument.quote    # Full quote depth
+
+# Historical Data Methods
+daily_data = instrument.daily(
+  from_date: "2024-01-01",
+  to_date: "2024-01-31",
+  expiry_code: 0  # Optional, only for derivatives
+)
+
+intraday_data = instrument.intraday(
+  from_date: "2024-09-11",
+  to_date: "2024-09-15",
+  interval: "15"  # 1, 5, 15, 25, or 60 minutes
+)
+
+# Option Chain Methods (for F&O instruments)
+fn_instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+expiries = fn_instrument.expiry_list  # Get all available expiries
+chain = fn_instrument.option_chain(expiry: "2024-02-29")  # Get option chain for specific expiry
+```
+
+**Available Instance Methods:**
+
+| Method                                                            | Description                      | Underlying API                                  |
+| ----------------------------------------------------------------- | -------------------------------- | ----------------------------------------------- |
+| `instrument.ltp`                                                  | Fetches last traded price        | `DhanHQ::Models::MarketFeed.ltp`                |
+| `instrument.ohlc`                                                 | Fetches OHLC data                | `DhanHQ::Models::MarketFeed.ohlc`               |
+| `instrument.quote`                                                | Fetches full quote depth         | `DhanHQ::Models::MarketFeed.quote`              |
+| `instrument.daily(from_date:, to_date:, **options)`               | Fetches daily historical data    | `DhanHQ::Models::HistoricalData.daily`          |
+| `instrument.intraday(from_date:, to_date:, interval:, **options)` | Fetches intraday historical data | `DhanHQ::Models::HistoricalData.intraday`       |
+| `instrument.expiry_list`                                          | Fetches expiry list              | `DhanHQ::Models::OptionChain.fetch_expiry_list` |
+| `instrument.option_chain(expiry:)`                                | Fetches option chain             | `DhanHQ::Models::OptionChain.fetch`             |
+
+All methods automatically extract `security_id`, `exchange_segment`, and `instrument` from the instrument instance, making it easier to work with market data without manually managing these parameters.
 
 ### WebSocket Market Feed
 

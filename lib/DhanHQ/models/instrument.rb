@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require_relative "../contracts/instrument_list_contract"
+require_relative "instrument_helpers"
 
 module DhanHQ
   module Models
     # Model wrapper for fetching instruments by exchange segment.
     class Instrument < BaseModel
+      include InstrumentHelpers
+
       attributes :security_id, :symbol_name, :display_name, :exchange, :segment, :exchange_segment, :instrument, :series,
                  :lot_size, :tick_size, :expiry_date, :strike_price, :option_type, :underlying_symbol,
                  :isin, :instrument_type, :expiry_flag, :bracket_flag, :cover_flag, :asm_gsm_flag,
