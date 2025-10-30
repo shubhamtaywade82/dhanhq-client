@@ -95,7 +95,7 @@ module DhanHQ
       def expiry_list
         params = {
           underlying_scrip: security_id.to_i,
-          underlying_seg: exchange_segment
+          underlying_seg: underlying_segment_for_options
         }
         DhanHQ::Models::OptionChain.fetch_expiry_list(params)
       end
@@ -111,7 +111,7 @@ module DhanHQ
       def option_chain(expiry:)
         params = {
           underlying_scrip: security_id.to_i,
-          underlying_seg: exchange_segment,
+          underlying_seg: underlying_segment_for_options,
           expiry: expiry
         }
         DhanHQ::Models::OptionChain.fetch(params)
@@ -148,6 +148,27 @@ module DhanHQ
         params.merge!(options) if options.any?
 
         params
+      end
+
+      ##
+      # Determines the correct underlying segment for option chain APIs.
+      # Index uses IDX_I; stocks map to NSE_FNO or BSE_FNO by exchange.
+      def underlying_segment_for_options
+        seg = exchange_segment.to_s
+        ins = instrument.to_s
+
+        # If already a valid underlying seg, return as-is
+        return seg if %w[IDX_I NSE_FNO BSE_FNO MCX_FO].include?(seg)
+
+        # Index detection by instrument kind or segment
+        return "IDX_I" if ins == "INDEX" || seg == "IDX_I"
+
+        # Map equities/stock-related segments to respective FNO
+        return "NSE_FNO" if seg.start_with?("NSE")
+        return "BSE_FNO" if seg.start_with?("BSE")
+
+        # Fallback to IDX_I to avoid contract rejection
+        "IDX_I"
       end
     end
   end

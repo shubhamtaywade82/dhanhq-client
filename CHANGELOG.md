@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [2.1.8] - 2025-10-30
+
+### Fixed
+- Correctly map `underlying_seg` for option chain APIs:
+  - Index instruments use `IDX_I`.
+  - Stocks map to `NSE_FNO` or `BSE_FNO` based on the instrument's exchange.
+- Implemented via `underlying_segment_for_options` in `DhanHQ::Models::InstrumentHelpers` and applied to `expiry_list` and `option_chain`.
+
 ## [2.1.7] - 2025-01-28
 
 ### Added
