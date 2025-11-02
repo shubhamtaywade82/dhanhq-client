@@ -3,8 +3,45 @@
 module DhanHQ
   module Models
     ##
-    # Represents expired options data for rolling contracts
-    # Provides access to OHLC, volume, open interest, implied volatility, and spot data
+    # Model for fetching expired options contract data on a rolling basis.
+    #
+    # This API provides pre-processed expired options data for up to the last 5 years.
+    # Data is available on a minute-level basis, organized by strike price relative to spot
+    # (e.g., ATM, ATM+1, ATM-1, etc.). You can fetch up to 30 days of data in a single API call.
+    #
+    # Available data includes:
+    # - OHLC (Open, High, Low, Close) prices
+    # - Volume and Open Interest
+    # - Implied Volatility (IV)
+    # - Strike prices
+    # - Spot prices
+    # - Timestamps
+    #
+    # Strike ranges:
+    # - Index Options (near expiry): Up to ATM+10 / ATM-10
+    # - All other contracts: Up to ATM+3 / ATM-3
+    #
+    # @example Fetch expired options data for NIFTY
+    #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
+    #     exchange_segment: "NSE_FNO",
+    #     interval: 1,
+    #     security_id: "13",
+    #     instrument: "OPTIDX",
+    #     expiry_flag: "MONTH",
+    #     expiry_code: 1,
+    #     strike: "ATM",
+    #     drv_option_type: "CALL",
+    #     required_data: ["open", "high", "low", "close", "volume"],
+    #     from_date: "2021-08-01",
+    #     to_date: "2021-09-01"
+    #   )
+    #   ohlc = data.ohlc_data
+    #   volumes = data.volume_data
+    #
+    # @example Access call option data
+    #   call_data = data.call_data
+    #   put_data = data.put_data
+    #
     # rubocop:disable Metrics/ClassLength
     class ExpiredOptionsData < BaseModel
       # All expired options data attributes
@@ -14,22 +51,68 @@ module DhanHQ
 
       class << self
         ##
-        # Fetch expired options data for rolling contracts
-        # POST /charts/rollingoption
+        # Fetches expired options data for rolling contracts on a minute-level basis.
         #
-        # @param params [Hash] Parameters for the request
-        # @option params [String] :exchange_segment Exchange segment (e.g., "NSE_FNO")
-        # @option params [Integer] :interval Minute interval (1, 5, 15, 25, 60)
-        # @option params [String] :security_id Security ID for the underlying
-        # @option params [String] :instrument Instrument type ("OPTIDX" or "OPTSTK")
-        # @option params [String] :expiry_flag Expiry interval ("WEEK" or "MONTH")
-        # @option params [Integer] :expiry_code Expiry code
-        # @option params [String] :strike Strike price ("ATM", "ATM+1", "ATM-1", etc.)
-        # @option params [String] :drv_option_type Option type ("CALL" or "PUT")
-        # @option params [Array<String>] :required_data Required data fields
-        # @option params [String] :from_date Start date (YYYY-MM-DD)
-        # @option params [String] :to_date End date (YYYY-MM-DD)
-        # @return [ExpiredOptionsData] Expired options data object
+        # Data is organized by strike price relative to spot and can be fetched for up to
+        # 30 days in a single request. Historical data is available for up to the last 5 years.
+        #
+        # @param params [Hash{Symbol => String, Integer, Array<String>}] Request parameters
+        #   @option params [String] :exchange_segment (required) Exchange and segment identifier.
+        #     Valid values: "NSE_FNO", "BSE_FNO", "NSE_EQ", "BSE_EQ"
+        #   @option params [Integer] :interval (required) Minute intervals for the timeframe.
+        #     Valid values: 1, 5, 15, 25, 60
+        #   @option params [String] :security_id (required) Underlying exchange standard ID for each scrip
+        #   @option params [String] :instrument (required) Instrument type of the scrip.
+        #     Valid values: "OPTIDX" (Index Options), "OPTSTK" (Stock Options)
+        #   @option params [String] :expiry_flag (required) Expiry interval of the instrument.
+        #     Valid values: "WEEK", "MONTH"
+        #   @option params [Integer] :expiry_code (required) Expiry code for the instrument
+        #   @option params [String] :strike (required) Strike price specification.
+        #     Format: "ATM" for At The Money, "ATM+X" or "ATM-X" for offset strikes.
+        #     For Index Options (near expiry): Up to ATM+10 / ATM-10
+        #     For all other contracts: Up to ATM+3 / ATM-3
+        #   @option params [String] :drv_option_type (required) Option type.
+        #     Valid values: "CALL", "PUT"
+        #   @option params [Array<String>] :required_data (required) Array of required data fields.
+        #     Valid values: "open", "high", "low", "close", "iv", "volume", "strike", "oi", "spot"
+        #   @option params [String] :from_date (required) Start date of the desired range in YYYY-MM-DD format.
+        #     Cannot be more than 5 years ago
+        #   @option params [String] :to_date (required) End date of the desired range (non-inclusive) in YYYY-MM-DD format.
+        #     Date range cannot exceed 30 days from from_date
+        #
+        # @return [ExpiredOptionsData] Expired options data object with fetched data
+        #
+        # @example Fetch NIFTY index options data
+        #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
+        #     exchange_segment: "NSE_FNO",
+        #     interval: 1,
+        #     security_id: "13",
+        #     instrument: "OPTIDX",
+        #     expiry_flag: "MONTH",
+        #     expiry_code: 1,
+        #     strike: "ATM",
+        #     drv_option_type: "CALL",
+        #     required_data: ["open", "high", "low", "close", "volume", "iv", "oi", "spot"],
+        #     from_date: "2021-08-01",
+        #     to_date: "2021-09-01"
+        #   )
+        #
+        # @example Fetch stock options data for ATM+2 strike
+        #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
+        #     exchange_segment: "NSE_FNO",
+        #     interval: 15,
+        #     security_id: "11536",
+        #     instrument: "OPTSTK",
+        #     expiry_flag: "WEEK",
+        #     expiry_code: 0,
+        #     strike: "ATM+2",
+        #     drv_option_type: "PUT",
+        #     required_data: ["open", "high", "low", "close", "volume"],
+        #     from_date: "2024-01-01",
+        #     to_date: "2024-01-31"
+        #   )
+        #
+        # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def fetch(params)
           validate_params(params)
 
@@ -60,8 +143,21 @@ module DhanHQ
       end
 
       ##
-      # Get call option data
-      # @return [Hash, nil] Call option data or nil if not available
+      # Gets call option data from the response.
+      #
+      # @return [Hash{Symbol => Array<Float, Integer>}, nil] Call option data hash containing arrays
+      #   of OHLC, volume, IV, OI, strike, spot, and timestamps. Returns nil if call option data
+      #   is not available in the response. Keys are normalized to snake_case:
+      #   - **:open** [Array<Float>] Open prices
+      #   - **:high** [Array<Float>] High prices
+      #   - **:low** [Array<Float>] Low prices
+      #   - **:close** [Array<Float>] Close prices
+      #   - **:volume** [Array<Integer>] Volume traded
+      #   - **:iv** [Array<Float>] Implied volatility values
+      #   - **:oi** [Array<Float>] Open interest values
+      #   - **:strike** [Array<Float>] Strike prices
+      #   - **:spot** [Array<Float>] Spot prices
+      #   - **:timestamp** [Array<Integer>] Epoch timestamps
       def call_data
         return nil unless data.is_a?(Hash)
 
@@ -69,8 +165,21 @@ module DhanHQ
       end
 
       ##
-      # Get put option data
-      # @return [Hash, nil] Put option data or nil if not available
+      # Gets put option data from the response.
+      #
+      # @return [Hash{Symbol => Array<Float, Integer>}, nil] Put option data hash containing arrays
+      #   of OHLC, volume, IV, OI, strike, spot, and timestamps. Returns nil if put option data
+      #   is not available in the response. Keys are normalized to snake_case:
+      #   - **:open** [Array<Float>] Open prices
+      #   - **:high** [Array<Float>] High prices
+      #   - **:low** [Array<Float>] Low prices
+      #   - **:close** [Array<Float>] Close prices
+      #   - **:volume** [Array<Integer>] Volume traded
+      #   - **:iv** [Array<Float>] Implied volatility values
+      #   - **:oi** [Array<Float>] Open interest values
+      #   - **:strike** [Array<Float>] Strike prices
+      #   - **:spot** [Array<Float>] Spot prices
+      #   - **:timestamp** [Array<Integer>] Epoch timestamps
       def put_data
         return nil unless data.is_a?(Hash)
 
@@ -78,9 +187,11 @@ module DhanHQ
       end
 
       ##
-      # Get data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Hash, nil] Option data or nil if not available
+      # Gets data for the specified option type.
+      #
+      # @param option_type [String] Option type to retrieve. Valid values: "CALL", "PUT"
+      # @return [Hash{Symbol => Array<Float, Integer>}, nil] Option data hash or nil if not available.
+      #   See {#call_data} or {#put_data} for structure details.
       def data_for_type(option_type)
         case option_type.upcase
         when "CALL"
@@ -91,9 +202,16 @@ module DhanHQ
       end
 
       ##
-      # Get OHLC data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Hash] OHLC data with open, high, low, close arrays
+      # Gets OHLC (Open, High, Low, Close) data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Hash{Symbol => Array<Float>}] OHLC data hash with:
+      #   - **:open** [Array<Float>] Open prices for each time point
+      #   - **:high** [Array<Float>] High prices for each time point
+      #   - **:low** [Array<Float>] Low prices for each time point
+      #   - **:close** [Array<Float>] Close prices for each time point
+      # @return [Hash{Symbol => Array}] Empty hash if option data is not available
       # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
       def ohlc_data(option_type = nil)
         option_type ||= drv_option_type
@@ -110,9 +228,12 @@ module DhanHQ
       # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
       ##
-      # Get volume data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Integer>] Volume data array
+      # Gets volume data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Integer>] Array of volume values traded in each timeframe.
+      #   Returns empty array if option data is not available or volume was not requested.
       def volume_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -122,9 +243,12 @@ module DhanHQ
       end
 
       ##
-      # Get open interest data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Float>] Open interest data array
+      # Gets open interest (OI) data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Float>] Array of open interest values for each timeframe.
+      #   Returns empty array if option data is not available or OI was not requested.
       def open_interest_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -134,9 +258,12 @@ module DhanHQ
       end
 
       ##
-      # Get implied volatility data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Float>] Implied volatility data array
+      # Gets implied volatility (IV) data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Float>] Array of implied volatility values for each timeframe.
+      #   Returns empty array if option data is not available or IV was not requested.
       def implied_volatility_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -146,9 +273,12 @@ module DhanHQ
       end
 
       ##
-      # Get strike price data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Float>] Strike price data array
+      # Gets strike price data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Float>] Array of strike prices for each timeframe.
+      #   Returns empty array if option data is not available or strike was not requested.
       def strike_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -158,9 +288,12 @@ module DhanHQ
       end
 
       ##
-      # Get spot price data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Float>] Spot price data array
+      # Gets spot price data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Float>] Array of spot prices for each timeframe.
+      #   Returns empty array if option data is not available or spot was not requested.
       def spot_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -170,9 +303,12 @@ module DhanHQ
       end
 
       ##
-      # Get timestamp data for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Integer>] Timestamp data array (epoch)
+      # Gets timestamp data for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Integer>] Array of epoch timestamps (Unix time in seconds) for each timeframe.
+      #   Returns empty array if option data is not available.
       def timestamp_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -182,18 +318,22 @@ module DhanHQ
       end
 
       ##
-      # Get data points count for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Integer] Number of data points
+      # Gets the number of data points available for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Integer] Number of data points (timeframes) available. Returns 0 if no data.
       def data_points_count(option_type = nil)
         timestamps = timestamp_data(option_type)
         timestamps.size
       end
 
       ##
-      # Get average volume for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Float] Average volume
+      # Calculates the average volume for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Float] Average volume across all timeframes. Returns 0.0 if no volume data is available.
       def average_volume(option_type = nil)
         volumes = volume_data(option_type)
         return 0.0 if volumes.empty?
@@ -202,9 +342,11 @@ module DhanHQ
       end
 
       ##
-      # Get average open interest for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Float] Average open interest
+      # Calculates the average open interest for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Float] Average open interest across all timeframes. Returns 0.0 if no OI data is available.
       def average_open_interest(option_type = nil)
         oi_data = open_interest_data(option_type)
         return 0.0 if oi_data.empty?
@@ -213,9 +355,11 @@ module DhanHQ
       end
 
       ##
-      # Get average implied volatility for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Float] Average implied volatility
+      # Calculates the average implied volatility for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Float] Average implied volatility across all timeframes. Returns 0.0 if no IV data is available.
       def average_implied_volatility(option_type = nil)
         iv_data = implied_volatility_data(option_type)
         return 0.0 if iv_data.empty?
@@ -224,9 +368,12 @@ module DhanHQ
       end
 
       ##
-      # Get price range (high - low) for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Array<Float>] Price range for each data point
+      # Calculates price range (high - low) for each timeframe of the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Float>] Array of price ranges (high - low) for each data point.
+      #   Returns empty array if OHLC data is not available.
       def price_ranges(option_type = nil)
         ohlc = ohlc_data(option_type)
         highs = ohlc[:high]
@@ -238,9 +385,20 @@ module DhanHQ
       end
 
       ##
-      # Get summary statistics for the specified option type
-      # @param option_type [String] "CALL" or "PUT"
-      # @return [Hash] Summary statistics
+      # Gets comprehensive summary statistics for the specified option type.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Hash{Symbol => Integer, Float, Array, Boolean}] Summary statistics hash containing:
+      #   - **:data_points** [Integer] Total number of data points
+      #   - **:avg_volume** [Float] Average volume
+      #   - **:avg_open_interest** [Float] Average open interest
+      #   - **:avg_implied_volatility** [Float] Average implied volatility
+      #   - **:price_ranges** [Array<Float>] Price ranges (high - low) for each point
+      #   - **:has_ohlc** [Boolean] Whether OHLC data is available
+      #   - **:has_volume** [Boolean] Whether volume data is available
+      #   - **:has_open_interest** [Boolean] Whether open interest data is available
+      #   - **:has_implied_volatility** [Boolean] Whether implied volatility data is available
       # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def summary_stats(option_type = nil)
         option_type ||= drv_option_type
@@ -264,57 +422,79 @@ module DhanHQ
       # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
       ##
-      # Check if this is index options data
-      # @return [Boolean] true if instrument is OPTIDX
+      # Checks if this is index options data.
+      #
+      # @return [Boolean] true if instrument type is "OPTIDX", false otherwise
       def index_options?
         instrument == "OPTIDX"
       end
 
       ##
-      # Check if this is stock options data
-      # @return [Boolean] true if instrument is OPTSTK
+      # Checks if this is stock options data.
+      #
+      # @return [Boolean] true if instrument type is "OPTSTK", false otherwise
       def stock_options?
         instrument == "OPTSTK"
       end
 
       ##
-      # Check if this is weekly expiry
-      # @return [Boolean] true if expiry_flag is WEEK
+      # Checks if this is weekly expiry data.
+      #
+      # @return [Boolean] true if expiry_flag is "WEEK", false otherwise
       def weekly_expiry?
         expiry_flag == "WEEK"
       end
 
       ##
-      # Check if this is monthly expiry
-      # @return [Boolean] true if expiry_flag is MONTH
+      # Checks if this is monthly expiry data.
+      #
+      # @return [Boolean] true if expiry_flag is "MONTH", false otherwise
       def monthly_expiry?
         expiry_flag == "MONTH"
       end
 
       ##
-      # Check if this is call option data
-      # @return [Boolean] true if drv_option_type is CALL
+      # Checks if this is call option data.
+      #
+      # @return [Boolean] true if drv_option_type is "CALL", false otherwise
       def call_option?
         drv_option_type == "CALL"
       end
 
       ##
-      # Check if this is put option data
-      # @return [Boolean] true if drv_option_type is PUT
+      # Checks if this is put option data.
+      #
+      # @return [Boolean] true if drv_option_type is "PUT", false otherwise
       def put_option?
         drv_option_type == "PUT"
       end
 
       ##
-      # Check if strike is at the money
-      # @return [Boolean] true if strike is ATM
+      # Checks if the strike is at the money (ATM).
+      #
+      # @return [Boolean] true if strike is "ATM", false otherwise
       def at_the_money?
         strike == "ATM"
       end
 
       ##
-      # Get strike offset from ATM
-      # @return [Integer] Strike offset (0 for ATM, positive for ATM+X, negative for ATM-X)
+      # Calculates the strike offset from ATM (At The Money).
+      #
+      # @return [Integer] Strike offset value:
+      #   - 0 for ATM strikes
+      #   - Positive integer for ATM+X (e.g., ATM+3 returns 3)
+      #   - Negative integer for ATM-X (e.g., ATM-2 returns -2)
+      #   - 0 if strike format is invalid
+      #
+      # @example
+      #   data.strike = "ATM+5"
+      #   data.strike_offset # => 5
+      #
+      #   data.strike = "ATM-3"
+      #   data.strike_offset # => -3
+      #
+      #   data.strike = "ATM"
+      #   data.strike_offset # => 0
       def strike_offset
         return 0 if at_the_money?
 
