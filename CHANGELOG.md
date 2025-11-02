@@ -1,5 +1,39 @@
 ## [Unreleased]
 
+## [2.1.9] - 2025-01-31
+
+### Added
+- **Comprehensive YARD documentation**: Added complete YARD documentation across all model classes with detailed parameter specifications, return types, and examples:
+  - `DhanHQ::Models::Edis` - EDIS form, bulk form, TPIN, and inquiry methods documented
+  - `DhanHQ::Models::ExpiredOptionsData` - Expired options data fetching with strike analysis helpers
+  - `DhanHQ::Models::ForeverOrder` - Forever Order (GTT) creation, modification, and cancellation
+  - `DhanHQ::Models::Funds` - Account fund information retrieval
+  - `DhanHQ::Models::HistoricalData` - Daily and intraday historical candle data fetching
+  - `DhanHQ::Models::Holding` - Portfolio holdings retrieval
+  - `DhanHQ::Models::Margin` - Margin calculation for orders
+  - `DhanHQ::Models::MarketFeed` - LTP, OHLC, and quote data fetching
+  - `DhanHQ::Models::OptionChain` - Option chain data and expiry list fetching
+  - `DhanHQ::Models::Order` - Order placement, modification, cancellation, and slicing
+  - `DhanHQ::Models::Position` - Position management and conversion
+  - `DhanHQ::Models::SuperOrder` - Multi-leg super order management
+  - `DhanHQ::Models::Trade` - Trade book, order trades, and historical trades
+  - `DhanHQ::Models::Profile` - User profile and account information
+  - `DhanHQ::Models::KillSwitch` - Kill switch activation and deactivation
+- All documentation includes:
+  - Complete parameter documentation with types, descriptions, and valid values
+  - Comprehensive return type specifications with response structure details
+  - Multiple practical examples for each method
+  - Response field normalization (snake_case) documentation
+  - Error handling documentation with `@raise` tags
+  - Special notes and prerequisites where applicable
+
+### Changed
+- **Documentation standards**: All model documentation now follows YARD best practices with:
+  - Properly indented `@option` tags for better readability
+  - Consistent use of YARD hash syntax for parameter and return types
+  - Detailed response structure documentation with field types and descriptions
+  - Clarified that `dhan_client_id` must be explicitly provided (not auto-injected) where applicable
+
 ## [2.1.8] - 2025-10-30
 
 ### Fixed
