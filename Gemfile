@@ -19,6 +19,10 @@ gem "webmock", "~> 3.24"
 
 gem "yard", "~> 0.9.37"
 
+# Dependencies for yard server (required in Ruby 3.0+)
+gem "rack", "~> 2.0", groups: %i[development]
+gem "webrick", "~> 1.7", groups: %i[development]
+
 gem "debug"
 
 gem "rubycritic"

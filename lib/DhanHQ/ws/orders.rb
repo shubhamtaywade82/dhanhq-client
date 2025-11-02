@@ -10,7 +10,8 @@ module DhanHQ
     module Orders
       ##
       # Connect to order updates WebSocket with a simple callback
-      # @param block [Proc] Callback for order updates
+      #
+      # @yield [OrderUpdate] Yields order update objects when received
       # @return [Client] WebSocket client instance
       def self.connect(&)
         Client.new.start.on(:update, &)

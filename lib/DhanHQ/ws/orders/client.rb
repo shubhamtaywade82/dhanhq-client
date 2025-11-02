@@ -184,8 +184,9 @@ module DhanHQ
 
         ##
         # Emit status-specific events
+        #
         # @param order_update [OrderUpdate] Current order update
-        # @param previous_state [OrderUpdate, nil] Previous order state
+        # @param _previous_state [OrderUpdate, nil] Previous order state (unused parameter)
         # rubocop:disable Metrics/MethodLength
         def emit_status_specific_events(order_update, _previous_state)
           case order_update.status

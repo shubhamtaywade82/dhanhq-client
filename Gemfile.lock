@@ -168,6 +168,7 @@ GEM
       stringio
     public_suffix (6.0.2)
     racc (1.8.1)
+    rack (2.2.21)
     rainbow (3.1.1)
     rake (13.3.0)
     rdoc (6.14.2)
@@ -266,6 +267,7 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
+    webrick (1.9.1)
     websocket-driver (0.8.0)
       base64
       websocket-extensions (>= 0.1.0)
@@ -281,6 +283,7 @@ DEPENDENCIES
   DhanHQ!
   debug
   dotenv
+  rack (~> 2.0)
   rake (~> 13.0)
   rspec (~> 3.0)
   rubocop (~> 1.21)
@@ -294,6 +297,7 @@ DEPENDENCIES
   timecop
   vcr
   webmock (~> 3.24)
+  webrick (~> 1.7)
   yard (~> 0.9.37)
 
 BUNDLED WITH
