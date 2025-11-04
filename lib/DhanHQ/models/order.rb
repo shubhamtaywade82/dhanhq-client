@@ -286,6 +286,8 @@ module DhanHQ
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def place(params)
           normalized_params = snake_case(params)
+          # Auto-inject dhan_client_id from configuration if not provided
+          normalized_params[:dhan_client_id] ||= DhanHQ.configuration.client_id if DhanHQ.configuration.client_id
           validate_params!(normalized_params, DhanHQ::Contracts::PlaceOrderContract)
 
           response = resource.create(camelize_keys(normalized_params))

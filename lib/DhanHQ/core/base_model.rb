@@ -222,9 +222,17 @@ module DhanHQ
 
     # Format request parameters before sending to API
     #
+    # Auto-injects dhan_client_id from configuration if not present in attributes
+    # and the model requires it (has dhan_client_id as an attribute).
+    #
     # @return [Hash] The camelCased attributes
     def to_request_params
-      optionchain_api? ? titleize_keys(@attributes) : camelize_keys(@attributes)
+      attrs = @attributes.dup
+      # Auto-inject dhan_client_id from configuration if not provided and model supports it
+      if self.class.defined_attributes&.include?("dhan_client_id") && !attrs[:dhan_client_id] && DhanHQ.configuration.client_id
+        attrs[:dhan_client_id] = DhanHQ.configuration.client_id
+      end
+      optionchain_api? ? titleize_keys(attrs) : camelize_keys(attrs)
     end
 
     # Identifier inferred from the loaded attributes.
