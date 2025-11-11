@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [2.1.10] - 2025-11-11
+
+### Fixed
+- Expired Options Data routing: send `client-id` header for `/v2/charts/rollingoption` by adding `/v2/charts/` to data API prefixes.
+- Correct `HTTP_PATH` for `ExpiredOptionsData` resource to `/v2/charts`.
+- Prevent false validation failures by allowing up to 31-day ranges (to_date non-inclusive).
+
+### Changed
+- Align `ExpiredOptionsData` contract with broker docs:
+  - `interval` accepted as String (e.g., "1", "5", "15", "25", "60").
+  - `security_id` validated as Integer.
+- Input normalization for `ExpiredOptionsData.fetch`:
+  - Coerce convertible types (`interval`, `security_id`, `expiry_code`).
+  - Uppercase enums and `strike`, normalize `required_data` to downcased unique list.
+- Improved examples and YARD docs to reflect the above.
+
 ## [2.1.9] - 2025-01-31
 
 ### Added

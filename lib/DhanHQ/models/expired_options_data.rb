@@ -7,7 +7,7 @@ module DhanHQ
     #
     # This API provides pre-processed expired options data for up to the last 5 years.
     # Data is available on a minute-level basis, organized by strike price relative to spot
-    # (e.g., ATM, ATM+1, ATM-1, etc.). You can fetch up to 30 days of data in a single API call.
+    # (e.g., ATM, ATM+1, ATM-1, etc.). You can fetch up to 31 days of data in a single API call.
     #
     # Available data includes:
     # - OHLC (Open, High, Low, Close) prices
@@ -24,8 +24,8 @@ module DhanHQ
     # @example Fetch expired options data for NIFTY
     #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
     #     exchange_segment: "NSE_FNO",
-    #     interval: 1,
-    #     security_id: "13",
+    #     interval: "1",
+    #     security_id: 13,
     #     instrument: "OPTIDX",
     #     expiry_flag: "MONTH",
     #     expiry_code: 1,
@@ -54,14 +54,14 @@ module DhanHQ
         # Fetches expired options data for rolling contracts on a minute-level basis.
         #
         # Data is organized by strike price relative to spot and can be fetched for up to
-        # 30 days in a single request. Historical data is available for up to the last 5 years.
+        # 31 days in a single request. Historical data is available for up to the last 5 years.
         #
         # @param params [Hash{Symbol => String, Integer, Array<String>}] Request parameters
         #   @option params [String] :exchange_segment (required) Exchange and segment identifier.
         #     Valid values: "NSE_FNO", "BSE_FNO", "NSE_EQ", "BSE_EQ"
-        #   @option params [Integer] :interval (required) Minute intervals for the timeframe.
-        #     Valid values: 1, 5, 15, 25, 60
-        #   @option params [String] :security_id (required) Underlying exchange standard ID for each scrip
+        #   @option params [String] :interval (required) Minute intervals for the timeframe.
+        #     Valid values: "1", "5", "15", "25", "60"
+        #   @option params [Integer] :security_id (required) Underlying exchange standard ID for each scrip
         #   @option params [String] :instrument (required) Instrument type of the scrip.
         #     Valid values: "OPTIDX" (Index Options), "OPTSTK" (Stock Options)
         #   @option params [String] :expiry_flag (required) Expiry interval of the instrument.
@@ -76,17 +76,17 @@ module DhanHQ
         #   @option params [Array<String>] :required_data (required) Array of required data fields.
         #     Valid values: "open", "high", "low", "close", "iv", "volume", "strike", "oi", "spot"
         #   @option params [String] :from_date (required) Start date of the desired range in YYYY-MM-DD format.
-        #     Cannot be more than 5 years ago
+        #     Cannot be more than 5 years ago. Same-day ranges are allowed.
         #   @option params [String] :to_date (required) End date of the desired range (non-inclusive) in YYYY-MM-DD format.
-        #     Date range cannot exceed 30 days from from_date
+        #     Date range cannot exceed 31 days from from_date (to_date is non-inclusive). Same-day `from_date`/`to_date` is valid.
         #
         # @return [ExpiredOptionsData] Expired options data object with fetched data
         #
         # @example Fetch NIFTY index options data
         #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
         #     exchange_segment: "NSE_FNO",
-        #     interval: 1,
-        #     security_id: "13",
+        #     interval: "1",
+        #     security_id: 13,
         #     instrument: "OPTIDX",
         #     expiry_flag: "MONTH",
         #     expiry_code: 1,
@@ -100,8 +100,8 @@ module DhanHQ
         # @example Fetch stock options data for ATM+2 strike
         #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
         #     exchange_segment: "NSE_FNO",
-        #     interval: 15,
-        #     security_id: "11536",
+        #     interval: "15",
+        #     security_id: 11536,
         #     instrument: "OPTSTK",
         #     expiry_flag: "WEEK",
         #     expiry_code: 0,
@@ -114,10 +114,11 @@ module DhanHQ
         #
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def fetch(params)
-          validate_params(params)
+          normalized = normalize_params(params)
+          validate_params(normalized)
 
-          response = expired_options_resource.fetch(params)
-          new(response.merge(params), skip_validation: true)
+          response = expired_options_resource.fetch(normalized)
+          new(response.merge(normalized), skip_validation: true)
         end
 
         private
@@ -133,6 +134,50 @@ module DhanHQ
           return if validation_result.success?
 
           raise DhanHQ::ValidationError, "Invalid parameters: #{validation_result.errors.to_h}"
+        end
+
+        # Best-effort normalization: coerce convertible values into expected shapes.
+        # Only values that are not convertible will fail validation.
+        def normalize_params(params)
+          normalized = params.dup
+
+          # interval: accept Integer or String, normalize to String
+          normalized[:interval] = normalized[:interval].to_s if normalized.key?(:interval)
+
+          # security_id, expiry_code: accept String or Integer, normalize to Integer if possible
+          if normalized.key?(:security_id)
+            original = normalized[:security_id]
+            converted = Integer(original, exception: false)
+            normalized[:security_id] = converted || original
+          end
+
+          if normalized.key?(:expiry_code)
+            original = normalized[:expiry_code]
+            converted = Integer(original, exception: false)
+            normalized[:expiry_code] = converted || original
+          end
+
+          # Uppercase enums where appropriate
+          %i[exchange_segment instrument expiry_flag drv_option_type].each do |k|
+            next unless normalized.key?(k)
+
+            v = normalized[k]
+            normalized[k] = v.to_s.upcase
+          end
+
+          # required_data: array of strings, downcased unique
+          if normalized.key?(:required_data)
+            normalized[:required_data] = Array(normalized[:required_data]).map { |x| x.to_s.downcase }.uniq
+          end
+
+          # strike: ensure string
+          normalized[:strike] = normalized[:strike].to_s.upcase if normalized.key?(:strike)
+
+          # dates: ensure string (contract validates format)
+          normalized[:from_date] = normalized[:from_date].to_s if normalized.key?(:from_date)
+          normalized[:to_date] = normalized[:to_date].to_s if normalized.key?(:to_date)
+
+          normalized
         end
       end
 

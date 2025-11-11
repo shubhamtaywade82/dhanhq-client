@@ -10,8 +10,8 @@ module DhanHQ
     class ExpiredOptionsDataContract < BaseContract
       params do
         required(:exchange_segment).filled(:string)
-        required(:interval).filled(:integer)
-        required(:security_id).filled(:string)
+        required(:interval).filled(:string)
+        required(:security_id).filled(:integer)
         required(:instrument).filled(:string)
         required(:expiry_flag).filled(:string)
         required(:expiry_code).filled(:integer)
@@ -28,7 +28,7 @@ module DhanHQ
       end
 
       rule(:interval) do
-        valid_intervals = [1, 5, 15, 25, 60]
+        valid_intervals = %w[1 5 15 25 60]
         key.failure("must be one of: #{valid_intervals.join(", ")}") unless valid_intervals.include?(value)
       end
 
@@ -69,10 +69,10 @@ module DhanHQ
             from_date = Date.parse(values[:from_date])
             to_date = Date.parse(values[:to_date])
 
-            key.failure("from_date must be before to_date") if from_date >= to_date
+            key.failure("from_date must be on or before to_date") if from_date > to_date
 
-            # Check if date range is not too large (max 30 days)
-            key.failure("date range cannot exceed 30 days") if (to_date - from_date).to_i > 30
+            # Check if date range is not too large (max 31 days; to_date is non-inclusive)
+            key.failure("date range cannot exceed 31 days") if (to_date - from_date).to_i > 31
 
             # Check if from_date is not too far in the past (max 5 years)
             five_years_ago = Date.today - (5 * 365)

@@ -6,7 +6,7 @@ module DhanHQ
     # Resource for expired options data API endpoints
     class ExpiredOptionsData < BaseAPI
       API_TYPE = :data_api
-      HTTP_PATH = "/charts"
+      HTTP_PATH = "/v2/charts"
 
       ##
       # Fetch expired options data for rolling contracts
