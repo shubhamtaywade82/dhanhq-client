@@ -6,8 +6,8 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
   let(:valid_params) do
     {
       exchange_segment: "NSE_FNO",
-      interval: 1,
-      security_id: "13",
+      interval: "1",
+      security_id: 13,
       instrument: "OPTIDX",
       expiry_flag: "MONTH",
       expiry_code: 1,
@@ -53,7 +53,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
 
   describe "interval validation" do
     it "validates valid intervals" do
-      valid_intervals = [1, 5, 15, 25, 60]
+      valid_intervals = %w[1 5 15 25 60]
 
       valid_intervals.each do |interval|
         params = valid_params.merge(interval: interval)
@@ -65,7 +65,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "rejects invalid intervals" do
-      invalid_params = valid_params.merge(interval: 99)
+      invalid_params = valid_params.merge(interval: "99")
       contract = described_class.new
       result = contract.call(invalid_params)
 
@@ -248,33 +248,32 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       result = contract.call(params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
+      expect(result.errors[:from_date]).to include(/from_date must be on or before to_date/)
     end
 
-    it "rejects when from_date equals to_date" do
+    it "allows when from_date equals to_date" do
       params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-08-01")
-      contract = described_class.new
-      result = contract.call(params)
-
-      expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
-    end
-
-    it "validates date range length (30 days max)" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-08-30")
       contract = described_class.new
       result = contract.call(params)
 
       expect(result.success?).to be true
     end
 
-    it "rejects date range longer than 30 days" do
+    it "validates date range length (31 days max, non-inclusive)" do
+      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-09-01")
+      contract = described_class.new
+      result = contract.call(params)
+
+      expect(result.success?).to be true
+    end
+
+    it "rejects date range longer than 31 days" do
       params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-09-15")
       contract = described_class.new
       result = contract.call(params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/date range cannot exceed 30 days/)
+      expect(result.errors[:from_date]).to include(/date range cannot exceed 31 days/)
     end
 
     it "validates historical date limit (5 years max)" do
@@ -340,12 +339,12 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "handles wrong data types" do
-      params = valid_params.merge(interval: "not_a_number") # Should be integer
+      params = valid_params.merge(interval: "not_a_number") # invalid enum
       contract = described_class.new
       result = contract.call(params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:interval]).to include(/must be an integer/)
+      expect(result.errors[:interval]).to include(/must be one of: 1, 5, 15, 25, 60/)
     end
   end
 end

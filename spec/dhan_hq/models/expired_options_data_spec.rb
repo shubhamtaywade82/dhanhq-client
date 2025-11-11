@@ -6,8 +6,8 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
   let(:valid_params) do
     {
       exchange_segment: "NSE_FNO",
-      interval: 1,
-      security_id: "13",
+      interval: "1",
+      security_id: 13,
       instrument: "OPTIDX",
       expiry_flag: "MONTH",
       expiry_code: 1,
@@ -58,7 +58,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
     end
 
     it "validates parameters before making API call" do
-      invalid_params = valid_params.merge(interval: 99)
+      invalid_params = valid_params.merge(interval: "99")
 
       expect { described_class.fetch(invalid_params) }
         .to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
@@ -68,14 +68,14 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       invalid_params = valid_params.merge(from_date: "2021-09-01", to_date: "2021-08-01")
 
       expect { described_class.fetch(invalid_params) }
-        .to raise_error(DhanHQ::ValidationError, /from_date must be before to_date/)
+        .to raise_error(DhanHQ::ValidationError, /from_date must be on or before to_date/)
     end
 
     it "validates date range length" do
       invalid_params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-09-15")
 
       expect { described_class.fetch(invalid_params) }
-        .to raise_error(DhanHQ::ValidationError, /date range cannot exceed 30 days/)
+        .to raise_error(DhanHQ::ValidationError, /date range cannot exceed 31 days/)
     end
 
     it "validates required data fields" do
@@ -398,7 +398,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
     end
 
     it "validates interval" do
-      invalid_params = valid_params.merge(interval: 99)
+      invalid_params = valid_params.merge(interval: "99")
       result = contract.call(invalid_params)
 
       expect(result.failure?).to be true
@@ -450,7 +450,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       result = contract.call(invalid_params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
+      expect(result.errors[:from_date]).to include(/from_date must be on or before to_date/)
     end
 
     it "validates date range length" do
@@ -458,7 +458,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       result = contract.call(invalid_params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/date range cannot exceed 30 days/)
+      expect(result.errors[:from_date]).to include(/date range cannot exceed 31 days/)
     end
 
     it "validates historical date limit" do
