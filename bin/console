@@ -11,4 +11,9 @@ require "ta/technical_analysis"
 
 require "irb"
 DhanHQ.configure_with_env
+
+# Load test helpers for easier testing (optional)
+# Uncomment the line below to auto-load test helpers:
+# load File.expand_path("../test_helpers.rb", __FILE__)
+
 IRB.start(__FILE__)

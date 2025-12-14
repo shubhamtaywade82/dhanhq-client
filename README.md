@@ -144,6 +144,33 @@ out the [Rails integration guide](docs/rails_integration.md) for
 initializers, service objects, workers, and ActionCable wiring tailored for the
 `DhanHQ` gem.
 
+### Testing & Development
+
+For comprehensive testing examples and interactive console helpers, see the [Testing Guide](docs/TESTING_GUIDE.md). The guide includes:
+
+- **WebSocket Testing**: Market feed, order updates, and market depth examples
+- **Model Testing**: Complete examples for all models (Orders, Positions, Holdings, etc.)
+- **Validation Contracts**: Testing all validation contracts
+- **Error Handling**: Testing error scenarios and recovery
+- **Quick Helpers**: Load `bin/test_helpers.rb` in console for quick test functions
+
+**Quick start in console:**
+```ruby
+# Start console
+bin/console
+
+# Load test helpers
+load 'bin/test_helpers.rb'
+
+# Run quick tests
+run_all_tests
+
+# Or test individual features
+test_funds
+test_market_feed
+test_orders
+```
+
 ---
 
 ## WebSocket Integration (Orders, Market Feed, Market Depth)
