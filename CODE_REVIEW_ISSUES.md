@@ -292,12 +292,85 @@ return [] unless response.is_a?(Array) || (response.is_a?(Hash) && response[:dat
 
 ---
 
+## 🔴 API Compliance Issues
+
+### 31. **Missing Alert Orders API Implementation**
+**Location**: Not implemented
+**Issue**: The API documentation shows Alert Orders endpoints (`/alerts/orders`) but the gem doesn't implement them:
+- `POST /alerts/orders` - Place alert order
+- `GET /alerts/orders` - Get all alert orders
+- `GET /alerts/orders/{trigger-id}` - Get alert order by ID
+- `PUT /alerts/orders/{trigger-id}` - Modify alert order
+- `DELETE /alerts/orders/{trigger-id}` - Delete alert order
+**Problem**: Users cannot use Conditional Triggers (Alerts) feature via the gem.
+**Recommendation**: Implement `DhanHQ::Resources::AlertOrders` and `DhanHQ::Models::AlertOrder` classes.
+
+### 32. **Missing IP Setup API Implementation**
+**Location**: Not implemented
+**Issue**: The API documentation shows IP Setup endpoints (`/ip/*`) but the gem doesn't implement them:
+- `POST /ip/setIP` - Set static IP
+- `PUT /ip/modifyIP` - Modify static IP
+- `GET /ip/getIP` - Get current static IP
+**Problem**: Users cannot configure static IP whitelisting via the gem (required for order placement).
+**Recommendation**: Implement `DhanHQ::Resources::IPSetup` resource class.
+
+### 33. **Path Parameter Naming Inconsistency**
+**Location**: `lib/DhanHQ/resources/trades.rb:18`
+**Issue**: API uses `{order-id}` (with hyphen) in path, but gem constructs paths with `/#{order_id}`:
+```ruby
+def find(order_id)
+  get("/#{order_id}")
+end
+```
+**Problem**: While this works, it's inconsistent with API documentation format. More importantly, the trade history endpoint uses path parameters: `/trades/{from-date}/{to-date}/{page-number}` but the gem uses query parameters.
+**Recommendation**: Verify path construction matches API spec exactly. For trade history, use path parameters as documented.
+
+### 34. **Trade History Endpoint Mismatch**
+**Location**: `lib/DhanHQ/resources/statements.rb` (referenced)
+**Issue**: API documentation shows trade history as: `GET /trades/{from-date}/{to-date}/{page-number}` (path parameters), but implementation might use query parameters.
+**Problem**: Incorrect endpoint format could cause API errors.
+**Recommendation**: Verify and fix trade history endpoint to use path parameters as per API spec.
+
+### 35. **Missing Validation for Required Headers**
+**Location**: `lib/DhanHQ/helpers/request_helper.rb:28-42`
+**Issue**: The `build_headers` method adds headers but doesn't validate that required headers are present before making requests:
+```ruby
+headers = {
+  "Content-Type" => "application/json",
+  "Accept" => "application/json",
+  "access-token" => DhanHQ.configuration.access_token
+}
+```
+**Problem**: If `access_token` is nil, requests will fail at runtime rather than failing fast with a clear error.
+**Recommendation**: Validate required headers before building request, raise clear error if missing.
+
+### 36. **Incorrect Response Status Code Handling**
+**Location**: `lib/DhanHQ/resources/positions.rb` (position conversion)
+**Issue**: API documentation shows position conversion returns `202 Accepted`, but the gem might expect `200 OK`.
+**Problem**: Success detection might fail for async operations.
+**Recommendation**: Handle `202 Accepted` status codes appropriately for async operations.
+
+### 37. **Missing Pagination Support**
+**Location**: Various `all` methods
+**Issue**: Some endpoints support pagination (e.g., trade history has `page-number`), but the gem doesn't expose pagination helpers consistently.
+**Problem**: Users cannot easily paginate through large result sets.
+**Recommendation**: Add pagination support with `page` and `per_page` parameters where API supports it.
+
+### 38. **Date Format Validation Missing**
+**Location**: `lib/DhanHQ/models/trade.rb:211-244`
+**Issue**: Trade history validates date format, but other date parameters (e.g., in historical data, option chain expiry) might not validate format strictly.
+**Problem**: Invalid date formats could cause API errors.
+**Recommendation**: Add consistent date format validation (`YYYY-MM-DD`) across all date parameters.
+
+---
+
 ## 📋 Summary
 
 ### Critical Issues: 4
 ### High Priority Issues: 6
 ### Medium Priority Issues: 10
 ### Low Priority Issues: 10
+### API Compliance Issues: 8
 
 ### Key Areas Requiring Attention:
 1. **Thread Safety**: Rate limiter and WebSocket clients need better synchronization
@@ -306,14 +379,19 @@ return [] unless response.is_a?(Array) || (response.is_a?(Hash) && response[:dat
 4. **Input Validation**: Missing validation for edge cases (NaN, Infinity, bounds)
 5. **Configuration**: Missing timeout configuration and better credential validation
 6. **Documentation**: Some areas lack clear documentation
+7. **API Compliance**: Missing implementations for Alert Orders and IP Setup APIs
+8. **Endpoint Consistency**: Path parameter construction and response handling need verification
 
 ### Recommended Next Steps:
 1. Fix critical issues first (especially thread safety and error handling)
-2. Add comprehensive integration tests
-3. Implement proper logging and monitoring
-4. Add configuration validation on startup
-5. Document API compliance with official DhanHQ API documentation
+2. Implement missing API endpoints (Alert Orders, IP Setup)
+3. Verify all endpoint paths match API documentation exactly
+4. Add comprehensive integration tests against live API
+5. Implement proper logging and monitoring
+6. Add configuration validation on startup
+7. Document API compliance with official DhanHQ API documentation
+8. Add pagination support where API provides it
 
 ---
 
-**Note**: This review is based on static code analysis. Dynamic testing and API compliance verification against https://dhanhq.co/docs/v2/ should be performed to validate these findings.
+**Note**: This review is based on static code analysis and API documentation comparison. Dynamic testing and API compliance verification against https://api.dhan.co/v2/#/ should be performed to validate these findings.
