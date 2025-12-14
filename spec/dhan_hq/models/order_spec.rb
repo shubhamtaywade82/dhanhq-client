@@ -233,6 +233,28 @@ RSpec.describe DhanHQ::Models::Order do
       expect(result).to be(order)
       expect(order.quantity).to eq(10)
     end
+
+    it "raises error when trying to modify TRADED order" do
+      traded_order = described_class.new({ orderId: "OID123", orderStatus: "TRADED" }, skip_validation: true)
+      allow(described_class).to receive(:resource).and_return(resource_double)
+
+      expect { traded_order.modify(quantity: 10) }
+        .to raise_error(DhanHQ::OrderError, /Cannot modify order.*TRADED state/)
+    end
+
+    it "raises error when trying to modify CANCELLED order" do
+      cancelled_order = described_class.new({ orderId: "OID123", orderStatus: "CANCELLED" }, skip_validation: true)
+      allow(described_class).to receive(:resource).and_return(resource_double)
+
+      expect { cancelled_order.modify(quantity: 10) }
+        .to raise_error(DhanHQ::OrderError, /Cannot modify order.*CANCELLED state/)
+    end
+
+    it "allows modification of PENDING order" do
+      expect(resource_double).to receive(:update).and_return({ "status" => "success", "orderId" => "OID123" })
+      result = order.modify(quantity: 10)
+      expect(result).to be(order)
+    end
   end
 
   describe "#slice_order" do
