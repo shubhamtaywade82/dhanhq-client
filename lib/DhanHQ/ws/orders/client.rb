@@ -11,10 +11,19 @@ module DhanHQ
       # Provides comprehensive order state tracking and event handling
       # rubocop:disable Metrics/ClassLength
       class Client
+        # Maximum number of orders to keep in tracker (default: 10,000)
+        MAX_TRACKED_ORDERS = ENV.fetch("DHAN_WS_MAX_TRACKED_ORDERS", 10_000).to_i
+        
+        # Maximum age of orders in tracker in seconds (default: 7 days)
+        MAX_ORDER_AGE = ENV.fetch("DHAN_WS_MAX_ORDER_AGE", 604_800).to_i
+
         def initialize(url: nil, **options)
           @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
           @started = Concurrent::AtomicBoolean.new(false)
           @order_tracker = Concurrent::Map.new
+          @order_timestamps = Concurrent::Map.new
+          @cleanup_mutex = Mutex.new
+          @cleanup_thread = nil
           cfg = DhanHQ.configuration
           @url = url || cfg.ws_order_url
           @connection_options = options
@@ -33,6 +42,7 @@ module DhanHQ
           @conn.on(:error) { |error| emit(:error, error) }
           @conn.on(:message) { |msg| handle_message(msg) }
           @conn.start
+          start_cleanup_thread
           DhanHQ::WS::Registry.register(self) if defined?(DhanHQ::WS::Registry)
           self
         end
@@ -44,6 +54,7 @@ module DhanHQ
           return unless @started.true?
 
           @started.make_false
+          stop_cleanup_thread
           @conn&.stop
           emit(:close, true)
           DhanHQ::WS::Registry.unregister(self) if defined?(DhanHQ::WS::Registry)
@@ -152,8 +163,12 @@ module DhanHQ
           order_no = order_update.order_no
           previous_state = @order_tracker[order_no]
 
-          # Update order tracker
+          # Update order tracker with timestamp
           @order_tracker[order_no] = order_update
+          @order_timestamps[order_no] = Time.now
+
+          # Cleanup if tracker exceeds max size
+          cleanup_old_orders if @order_tracker.size > MAX_TRACKED_ORDERS
 
           # Emit update event
           emit(:update, order_update)
@@ -211,14 +226,66 @@ module DhanHQ
         # @param event [Symbol] Event type
         # @param payload [Object] Event payload
         def emit(event, payload)
-          list = begin
-            @callbacks[event]
+          # Create a snapshot of callbacks to avoid modification during iteration
+          callbacks_snapshot = begin
+            @callbacks[event].dup.freeze
           rescue StandardError
-            []
+            [].freeze
           end
-          list.each { |cb| cb.call(payload) }
+          
+          callbacks_snapshot.each { |cb| cb.call(payload) }
         rescue StandardError => e
           DhanHQ.logger&.error("[DhanHQ::WS::Orders] Error in event handler: #{e.class} #{e.message}")
+        end
+
+        ##
+        # Start cleanup thread to periodically remove old orders
+        def start_cleanup_thread
+          return if @cleanup_thread&.alive?
+
+          @cleanup_thread = Thread.new do
+            loop do
+              break unless @started.true?
+              sleep(3600) # Run cleanup every hour
+              break unless @started.true?
+              cleanup_old_orders
+            end
+          end
+        end
+
+        ##
+        # Stop cleanup thread
+        def stop_cleanup_thread
+          return unless @cleanup_thread&.alive?
+
+          @cleanup_thread.wakeup
+          @cleanup_thread.join(5) # Wait up to 5 seconds
+          @cleanup_thread = nil
+        end
+
+        ##
+        # Clean up old orders from tracker
+        def cleanup_old_orders
+          @cleanup_mutex.synchronize do
+            now = Time.now
+            orders_to_remove = []
+
+            # Find orders to remove (too old or if tracker is too large)
+            @order_timestamps.each do |order_no, timestamp|
+              age = now - timestamp
+              if age > MAX_ORDER_AGE || (@order_tracker.size > MAX_TRACKED_ORDERS && orders_to_remove.size < @order_tracker.size - MAX_TRACKED_ORDERS)
+                orders_to_remove << order_no
+              end
+            end
+
+            # Remove old orders
+            orders_to_remove.each do |order_no|
+              @order_tracker.delete(order_no)
+              @order_timestamps.delete(order_no)
+            end
+
+            DhanHQ.logger&.debug("[DhanHQ::WS::Orders] Cleaned up #{orders_to_remove.size} old orders") if orders_to_remove.any?
+          end
         end
       end
       # rubocop:enable Metrics/ClassLength

@@ -79,5 +79,82 @@ RSpec.describe DhanHQ::BaseModel do
         "productType" => "CNC"
       )
     end
+
+    describe "#delete and #destroy" do
+      it "delegates delete to destroy" do
+        # Use a test model class since Order aliases delete to destroy (they're the same method)
+        test_model_class = Class.new(DhanHQ::BaseModel) do
+          def self.validation_contract
+            nil
+          end
+
+          def self.resource
+            @resource ||= DhanHQ::BaseAPI.new
+          end
+        end
+        model = test_model_class.new({ id: "123" }, skip_validation: true)
+        # Stub destroy to avoid making HTTP request
+        allow(model).to receive(:destroy).and_return(true)
+        result = model.delete
+        expect(result).to be true
+        expect(model).to have_received(:destroy)
+      end
+
+      it "logs errors when destroy fails" do
+        # Use a test model class to test BaseModel's destroy (Order overrides it without rescue)
+        test_model_class = Class.new(DhanHQ::BaseModel) do
+          def self.validation_contract
+            nil
+          end
+
+          def self.resource
+            @resource ||= DhanHQ::BaseAPI.new
+          end
+        end
+        model = test_model_class.new({ id: "123" }, skip_validation: true)
+        allow(model.class.resource).to receive(:delete).and_raise(StandardError.new("Test error"))
+        expect(DhanHQ.logger).to receive(:error).with(/Error deleting resource/)
+        expect(model.destroy).to be false
+      end
+    end
+
+    describe "#parse_collection_response" do
+      it "logs warning for unexpected response formats" do
+        expect(DhanHQ.logger).to receive(:warn).with(/Unexpected response format/)
+        result = DhanHQ::BaseModel.parse_collection_response("invalid")
+        expect(result).to eq([])
+      end
+
+      it "handles array responses" do
+        response = [{ id: 1 }, { id: 2 }]
+        result = DhanHQ::BaseModel.parse_collection_response(response)
+        expect(result).to be_an(Array)
+        expect(result.size).to eq(2)
+      end
+
+      it "handles hash with data key" do
+        response = { data: [{ id: 1 }] }
+        result = DhanHQ::BaseModel.parse_collection_response(response)
+        expect(result).to be_an(Array)
+        expect(result.size).to eq(1)
+      end
+    end
+
+    describe "#id" do
+      it "converts id to string" do
+        model = DhanHQ::BaseModel.new({ id: 123 }, skip_validation: true)
+        expect(model.id).to eq("123")
+      end
+
+      it "handles order_id" do
+        model = DhanHQ::BaseModel.new({ order_id: 456 }, skip_validation: true)
+        expect(model.id).to eq("456")
+      end
+
+      it "returns nil when no id present" do
+        model = DhanHQ::BaseModel.new({}, skip_validation: true)
+        expect(model.id).to be_nil
+      end
+    end
   end
 end

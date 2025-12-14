@@ -233,6 +233,34 @@ RSpec.describe DhanHQ::Models::Order do
       expect(result).to be(order)
       expect(order.quantity).to eq(10)
     end
+
+    it "logs warning when trying to modify TRADED order but still attempts API call" do
+      traded_order = described_class.new({ orderId: "OID123", orderStatus: "TRADED" }, skip_validation: true)
+      allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already traded" })
+
+      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*TRADED state/)
+      # API call is attempted, API will return error
+      result = traded_order.modify(quantity: 10)
+      expect(result).to be_a(DhanHQ::ErrorObject)
+    end
+
+    it "logs warning when trying to modify CANCELLED order but still attempts API call" do
+      cancelled_order = described_class.new({ orderId: "OID123", orderStatus: "CANCELLED" }, skip_validation: true)
+      allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already cancelled" })
+
+      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*CANCELLED state/)
+      # API call is attempted, API will return error
+      result = cancelled_order.modify(quantity: 10)
+      expect(result).to be_a(DhanHQ::ErrorObject)
+    end
+
+    it "allows modification of PENDING order" do
+      expect(resource_double).to receive(:update).and_return({ "status" => "success", "orderId" => "OID123" })
+      result = order.modify(quantity: 10)
+      expect(result).to be(order)
+    end
   end
 
   describe "#slice_order" do
@@ -413,27 +441,35 @@ RSpec.describe DhanHQ::Models::Order do
       it "places a new order when valid" do
         allow(order).to receive_messages(valid?: true, new_record?: true)
         expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
+        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order placed successfully/)
 
         expect(order.save).to be(true)
       end
 
-      it "returns false when create fails" do
+      it "returns false when create fails and logs error" do
         allow(order).to receive_messages(valid?: true, new_record?: true)
-        expect(resource_double).to receive(:create).and_return({})
+        expect(resource_double).to receive(:create).and_return({ errorMessage: "Insufficient funds" })
+        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
+        expect(DhanHQ.logger).to receive(:error).with(/Order placement failed/)
 
         expect(order.save).to be(false)
       end
 
-      it "updates existing orders" do
+      it "updates existing orders and logs" do
         allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
         expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
+        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order modified successfully/)
 
         expect(order.save).to be(true)
       end
 
-      it "returns false when update fails" do
+      it "returns false when update fails and logs error" do
         allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
-        expect(resource_double).to receive(:update).and_return({})
+        expect(resource_double).to receive(:update).and_return({ errorMessage: "Order not found" })
+        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
+        expect(DhanHQ.logger).to receive(:error).with(/Order modification failed/)
 
         expect(order.save).to be(false)
       end

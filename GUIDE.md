@@ -63,6 +63,11 @@ Set any of the following environment variables _before_ calling
 | `DHAN_WS_ORDER_URL`                       | Customise the order update WebSocket endpoint.       |
 | `DHAN_WS_USER_TYPE`                       | Toggle between `SELF` and `PARTNER` streaming modes. |
 | `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when streaming as a partner.                |
+| `DHAN_CONNECT_TIMEOUT`                    | Connection timeout in seconds (default: 10).         |
+| `DHAN_READ_TIMEOUT`                       | Read timeout in seconds (default: 30).              |
+| `DHAN_WRITE_TIMEOUT`                      | Write timeout in seconds (default: 30).              |
+| `DHAN_WS_MAX_TRACKED_ORDERS`             | Maximum orders to track in WebSocket (default: 10,000). |
+| `DHAN_WS_MAX_ORDER_AGE`                  | Maximum order age in seconds before cleanup (default: 604,800 = 7 days). |
 
 ---
 
@@ -739,6 +744,38 @@ end
 5. Keep enum values in sync by referencing `DhanHQ::Constants`; avoid hardcoding strings in application code.
 6. Capture and persist broker error codes—they are mapped to Ruby error classes but still valuable for support tickets.
 7. For WebSocket feeds, subscribe in frames ≤ 100 instruments and handle reconnect callbacks to resubscribe cleanly.
+8. Use retry logic for transient errors—the client automatically retries `RateLimitError`, `InternalServerError`, and `NetworkError` with exponential backoff.
+9. Configure timeouts appropriately for your network conditions using `DHAN_CONNECT_TIMEOUT`, `DHAN_READ_TIMEOUT`, and `DHAN_WRITE_TIMEOUT`.
+10. Monitor WebSocket order tracker memory usage—configure `DHAN_WS_MAX_TRACKED_ORDERS` and `DHAN_WS_MAX_ORDER_AGE` for long-running applications.
+
+---
+
+## Testing & Development
+
+For comprehensive testing examples and interactive console helpers, see the [Testing Guide](docs/TESTING_GUIDE.md). The guide includes:
+
+- **WebSocket Testing**: Market feed, order updates, and market depth examples
+- **Model Testing**: Complete examples for all models (Orders, Positions, Holdings, etc.)
+- **Validation Contracts**: Testing all validation contracts
+- **Error Handling**: Testing error scenarios and recovery
+- **Quick Helpers**: Load `bin/test_helpers.rb` in console for quick test functions
+
+**Quick start in console:**
+```ruby
+# Start console
+bin/console
+
+# Load test helpers
+load 'bin/test_helpers.rb'
+
+# Run quick tests
+run_all_tests
+
+# Or test individual features
+test_funds
+test_market_feed
+test_orders
+```
 
 ---
 

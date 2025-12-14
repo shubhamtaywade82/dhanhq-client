@@ -1,5 +1,91 @@
 ## [Unreleased]
 
+## [2.1.11] - 2025-01-27
+
+This release includes comprehensive bug fixes, security improvements, and reliability enhancements. All changes are **backward compatible** - no breaking changes.
+
+### 🔴 Critical Fixes
+
+#### Thread Safety & Concurrency
+- **Rate limiter race condition**: Fixed thread safety issue where cleanup threads modified shared state without synchronization. Added mutex protection and graceful shutdown mechanism.
+- **WebSocket thread safety**: Fixed callback iteration race condition by creating frozen snapshots to prevent modification during event emission.
+
+#### Error Handling & Validation
+- **Client credential validation**: Moved validation to request time (in `build_headers`) rather than initialization, maintaining backward compatibility while ensuring credentials are validated before API calls.
+- **WebSocket error handling**: Added proper cleanup and state reset on exceptions, improved logging with backtraces for better debugging.
+- **Price field validation**: Added comprehensive validation for all float fields (price, trigger_price, bo_profit_value, bo_stop_loss_value, drv_strike_price) to reject NaN, Infinity, and values exceeding reasonable bounds (1,000,000,000).
+
+### 🟠 High Priority Fixes
+
+#### Memory Management
+- **Order tracker memory leak**: Fixed unbounded memory growth in WebSocket order tracker by implementing automatic cleanup with configurable limits:
+  - Maximum tracked orders: 10,000 (configurable via `DHAN_WS_MAX_TRACKED_ORDERS`)
+  - Maximum order age: 7 days (configurable via `DHAN_WS_MAX_ORDER_AGE`)
+  - Automatic cleanup thread runs hourly
+
+#### Reliability & Error Handling
+- **JSON parse error handling**: Improved error handling for invalid JSON responses. Empty strings return empty hash (backward compatible), but truly invalid JSON now raises `DataError` with detailed logging.
+- **Timeout configuration**: Added configurable timeouts to prevent requests from hanging indefinitely:
+  - Connection timeout: 10s (configurable via `DHAN_CONNECT_TIMEOUT`)
+  - Read timeout: 30s (configurable via `DHAN_READ_TIMEOUT`)
+  - Write timeout: 30s (configurable via `DHAN_WRITE_TIMEOUT`)
+- **Retry logic**: Added automatic retry with exponential backoff for transient errors (RateLimitError, InternalServerError, NetworkError, timeouts). Default: 3 retries with exponential backoff (1s, 2s, 4s, capped at 30s).
+
+### 🟡 Medium Priority Fixes
+
+#### Code Quality & Reliability
+- **Order modification validation**: Added warning logs for invalid order states (TRADED, CANCELLED, EXPIRED, CLOSED) but still attempts API call - API handles final validation (backward compatible).
+- **Error mapping**: Added logging for unmapped error codes to aid investigation and debugging.
+- **Rate limiter cleanup**: Added `shutdown()` method to gracefully stop cleanup threads and prevent resource leaks.
+- **Order operation logging**: Added structured logging for order placement and modification operations to aid debugging.
+
+### 🔵 Low Priority Fixes
+
+#### Code Quality
+- **Code deduplication**: Made `delete` delegate to `destroy`, removing duplicate code.
+- **Type consistency**: Added `.to_s` conversion for `id` method to ensure consistent string return type.
+- **Response format logging**: Added logging for unexpected response formats in collection parsing to help identify API changes.
+
+### ✅ API Compliance
+
+- **Header validation**: Validates required headers (`access_token`, `client_id` for DATA APIs) before making requests, providing clear error messages.
+- **202 Accepted status**: Properly handles `202 Accepted` status code for async operations (e.g., position conversion).
+
+### ➕ Added
+
+#### Configuration Options
+- **Timeout configuration** via environment variables:
+  - `DHAN_CONNECT_TIMEOUT` - Connection timeout in seconds (default: 10)
+  - `DHAN_READ_TIMEOUT` - Read timeout in seconds (default: 30)
+  - `DHAN_WRITE_TIMEOUT` - Write timeout in seconds (default: 30)
+- **WebSocket order tracker configuration** via environment variables:
+  - `DHAN_WS_MAX_TRACKED_ORDERS` - Maximum orders to track (default: 10,000)
+  - `DHAN_WS_MAX_ORDER_AGE` - Maximum order age in seconds (default: 604,800 = 7 days)
+
+#### Test Coverage
+- `spec/dhan_hq/contracts/place_order_contract_spec.rb` - Comprehensive price validation tests
+- `spec/dhan_hq/helpers/response_helper_spec.rb` - JSON parsing and error handling tests
+- `spec/dhan_hq/ws/orders/client_spec.rb` - Order tracker cleanup and thread safety tests
+- Updated existing specs to cover new functionality and improvements
+
+### 🔄 Changed
+
+- **Error handling**: Improved error messages and logging throughout the codebase
+- **Thread safety**: Enhanced thread safety in rate limiter and WebSocket clients
+- **Memory management**: Order tracker now automatically cleans up old orders
+- **JSON parsing**: Invalid JSON now raises `DataError` with logging (empty strings still return empty hash for backward compatibility)
+
+### 🗑️ Removed
+
+- `lib/DhanHQ/contracts/modify_order_contract_copy.rb` - Removed unused duplicate file
+
+### 📝 Notes
+
+- **Backward Compatibility**: All changes maintain 100% backward compatibility. No breaking changes.
+- **API Compliance**: All fixes align with official API documentation at https://api.dhan.co/v2/#/
+- **Performance**: Memory leak fixes and cleanup mechanisms improve long-running application stability
+- **Reliability**: Retry logic and improved error handling increase resilience to transient failures
+
 ## [2.1.10] - 2025-11-11
 
 ### Fixed

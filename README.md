@@ -86,6 +86,11 @@ override defaults supplied by the gem:
 | `DHAN_WS_ORDER_URL`                       | Override the order update WebSocket endpoint.        |
 | `DHAN_WS_USER_TYPE`                       | Switch between `SELF` and `PARTNER` streaming modes. |
 | `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`.           |
+| `DHAN_CONNECT_TIMEOUT`                    | Connection timeout in seconds (default: 10).         |
+| `DHAN_READ_TIMEOUT`                       | Read timeout in seconds (default: 30).              |
+| `DHAN_WRITE_TIMEOUT`                      | Write timeout in seconds (default: 30).              |
+| `DHAN_WS_MAX_TRACKED_ORDERS`             | Maximum orders to track in WebSocket (default: 10,000). |
+| `DHAN_WS_MAX_ORDER_AGE`                  | Maximum order age in seconds before cleanup (default: 604,800 = 7 days). |
 
 ### Logging
 
@@ -143,6 +148,33 @@ Need a full-stack example inside Rails (REST + WebSockets + automation)? Check
 out the [Rails integration guide](docs/rails_integration.md) for
 initializers, service objects, workers, and ActionCable wiring tailored for the
 `DhanHQ` gem.
+
+### Testing & Development
+
+For comprehensive testing examples and interactive console helpers, see the [Testing Guide](docs/TESTING_GUIDE.md). The guide includes:
+
+- **WebSocket Testing**: Market feed, order updates, and market depth examples
+- **Model Testing**: Complete examples for all models (Orders, Positions, Holdings, etc.)
+- **Validation Contracts**: Testing all validation contracts
+- **Error Handling**: Testing error scenarios and recovery
+- **Quick Helpers**: Load `bin/test_helpers.rb` in console for quick test functions
+
+**Quick start in console:**
+```ruby
+# Start console
+bin/console
+
+# Load test helpers
+load 'bin/test_helpers.rb'
+
+# Run quick tests
+run_all_tests
+
+# Or test individual features
+test_funds
+test_market_feed
+test_orders
+```
 
 ---
 

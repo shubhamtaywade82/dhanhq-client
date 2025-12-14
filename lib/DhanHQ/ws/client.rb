@@ -164,11 +164,16 @@ module DhanHQ
       def prune(hash) = { ExchangeSegment: hash[:ExchangeSegment], SecurityId: hash[:SecurityId] }
 
       def emit(event, payload)
-        begin
-          @callbacks[event].dup
+        # Create a frozen snapshot of callbacks to avoid modification during iteration
+        callbacks_snapshot = begin
+          @callbacks[event].dup.freeze
         rescue StandardError
-          []
-        end.each { |cb| cb.call(payload) }
+          [].freeze
+        end
+        
+        callbacks_snapshot.each { |cb| cb.call(payload) }
+      rescue StandardError => e
+        DhanHQ.logger&.error("[DhanHQ::WS::Client] Error in event handler for #{event}: #{e.class} #{e.message}")
       end
 
       def install_at_exit_once!

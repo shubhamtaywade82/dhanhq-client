@@ -894,6 +894,27 @@ puts "Market subscriptions: #{market_client.subscriptions}"
 puts "Depth subscriptions: #{depth_client.subscriptions}"
 ```
 
+## Testing
+
+For comprehensive testing examples and interactive console helpers, see the [Testing Guide](TESTING_GUIDE.md). The guide includes:
+
+- **WebSocket Testing**: Market feed, order updates, and market depth examples
+- **Interactive Console Helpers**: Load `bin/test_helpers.rb` for quick test functions
+- **Complete Examples**: Copy-paste examples for all WebSocket features
+
+**Quick start in console:**
+```ruby
+# Start console
+bin/console
+
+# Load test helpers
+load 'bin/test_helpers.rb'
+
+# Test WebSocket connections
+test_websocket(:ticker, 5)      # Test market feed for 5 seconds
+test_order_websocket(5)        # Test order updates for 5 seconds
+```
+
 ## Examples
 
 The gem includes comprehensive examples in the `examples/` directory:

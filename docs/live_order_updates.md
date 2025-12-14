@@ -317,3 +317,27 @@ All operations are thread-safe using `Concurrent::Map` and `Concurrent::AtomicBo
 - Connection state management
 
 This ensures safe usage in multi-threaded applications.
+
+## Testing
+
+For comprehensive testing examples and interactive console helpers, see the [Testing Guide](TESTING_GUIDE.md). The guide includes:
+
+- **Order Update WebSocket Testing**: Complete examples for all order update features
+- **Event Handler Testing**: Examples for all event types
+- **Order State Management**: Testing order tracking and querying
+- **Interactive Console Helpers**: Load `bin/test_helpers.rb` for quick test functions
+
+**Quick start in console:**
+```ruby
+# Start console
+bin/console
+
+# Load test helpers
+load 'bin/test_helpers.rb'
+
+# Test order WebSocket
+test_order_websocket(10)        # Test order updates for 10 seconds
+
+# Monitor specific order
+monitor_order("112111182045")   # Monitor order by ID
+```

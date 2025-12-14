@@ -23,18 +23,57 @@ RSpec.describe DhanHQ::Client do
   end
 
   describe "#initialize" do
+    before do
+      ENV["CLIENT_ID"] = "test_client_id"
+      ENV["ACCESS_TOKEN"] = "test_access_token"
+      DhanHQ.configure_with_env
+    end
+
     it "creates a Faraday connection" do
       expect(client.connection).to be_a(Faraday::Connection)
     end
 
-    # it "initializes the RateLimiter with correct api_type" do
-    #   client
-    #   expect(DhanHQ::RateLimiter).to have_received(:new).with(api_type)
-    # end
+    it "sets timeout configuration" do
+      expect(client.connection.options.timeout).to eq(30)
+      expect(client.connection.options.open_timeout).to eq(10)
+      expect(client.connection.options.write_timeout).to eq(30)
+    end
 
     it "raises an error if RateLimiter fails to initialize" do
       allow(DhanHQ::RateLimiter).to receive(:for).and_return(nil)
-      expect { described_class.new(api_type: api_type) }.to raise_error("RateLimiter initialization failed")
+      expect do
+        described_class.new(api_type: api_type)
+      end.to raise_error(DhanHQ::Error, /RateLimiter initialization failed/)
+    end
+
+    context "when CLIENT_ID is set but ACCESS_TOKEN is missing" do
+      before do
+        ENV["CLIENT_ID"] = "test_client_id"
+        ENV.delete("ACCESS_TOKEN")
+        DhanHQ.configure_with_env
+      end
+
+      it "does not raise error during initialization (validation happens at request time)" do
+        expect { described_class.new(api_type: api_type) }.not_to raise_error
+      end
+
+      it "raises error when making a request without access_token" do
+        client = described_class.new(api_type: api_type)
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::InvalidAuthenticationError, /access_token is required/)
+      end
+    end
+
+    context "when ACCESS_TOKEN is set but CLIENT_ID is missing" do
+      before do
+        ENV.delete("CLIENT_ID")
+        ENV["ACCESS_TOKEN"] = "test_access_token"
+        DhanHQ.configure_with_env
+      end
+
+      it "does not raise error (CLIENT_ID not required for all APIs)" do
+        expect { described_class.new(api_type: api_type) }.not_to raise_error
+      end
     end
   end
 
@@ -60,12 +99,17 @@ RSpec.describe DhanHQ::Client do
       end
     end
 
-    context "when response is not valid JSON", vcr: { cassette_name: "client/invalid_json_response" } do
+    context "when response is not valid JSON" do
       let(:endpoint) { "/v2/orders/#{order_id}" }
+      let(:invalid_json_response) { instance_double(Faraday::Response, status: 200, body: "invalid json") }
 
-      it "returns an empty hash for invalid JSON response" do
-        response = client.request(:get, endpoint, {})
-        expect(response).to eq([])
+      before do
+        allow(client.connection).to receive(:get).and_return(invalid_json_response)
+      end
+
+      it "raises DataError for invalid JSON response" do
+        expect { client.request(:get, endpoint, {}) }
+          .to raise_error(DhanHQ::DataError, /Failed to parse JSON response/)
       end
     end
 
@@ -83,12 +127,44 @@ RSpec.describe DhanHQ::Client do
     let(:data_api_path) { "/v2/marketfeed/ltp" }
     let(:non_data_api_path) { "/v2/orders" }
 
+    before do
+      ENV["CLIENT_ID"] = "test_client_id"
+      ENV["ACCESS_TOKEN"] = "test_access_token"
+      DhanHQ.configure_with_env
+    end
+
     it "includes client-id for data APIs" do
       expect(client.send(:build_headers, data_api_path)).to include("client-id" => DhanHQ.configuration.client_id)
     end
 
     it "does not include client-id for non-data APIs" do
       expect(client.send(:build_headers, non_data_api_path)).not_to include("client-id")
+    end
+
+    context "when access_token is missing" do
+      before do
+        # Clear ENV to prevent Client#initialize from auto-reloading access_token
+        ENV.delete("ACCESS_TOKEN")
+        DhanHQ.configuration.access_token = nil
+      end
+
+      it "raises InvalidAuthenticationError" do
+        expect { client.send(:build_headers, non_data_api_path) }
+          .to raise_error(DhanHQ::InvalidAuthenticationError, /access_token is required/)
+      end
+    end
+
+    context "when client_id is missing for data API" do
+      before do
+        # Clear ENV to prevent Client#initialize from auto-reloading client_id
+        ENV.delete("CLIENT_ID")
+        DhanHQ.configuration.client_id = nil
+      end
+
+      it "raises InvalidAuthenticationError" do
+        expect { client.send(:build_headers, data_api_path) }
+          .to raise_error(DhanHQ::InvalidAuthenticationError, /client_id is required for DATA APIs/)
+      end
     end
   end
 

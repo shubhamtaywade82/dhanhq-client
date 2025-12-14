@@ -93,6 +93,57 @@ module DhanHQ
         optional(:drv_strike_price).maybe(:float, gt?: 0)
       end
 
+      # Validate that float values are finite (not NaN or Infinity) and within reasonable bounds
+      rule(:price) do
+        if values[:price].is_a?(Float)
+          if values[:price].nan? || values[:price].infinite?
+            key(:price).failure("must be a finite number")
+          elsif values[:price] > 1_000_000_000
+            key(:price).failure("must be less than 1,000,000,000")
+          end
+        end
+      end
+
+      rule(:trigger_price) do
+        if values[:trigger_price].is_a?(Float)
+          if values[:trigger_price].nan? || values[:trigger_price].infinite?
+            key(:trigger_price).failure("must be a finite number")
+          elsif values[:trigger_price] > 1_000_000_000
+            key(:trigger_price).failure("must be less than 1,000,000,000")
+          end
+        end
+      end
+
+      rule(:bo_profit_value) do
+        if values[:bo_profit_value].is_a?(Float)
+          if values[:bo_profit_value].nan? || values[:bo_profit_value].infinite?
+            key(:bo_profit_value).failure("must be a finite number")
+          elsif values[:bo_profit_value] > 1_000_000_000
+            key(:bo_profit_value).failure("must be less than 1,000,000,000")
+          end
+        end
+      end
+
+      rule(:bo_stop_loss_value) do
+        if values[:bo_stop_loss_value].is_a?(Float)
+          if values[:bo_stop_loss_value].nan? || values[:bo_stop_loss_value].infinite?
+            key(:bo_stop_loss_value).failure("must be a finite number")
+          elsif values[:bo_stop_loss_value] > 1_000_000_000
+            key(:bo_stop_loss_value).failure("must be less than 1,000,000,000")
+          end
+        end
+      end
+
+      rule(:drv_strike_price) do
+        if values[:drv_strike_price].is_a?(Float)
+          if values[:drv_strike_price].nan? || values[:drv_strike_price].infinite?
+            key(:drv_strike_price).failure("must be a finite number")
+          elsif values[:drv_strike_price] > 1_000_000_000
+            key(:drv_strike_price).failure("must be less than 1,000,000,000")
+          end
+        end
+      end
+
       # Custom validation for trigger price when the order type is STOP_LOSS or STOP_LOSS_MARKET.
       rule(:trigger_price, :order_type) do
         if values[:order_type] =~ /^STOP_LOSS/ && !values[:trigger_price]
