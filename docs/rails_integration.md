@@ -46,6 +46,11 @@ dhanhq:
   ws_user_type: "SELF"                            # optional (SELF or PARTNER)
   partner_id: "your-partner-id"                   # optional when ws_user_type: PARTNER
   partner_secret: "your-partner-secret"           # optional when ws_user_type: PARTNER
+  connect_timeout: 10                             # optional, connection timeout in seconds
+  read_timeout: 30                                # optional, read timeout in seconds
+  write_timeout: 30                               # optional, write timeout in seconds
+  ws_max_tracked_orders: 10000                    # optional, max orders to track in WebSocket
+  ws_max_order_age: 604800                        # optional, max order age in seconds (7 days)
 ```
 
 Create an initializer so your app boots with the correct configuration via
@@ -64,6 +69,11 @@ if (creds = Rails.application.credentials.dig(:dhanhq))
   ENV['DHAN_WS_USER_TYPE'] ||= creds[:ws_user_type]
   ENV['DHAN_PARTNER_ID']    ||= creds[:partner_id]
   ENV['DHAN_PARTNER_SECRET'] ||= creds[:partner_secret]
+  ENV['DHAN_CONNECT_TIMEOUT'] ||= creds[:connect_timeout]&.to_s
+  ENV['DHAN_READ_TIMEOUT'] ||= creds[:read_timeout]&.to_s
+  ENV['DHAN_WRITE_TIMEOUT'] ||= creds[:write_timeout]&.to_s
+  ENV['DHAN_WS_MAX_TRACKED_ORDERS'] ||= creds[:ws_max_tracked_orders]&.to_s
+  ENV['DHAN_WS_MAX_ORDER_AGE'] ||= creds[:ws_max_order_age]&.to_s
 end
 
 # fall back to traditional ENV variables when credentials are not defined

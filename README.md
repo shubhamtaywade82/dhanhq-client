@@ -86,6 +86,11 @@ override defaults supplied by the gem:
 | `DHAN_WS_ORDER_URL`                       | Override the order update WebSocket endpoint.        |
 | `DHAN_WS_USER_TYPE`                       | Switch between `SELF` and `PARTNER` streaming modes. |
 | `DHAN_PARTNER_ID` / `DHAN_PARTNER_SECRET` | Required when `DHAN_WS_USER_TYPE=PARTNER`.           |
+| `DHAN_CONNECT_TIMEOUT`                    | Connection timeout in seconds (default: 10).         |
+| `DHAN_READ_TIMEOUT`                       | Read timeout in seconds (default: 30).              |
+| `DHAN_WRITE_TIMEOUT`                      | Write timeout in seconds (default: 30).              |
+| `DHAN_WS_MAX_TRACKED_ORDERS`             | Maximum orders to track in WebSocket (default: 10,000). |
+| `DHAN_WS_MAX_ORDER_AGE`                  | Maximum order age in seconds before cleanup (default: 604,800 = 7 days). |
 
 ### Logging
 
