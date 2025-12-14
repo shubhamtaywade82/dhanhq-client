@@ -25,18 +25,32 @@ module DhanHQ
     #
     # @param path [String] The API endpoint path.
     # @return [Hash] The request headers.
+    # @raise [DhanHQ::InvalidAuthenticationError] If required headers are missing
     def build_headers(path)
       # Public CSV endpoint for segment-wise instruments requires no auth
       return { "Accept" => "text/csv" } if path.start_with?("/v2/instrument/")
 
+      access_token = DhanHQ.configuration.access_token
+      unless access_token
+        raise DhanHQ::InvalidAuthenticationError,
+              "access_token is required but not set. Please configure DhanHQ with CLIENT_ID and ACCESS_TOKEN."
+      end
+
       headers = {
         "Content-Type" => "application/json",
         "Accept" => "application/json",
-        "access-token" => DhanHQ.configuration.access_token
+        "access-token" => access_token
       }
 
       # Add client-id for DATA APIs
-      headers["client-id"] = DhanHQ.configuration.client_id if data_api?(path)
+      if data_api?(path)
+        client_id = DhanHQ.configuration.client_id
+        unless client_id
+          raise DhanHQ::InvalidAuthenticationError,
+                "client_id is required for DATA APIs but not set. Please configure DhanHQ with CLIENT_ID."
+        end
+        headers["client-id"] = client_id
+      end
 
       headers
     end

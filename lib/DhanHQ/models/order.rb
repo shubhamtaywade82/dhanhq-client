@@ -366,6 +366,11 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
 
+        # Validate order is in a modifiable state
+        if order_status && %w[TRADED CANCELLED EXPIRED CLOSED].include?(order_status)
+          raise DhanHQ::OrderError, "Cannot modify order #{id}: order is in #{order_status} state"
+        end
+
         base_payload = attributes.merge(new_params)
         normalized_payload = snake_case(base_payload).merge(order_id: id)
         filtered_payload = normalized_payload.each_with_object({}) do |(key, value), memo|
@@ -490,23 +495,32 @@ module DhanHQ
 
         if new_record?
           # PLACE ORDER
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price).inspect}")
           response = self.class.resource.create(to_request_params)
           if success_response?(response) && response["orderId"]
             @attributes.merge!(normalize_keys(response))
             assign_attributes
+            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order placed successfully: #{response['orderId']}")
             true
           else
-            # maybe store errors?
+            error_msg = response.is_a?(Hash) ? response[:errorMessage] || response[:message] || "Unknown error" : "Invalid response format"
+            DhanHQ.logger&.error("[DhanHQ::Models::Order] Order placement failed: #{error_msg}")
+            @errors = response if response.is_a?(Hash)
             false
           end
         else
           # MODIFY ORDER
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity, :order_type).inspect}")
           response = self.class.resource.update(id, to_request_params)
           if success_response?(response) && response["orderStatus"]
             @attributes.merge!(normalize_keys(response))
             assign_attributes
+            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order modified successfully: #{id}")
             true
           else
+            error_msg = response.is_a?(Hash) ? response[:errorMessage] || response[:message] || "Unknown error" : "Invalid response format"
+            DhanHQ.logger&.error("[DhanHQ::Models::Order] Order modification failed for #{id}: #{error_msg}")
+            @errors = response if response.is_a?(Hash)
             false
           end
         end

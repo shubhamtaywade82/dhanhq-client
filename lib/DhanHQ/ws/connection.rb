@@ -141,8 +141,20 @@ module DhanHQ
             end
           rescue StandardError => e
             DhanHQ.logger&.error("[DhanHQ::WS] crashed #{e.class} #{e.message}")
+            DhanHQ.logger&.error("[DhanHQ::WS] backtrace: #{e.backtrace&.first(5)&.join("\n")}")
             failed = true
+            # Reset connection state on error
+            @ws = nil
+            @timer = nil
           ensure
+            # Clean up EventMachine resources
+            begin
+              EM.cancel_timer(@timer) if @timer
+              @timer = nil
+            rescue StandardError => cleanup_error
+              DhanHQ.logger&.debug("[DhanHQ::WS] cleanup error: #{cleanup_error.message}")
+            end
+            
             break if @stop
 
             if got_429
@@ -154,11 +166,13 @@ module DhanHQ
               # exponential backoff with jitter
               sleep_time = [backoff, MAX_BACKOFF].min
               jitter = rand(0.2 * sleep_time)
-              DhanHQ.logger&.warn("[DhanHQ::WS] reconnecting in #{(sleep_time + jitter).round(1)}s")
+              DhanHQ.logger&.warn("[DhanHQ::WS] reconnecting in #{(sleep_time + jitter).round(1)}s (backoff: #{backoff.round(1)}s)")
               sleep(sleep_time + jitter)
               backoff *= 2.0
             else
-              backoff = 2.0 # reset only after a clean session end
+              # Reset backoff only after a clean session end (normal close with code 1000)
+              backoff = 2.0
+              DhanHQ.logger&.debug("[DhanHQ::WS] backoff reset to 2.0s after clean session end")
             end
           end
         end

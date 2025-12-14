@@ -36,38 +36,91 @@ module DhanHQ
     #
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
     # @return [DhanHQ::Client] A new client instance.
+    # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
     def initialize(api_type:)
-      DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
+      # Validate configuration before proceeding
+      if ENV.fetch("CLIENT_ID", nil)
+        DhanHQ.configure_with_env
+        # Validate both required credentials are present
+        unless DhanHQ.configuration.client_id && DhanHQ.configuration.access_token
+          raise DhanHQ::InvalidAuthenticationError,
+                "Both CLIENT_ID and ACCESS_TOKEN must be set. " \
+                "CLIENT_ID: #{DhanHQ.configuration.client_id ? 'set' : 'missing'}, " \
+                "ACCESS_TOKEN: #{DhanHQ.configuration.access_token ? 'set' : 'missing'}"
+        end
+      end
+      
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)
 
-      raise "RateLimiter initialization failed" unless @rate_limiter
+      raise DhanHQ::Error, "RateLimiter initialization failed" unless @rate_limiter
+
+      # Get timeout values from configuration or environment, with sensible defaults
+      connect_timeout = ENV.fetch("DHAN_CONNECT_TIMEOUT", 10).to_i
+      read_timeout = ENV.fetch("DHAN_READ_TIMEOUT", 30).to_i
+      write_timeout = ENV.fetch("DHAN_WRITE_TIMEOUT", 30).to_i
 
       @connection = Faraday.new(url: DhanHQ.configuration.base_url) do |conn|
         conn.request :json, parser_options: { symbolize_names: true }
         conn.response :json, content_type: /\bjson$/
         conn.response :logger if ENV["DHAN_DEBUG"] == "true"
+        conn.options.timeout = read_timeout
+        conn.options.open_timeout = connect_timeout
+        conn.options.write_timeout = write_timeout
         conn.adapter Faraday.default_adapter
       end
     end
 
-    # Sends an HTTP request to the API.
+    # Sends an HTTP request to the API with automatic retry for transient errors.
     #
     # @param method [Symbol] The HTTP method (`:get`, `:post`, `:put`, `:delete`)
     # @param path [String] The API endpoint path.
     # @param payload [Hash] The request parameters or body.
+    # @param retries [Integer] Number of retries for transient errors (default: 3)
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
     # @raise [DhanHQ::Error] If an HTTP error occurs.
-    def request(method, path, payload)
+    def request(method, path, payload, retries: 3)
       @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
 
-      response = connection.send(method) do |req|
-        req.url path
-        req.headers.merge!(build_headers(path))
-        prepare_payload(req, payload, method)
-      end
+      attempt = 0
+      begin
+        response = connection.send(method) do |req|
+          req.url path
+          req.headers.merge!(build_headers(path))
+          prepare_payload(req, payload, method)
+        end
 
-      handle_response(response)
+        handle_response(response)
+      rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
+        attempt += 1
+        if attempt <= retries
+          backoff_time = calculate_backoff(attempt)
+          DhanHQ.logger&.warn("[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff_time}s (attempt #{attempt}/#{retries})")
+          sleep(backoff_time)
+          retry
+        end
+        raise
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+        attempt += 1
+        if attempt <= retries
+          backoff_time = calculate_backoff(attempt)
+          DhanHQ.logger&.warn("[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff_time}s (attempt #{attempt}/#{retries})")
+          sleep(backoff_time)
+          retry
+        end
+        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}"
+      end
+    end
+
+    private
+
+    # Calculates exponential backoff time
+    #
+    # @param attempt [Integer] Current attempt number (1-based)
+    # @return [Float] Backoff time in seconds
+    def calculate_backoff(attempt)
+      # Exponential backoff: 1s, 2s, 4s, 8s, etc., capped at 30s
+      [2**(attempt - 1), 30].min.to_f
     end
 
     # Convenience wrapper for issuing a GET request.

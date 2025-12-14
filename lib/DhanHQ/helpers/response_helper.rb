@@ -30,6 +30,10 @@ module DhanHQ
     def handle_response(response)
       case response.status
       when 200..299 then parse_json(response.body)
+      when 202 then
+        # 202 Accepted is used for async operations (e.g., position conversion)
+        # Return empty hash to indicate success for async operations
+        { status: "accepted" }.with_indifferent_access
       else handle_error(response)
       end
     end
@@ -49,16 +53,21 @@ module DhanHQ
 
       error_class = DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code]
 
-      error_class ||=
-        case response.status
-        when 400 then DhanHQ::InputExceptionError
-        when 401 then DhanHQ::InvalidAuthenticationError
-        when 403 then DhanHQ::InvalidAccessError
-        when 404 then DhanHQ::NotFoundError
-        when 429 then DhanHQ::RateLimitError
-        when 500..599 then DhanHQ::InternalServerError
-        else DhanHQ::OtherError
-        end
+      unless error_class
+        # Log unmapped error codes for investigation
+        DhanHQ.logger&.warn("[DhanHQ] Unmapped error code: #{error_code} (status: #{response.status})")
+        
+        error_class =
+          case response.status
+          when 400 then DhanHQ::InputExceptionError
+          when 401 then DhanHQ::InvalidAuthenticationError
+          when 403 then DhanHQ::InvalidAccessError
+          when 404 then DhanHQ::NotFoundError
+          when 429 then DhanHQ::RateLimitError
+          when 500..599 then DhanHQ::InternalServerError
+          else DhanHQ::OtherError
+          end
+      end
 
       error_text =
         if error_code == "DH-1111"
@@ -74,13 +83,16 @@ module DhanHQ
     #
     # @param body [String, Hash] The response body.
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
+    # @raise [DhanHQ::DataError] If JSON parsing fails
     def parse_json(body)
       parsed_body =
         if body.is_a?(String)
           begin
             JSON.parse(body, symbolize_names: true)
-          rescue JSON::ParserError
-            {} # Return an empty hash if the string is not valid JSON
+          rescue JSON::ParserError => e
+            DhanHQ.logger&.error("[DhanHQ] JSON parse error: #{e.message}")
+            DhanHQ.logger&.debug("[DhanHQ] Failed to parse body (first 200 chars): #{body[0..200]}")
+            raise DhanHQ::DataError, "Failed to parse JSON response: #{e.message}"
           end
         else
           body

@@ -143,7 +143,10 @@ module DhanHQ
       # @return [Array<BaseModel>]
       def parse_collection_response(response)
         # Some endpoints return arrays, others might return a `[:data]` structure
-        return [] unless response.is_a?(Array) || (response.is_a?(Hash) && response[:data].is_a?(Array))
+        unless response.is_a?(Array) || (response.is_a?(Hash) && response[:data].is_a?(Array))
+          DhanHQ.logger&.warn("[DhanHQ::BaseModel] Unexpected response format for collection: #{response.class}. Expected Array or Hash with :data key.")
+          return []
+        end
 
         collection = response.is_a?(Array) ? response : response[:data]
         collection.map { |record| new(record) }
@@ -155,11 +158,15 @@ module DhanHQ
     # Update an existing resource
     #
     # @param attributes [Hash] Attributes to update
-    # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject]
+    # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] Updated model instance or ErrorObject on failure
     def update(attributes = {})
       response = self.class.resource.put("/#{id}", params: attributes)
 
-      success_response?(response) ? self.class.build_from_response(response) : DhanHQ::ErrorObject.new(response)
+      if success_response?(response)
+        self.class.build_from_response(response)
+      else
+        DhanHQ::ErrorObject.new(response)
+      end
     end
 
     # Persists the current resource by delegating to {#create} or {#update}.
@@ -196,10 +203,7 @@ module DhanHQ
     #
     # @return [Boolean] True when the server confirms deletion.
     def delete
-      response = self.class.resource.delete("/#{id}")
-      success_response?(response)
-    rescue StandardError
-      false
+      destroy
     end
 
     # Alias for {#delete} maintained for ActiveModel familiarity.
@@ -208,7 +212,8 @@ module DhanHQ
     def destroy
       response = self.class.resource.delete("/#{id}")
       success_response?(response)
-    rescue StandardError
+    rescue StandardError => e
+      DhanHQ.logger&.error("[DhanHQ::BaseModel] Error deleting resource #{id}: #{e.class} #{e.message}")
       false
     end
 
@@ -239,7 +244,9 @@ module DhanHQ
     #
     # @return [String, Integer, nil]
     def id
-      @attributes[:id] || @attributes[:order_id] || @attributes[:security_id]
+      id_value = @attributes[:id] || @attributes[:order_id] || @attributes[:security_id]
+      # Convert to string for consistency, but preserve nil
+      id_value&.to_s
     end
 
     # Dynamically assign attributes as methods
