@@ -149,7 +149,7 @@ module DhanHQ
         end
 
         collection = response.is_a?(Array) ? response : response[:data]
-        collection.map { |record| new(record) }
+        collection.map { |record| new(record, skip_validation: true) }
       end
     end
 

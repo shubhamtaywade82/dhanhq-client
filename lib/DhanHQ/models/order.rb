@@ -379,7 +379,7 @@ module DhanHQ
           memo[symbolized_key] = value if MODIFIABLE_FIELDS.include?(symbolized_key)
         end
         filtered_payload[:order_id] ||= id
-        filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id]
+        filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id] || DhanHQ.configuration&.client_id
 
         cleaned_payload = filtered_payload.compact
         formatted_payload = camelize_keys(cleaned_payload)
@@ -496,12 +496,13 @@ module DhanHQ
 
         if new_record?
           # PLACE ORDER
-          DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price).inspect}")
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type,
+                                                                                         :exchange_segment, :security_id, :quantity, :price).inspect}")
           response = self.class.resource.create(to_request_params)
           if success_response?(response) && response["orderId"]
             @attributes.merge!(normalize_keys(response))
             assign_attributes
-            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order placed successfully: #{response['orderId']}")
+            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order placed successfully: #{response["orderId"]}")
             true
           else
             error_msg = response.is_a?(Hash) ? response[:errorMessage] || response[:message] || "Unknown error" : "Invalid response format"
@@ -511,7 +512,8 @@ module DhanHQ
           end
         else
           # MODIFY ORDER
-          DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity, :order_type).inspect}")
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity,
+                                                                                                 :order_type).inspect}")
           response = self.class.resource.update(id, to_request_params)
           if success_response?(response) && response["orderStatus"]
             @attributes.merge!(normalize_keys(response))

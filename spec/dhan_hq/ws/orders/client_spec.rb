@@ -5,8 +5,9 @@ require "spec_helper"
 RSpec.describe DhanHQ::WS::Orders::Client do
   let(:client) { described_class.new }
   let(:order_update) do
-    instance_double(
-      DhanHQ::Models::OrderUpdate,
+    # Use double instead of instance_double since OrderUpdate uses dynamic attributes
+    double(
+      "OrderUpdate",
       order_no: "12345",
       status: "PENDING",
       traded_qty: 0,

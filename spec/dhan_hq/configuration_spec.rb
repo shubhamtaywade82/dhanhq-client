@@ -5,10 +5,24 @@ require "dhan_hq"
 RSpec.describe DhanHQ::Configuration do
   let(:config) { described_class.new }
 
+  # Store original ENV values for this spec
+  before(:all) do
+    @original_client_id = ENV.fetch("CLIENT_ID", nil)
+    @original_access_token = ENV.fetch("ACCESS_TOKEN", nil)
+  end
+
   after do
-    # Reset ENV variables to prevent side effects
-    ENV.delete("ACCESS_TOKEN")
-    ENV.delete("CLIENT_ID")
+    # Restore original ENV values instead of deleting
+    if @original_client_id
+      ENV["CLIENT_ID"] = @original_client_id
+    else
+      ENV.delete("CLIENT_ID")
+    end
+    if @original_access_token
+      ENV["ACCESS_TOKEN"] = @original_access_token
+    else
+      ENV.delete("ACCESS_TOKEN")
+    end
   end
 
   describe "#initialize" do

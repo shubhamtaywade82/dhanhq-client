@@ -82,13 +82,36 @@ RSpec.describe DhanHQ::BaseModel do
 
     describe "#delete and #destroy" do
       it "delegates delete to destroy" do
-        model = DhanHQ::Models::Order.new({ order_id: "123" }, skip_validation: true)
-        expect(model).to receive(:destroy).and_return(true)
-        expect(model.delete).to be true
+        # Use a test model class since Order aliases delete to destroy (they're the same method)
+        test_model_class = Class.new(DhanHQ::BaseModel) do
+          def self.validation_contract
+            nil
+          end
+
+          def self.resource
+            @resource ||= DhanHQ::BaseAPI.new
+          end
+        end
+        model = test_model_class.new({ id: "123" }, skip_validation: true)
+        # Stub destroy to avoid making HTTP request
+        allow(model).to receive(:destroy).and_return(true)
+        result = model.delete
+        expect(result).to be true
+        expect(model).to have_received(:destroy)
       end
 
       it "logs errors when destroy fails" do
-        model = DhanHQ::Models::Order.new({ order_id: "123" }, skip_validation: true)
+        # Use a test model class to test BaseModel's destroy (Order overrides it without rescue)
+        test_model_class = Class.new(DhanHQ::BaseModel) do
+          def self.validation_contract
+            nil
+          end
+
+          def self.resource
+            @resource ||= DhanHQ::BaseAPI.new
+          end
+        end
+        model = test_model_class.new({ id: "123" }, skip_validation: true)
         allow(model.class.resource).to receive(:delete).and_raise(StandardError.new("Test error"))
         expect(DhanHQ.logger).to receive(:error).with(/Error deleting resource/)
         expect(model.destroy).to be false

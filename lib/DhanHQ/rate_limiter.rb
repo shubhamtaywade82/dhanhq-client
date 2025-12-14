@@ -142,46 +142,52 @@ module DhanHQ
     def start_cleanup_threads
       @cleanup_threads = []
       @shutdown = Concurrent::AtomicBoolean.new(false)
-      
+
       # Don't create per_second cleanup thread - we handle it with timestamps
       @cleanup_threads << Thread.new do
         loop do
           break if @shutdown.true?
+
           sleep(60)
           break if @shutdown.true?
+
           mutex.synchronize do
             @buckets[:per_minute]&.value = 0
           end
         end
       end
-      
+
       @cleanup_threads << Thread.new do
         loop do
           break if @shutdown.true?
+
           sleep(3600)
           break if @shutdown.true?
+
           mutex.synchronize do
             @buckets[:per_hour]&.value = 0
           end
         end
       end
-      
+
       @cleanup_threads << Thread.new do
         loop do
           break if @shutdown.true?
+
           sleep(86_400)
           break if @shutdown.true?
+
           mutex.synchronize do
             @buckets[:per_day]&.value = 0
           end
         end
       end
     end
-    
+
     # Shuts down cleanup threads gracefully
     def shutdown
       return if @shutdown.true?
-      
+
       @shutdown.make_true
       @cleanup_threads&.each do |thread|
         thread&.wakeup if thread&.alive?

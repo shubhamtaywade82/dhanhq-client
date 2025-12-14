@@ -41,7 +41,9 @@ RSpec.describe DhanHQ::Client do
 
     it "raises an error if RateLimiter fails to initialize" do
       allow(DhanHQ::RateLimiter).to receive(:for).and_return(nil)
-      expect { described_class.new(api_type: api_type) }.to raise_error(DhanHQ::Error, /RateLimiter initialization failed/)
+      expect do
+        described_class.new(api_type: api_type)
+      end.to raise_error(DhanHQ::Error, /RateLimiter initialization failed/)
     end
 
     context "when CLIENT_ID is set but ACCESS_TOKEN is missing" do
@@ -141,6 +143,8 @@ RSpec.describe DhanHQ::Client do
 
     context "when access_token is missing" do
       before do
+        # Clear ENV to prevent Client#initialize from auto-reloading access_token
+        ENV.delete("ACCESS_TOKEN")
         DhanHQ.configuration.access_token = nil
       end
 
@@ -152,6 +156,8 @@ RSpec.describe DhanHQ::Client do
 
     context "when client_id is missing for data API" do
       before do
+        # Clear ENV to prevent Client#initialize from auto-reloading client_id
+        ENV.delete("CLIENT_ID")
         DhanHQ.configuration.client_id = nil
       end
 

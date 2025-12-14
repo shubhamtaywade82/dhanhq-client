@@ -41,7 +41,7 @@ module DhanHQ
       # Configure from ENV if CLIENT_ID is present (backward compatible behavior)
       # Validation happens at request time in build_headers, not here
       DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
-      
+
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)
 
@@ -104,17 +104,6 @@ module DhanHQ
       end
     end
 
-    private
-
-    # Calculates exponential backoff time
-    #
-    # @param attempt [Integer] Current attempt number (1-based)
-    # @return [Float] Backoff time in seconds
-    def calculate_backoff(attempt)
-      # Exponential backoff: 1s, 2s, 4s, 8s, etc., capped at 30s
-      [2**(attempt - 1), 30].min.to_f
-    end
-
     # Convenience wrapper for issuing a GET request.
     #
     # @param path [String] The API endpoint path.
@@ -157,6 +146,17 @@ module DhanHQ
     # @see #request
     def delete(path, params = {})
       request(:delete, path, params)
+    end
+
+    private
+
+    # Calculates exponential backoff time
+    #
+    # @param attempt [Integer] Current attempt number (1-based)
+    # @return [Float] Backoff time in seconds
+    def calculate_backoff(attempt)
+      # Exponential backoff: 1s, 2s, 4s, 8s, etc., capped at 30s
+      [2**(attempt - 1), 30].min.to_f
     end
   end
 end
