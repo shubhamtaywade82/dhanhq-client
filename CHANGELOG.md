@@ -1,5 +1,50 @@
 ## [Unreleased]
 
+## [2.1.11] - 2025-01-27
+
+### Fixed
+- **Critical: Rate limiter race condition** - Added mutex synchronization for cleanup thread bucket modifications and shutdown mechanism
+- **Critical: Client initialization validation** - Validates both CLIENT_ID and ACCESS_TOKEN before proceeding, fails fast with clear error messages
+- **Critical: WebSocket error handling** - Proper cleanup and state reset on exceptions, improved logging with backtraces
+- **Critical: Price field validation** - Added validation for NaN/Infinity and reasonable upper bounds for all float fields (price, trigger_price, bo_profit_value, bo_stop_loss_value, drv_strike_price)
+- **High: Order tracker memory leak** - Added cleanup mechanism with configurable limits (MAX_TRACKED_ORDERS: 10,000, MAX_ORDER_AGE: 7 days) and automatic cleanup thread
+- **High: Silent JSON parse failures** - Changed to raise DataError with logging instead of returning empty hash
+- **High: Missing timeout configuration** - Added configurable timeouts (connect, read, write) to Faraday connection via environment variables
+- **High: WebSocket thread safety** - Fixed callback iteration by creating frozen snapshots to prevent modification during iteration
+- **Medium: Retry logic** - Added automatic retry with exponential backoff for transient errors (RateLimitError, InternalServerError, NetworkError, timeouts)
+- **Medium: Order modification state validation** - Prevents modification of TRADED, CANCELLED, EXPIRED, or CLOSED orders
+- **Medium: Error mapping** - Added logging for unmapped error codes to aid investigation
+- **Medium: Rate limiter cleanup threads** - Added shutdown mechanism to stop cleanup threads gracefully
+- **Medium: Order operation logging** - Added structured logging for order placement and modification operations
+- **Low: Duplicate code** - Made `delete` delegate to `destroy`, removed duplicate code
+- **Low: Type checking** - Added `.to_s` conversion for `id` method to ensure consistent string return type
+- **Low: Response format logging** - Added logging for unexpected response formats in collection parsing
+- **API Compliance: Header validation** - Validates required headers (access_token, client_id) before making requests
+- **API Compliance: 202 Accepted status** - Properly handles 202 Accepted status code for async operations (position conversion)
+
+### Added
+- **Configuration**: New environment variables for timeout configuration:
+  - `DHAN_CONNECT_TIMEOUT` (default: 10s)
+  - `DHAN_READ_TIMEOUT` (default: 30s)
+  - `DHAN_WRITE_TIMEOUT` (default: 30s)
+- **Configuration**: New environment variables for WebSocket order tracker:
+  - `DHAN_WS_MAX_TRACKED_ORDERS` (default: 10,000)
+  - `DHAN_WS_MAX_ORDER_AGE` (default: 604,800 seconds = 7 days)
+- **Tests**: Comprehensive test coverage for all fixes:
+  - `spec/dhan_hq/contracts/place_order_contract_spec.rb` - Price validation tests
+  - `spec/dhan_hq/helpers/response_helper_spec.rb` - JSON parsing and error handling tests
+  - `spec/dhan_hq/ws/orders/client_spec.rb` - Order tracker cleanup tests
+  - Updated existing specs for new functionality
+
+### Changed
+- **Error handling**: JSON parse errors now raise `DataError` instead of silently returning empty hash
+- **Error handling**: Improved error messages and logging throughout
+- **Thread safety**: Enhanced thread safety in rate limiter and WebSocket clients
+- **Memory management**: Order tracker now automatically cleans up old orders
+
+### Removed
+- **Unused code**: Removed `lib/DhanHQ/contracts/modify_order_contract_copy.rb` (unused duplicate file)
+
 ## [2.1.10] - 2025-11-11
 
 ### Fixed
