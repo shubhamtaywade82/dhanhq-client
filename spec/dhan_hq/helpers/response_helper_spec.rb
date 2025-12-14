@@ -17,7 +17,17 @@ RSpec.describe DhanHQ::ResponseHelper do
       expect(result).to eq({ key: "value" }.with_indifferent_access)
     end
 
-    it "raises DataError for invalid JSON" do
+    it "handles empty strings gracefully" do
+      result = helper.send(:parse_json, "")
+      expect(result).to eq({}.with_indifferent_access)
+    end
+
+    it "handles whitespace-only strings gracefully" do
+      result = helper.send(:parse_json, "   ")
+      expect(result).to eq({}.with_indifferent_access)
+    end
+
+    it "raises DataError for invalid JSON (non-empty, malformed)" do
       invalid_json = "not valid json"
       expect { helper.send(:parse_json, invalid_json) }
         .to raise_error(DhanHQ::DataError, /Failed to parse JSON response/)

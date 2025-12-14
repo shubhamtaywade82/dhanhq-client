@@ -38,17 +38,9 @@ module DhanHQ
     # @return [DhanHQ::Client] A new client instance.
     # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
     def initialize(api_type:)
-      # Validate configuration before proceeding
-      if ENV.fetch("CLIENT_ID", nil)
-        DhanHQ.configure_with_env
-        # Validate both required credentials are present
-        unless DhanHQ.configuration.client_id && DhanHQ.configuration.access_token
-          raise DhanHQ::InvalidAuthenticationError,
-                "Both CLIENT_ID and ACCESS_TOKEN must be set. " \
-                "CLIENT_ID: #{DhanHQ.configuration.client_id ? 'set' : 'missing'}, " \
-                "ACCESS_TOKEN: #{DhanHQ.configuration.access_token ? 'set' : 'missing'}"
-        end
-      end
+      # Configure from ENV if CLIENT_ID is present (backward compatible behavior)
+      # Validation happens at request time in build_headers, not here
+      DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
       
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)

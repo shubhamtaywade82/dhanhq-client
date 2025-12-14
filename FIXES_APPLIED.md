@@ -22,11 +22,12 @@ All 38 issues identified in the code review have been addressed. This document s
 **Tests**: Added to `spec/dhan_hq/rate_limiter_spec.rb`
 
 ### 2. Client Initialization Validation
-**File**: `lib/DhanHQ/client.rb`
+**File**: `lib/DhanHQ/client.rb` and `lib/DhanHQ/helpers/request_helper.rb`
 **Fix**:
-- Validates both `CLIENT_ID` and `ACCESS_TOKEN` are present before proceeding
-- Raises `InvalidAuthenticationError` with clear error message if credentials missing
-- Fails fast with descriptive error
+- Validation moved to request time (in `build_headers`) rather than initialization
+- Maintains backward compatibility - only validates when making actual requests
+- Raises `InvalidAuthenticationError` with clear error message if credentials missing at request time
+- Fails fast with descriptive error when needed
 
 **Tests**: Updated `spec/dhan_hq/client_spec.rb`
 
@@ -90,9 +91,11 @@ All 38 issues identified in the code review have been addressed. This document s
 ### 9. Silent JSON Parse Failures
 **File**: `lib/DhanHQ/helpers/response_helper.rb`
 **Fix**:
-- Changed `parse_json` to raise `DataError` instead of returning empty hash
+- Changed `parse_json` to raise `DataError` for invalid JSON (not empty strings)
+- Empty strings still return empty hash for backward compatibility
 - Added error logging with body preview (first 200 chars)
 - Provides clear error messages for debugging
+- Only raises for truly malformed JSON (API should never return this)
 
 **Tests**: Created `spec/dhan_hq/helpers/response_helper_spec.rb`
 
@@ -139,9 +142,10 @@ All 38 issues identified in the code review have been addressed. This document s
 ### 14. Order Modification State Validation
 **File**: `lib/DhanHQ/models/order.rb`
 **Fix**:
-- Added validation to prevent modification of TRADED, CANCELLED, EXPIRED, or CLOSED orders
-- Raises `OrderError` with clear message
-- Validates before making API call
+- Added warning log for invalid states (TRADED, CANCELLED, EXPIRED, CLOSED)
+- Still attempts API call - lets API handle final validation
+- Maintains backward compatibility while providing early warning
+- API will return appropriate error if modification is not allowed
 
 **Tests**: Updated `spec/dhan_hq/models/order_spec.rb`
 

@@ -234,20 +234,26 @@ RSpec.describe DhanHQ::Models::Order do
       expect(order.quantity).to eq(10)
     end
 
-    it "raises error when trying to modify TRADED order" do
+    it "logs warning when trying to modify TRADED order but still attempts API call" do
       traded_order = described_class.new({ orderId: "OID123", orderStatus: "TRADED" }, skip_validation: true)
       allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already traded" })
 
-      expect { traded_order.modify(quantity: 10) }
-        .to raise_error(DhanHQ::OrderError, /Cannot modify order.*TRADED state/)
+      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*TRADED state/)
+      # API call is attempted, API will return error
+      result = traded_order.modify(quantity: 10)
+      expect(result).to be_a(DhanHQ::ErrorObject)
     end
 
-    it "raises error when trying to modify CANCELLED order" do
+    it "logs warning when trying to modify CANCELLED order but still attempts API call" do
       cancelled_order = described_class.new({ orderId: "OID123", orderStatus: "CANCELLED" }, skip_validation: true)
       allow(described_class).to receive(:resource).and_return(resource_double)
+      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already cancelled" })
 
-      expect { cancelled_order.modify(quantity: 10) }
-        .to raise_error(DhanHQ::OrderError, /Cannot modify order.*CANCELLED state/)
+      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*CANCELLED state/)
+      # API call is attempted, API will return error
+      result = cancelled_order.modify(quantity: 10)
+      expect(result).to be_a(DhanHQ::ErrorObject)
     end
 
     it "allows modification of PENDING order" do

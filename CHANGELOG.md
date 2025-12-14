@@ -4,15 +4,15 @@
 
 ### Fixed
 - **Critical: Rate limiter race condition** - Added mutex synchronization for cleanup thread bucket modifications and shutdown mechanism
-- **Critical: Client initialization validation** - Validates both CLIENT_ID and ACCESS_TOKEN before proceeding, fails fast with clear error messages
+- **Critical: Client initialization validation** - Validates credentials at request time (in build_headers) rather than initialization, maintaining backward compatibility
 - **Critical: WebSocket error handling** - Proper cleanup and state reset on exceptions, improved logging with backtraces
 - **Critical: Price field validation** - Added validation for NaN/Infinity and reasonable upper bounds for all float fields (price, trigger_price, bo_profit_value, bo_stop_loss_value, drv_strike_price)
 - **High: Order tracker memory leak** - Added cleanup mechanism with configurable limits (MAX_TRACKED_ORDERS: 10,000, MAX_ORDER_AGE: 7 days) and automatic cleanup thread
-- **High: Silent JSON parse failures** - Changed to raise DataError with logging instead of returning empty hash
+- **High: Silent JSON parse failures** - Changed to raise DataError with logging for invalid JSON (empty strings still return empty hash for backward compatibility)
 - **High: Missing timeout configuration** - Added configurable timeouts (connect, read, write) to Faraday connection via environment variables
 - **High: WebSocket thread safety** - Fixed callback iteration by creating frozen snapshots to prevent modification during iteration
 - **Medium: Retry logic** - Added automatic retry with exponential backoff for transient errors (RateLimitError, InternalServerError, NetworkError, timeouts)
-- **Medium: Order modification state validation** - Prevents modification of TRADED, CANCELLED, EXPIRED, or CLOSED orders
+- **Medium: Order modification state validation** - Logs warning for invalid states but still attempts API call (API handles final validation)
 - **Medium: Error mapping** - Added logging for unmapped error codes to aid investigation
 - **Medium: Rate limiter cleanup threads** - Added shutdown mechanism to stop cleanup threads gracefully
 - **Medium: Order operation logging** - Added structured logging for order placement and modification operations

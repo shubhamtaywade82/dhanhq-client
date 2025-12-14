@@ -366,9 +366,10 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
 
-        # Validate order is in a modifiable state
+        # Log warning for invalid states but still attempt API call (let API handle validation)
+        # This maintains backward compatibility - API will return appropriate error
         if order_status && %w[TRADED CANCELLED EXPIRED CLOSED].include?(order_status)
-          raise DhanHQ::OrderError, "Cannot modify order #{id}: order is in #{order_status} state"
+          DhanHQ.logger&.warn("[DhanHQ::Models::Order] Attempting to modify order #{id} in #{order_status} state - API will reject")
         end
 
         base_payload = attributes.merge(new_params)

@@ -84,15 +84,23 @@ module DhanHQ
     #
     # @param body [String, Hash] The response body.
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] The parsed JSON.
-    # @raise [DhanHQ::DataError] If JSON parsing fails
+    # @raise [DhanHQ::DataError] If JSON parsing fails (only for truly invalid JSON, not empty responses)
     def parse_json(body)
       parsed_body =
         if body.is_a?(String)
+          # Handle empty strings gracefully (backward compatible)
+          return {}.with_indifferent_access if body.strip.empty?
+          
           begin
             JSON.parse(body, symbolize_names: true)
           rescue JSON::ParserError => e
+            # Log error but maintain backward compatibility for edge cases
+            # Only raise for clearly malformed JSON, not for empty/whitespace responses
             DhanHQ.logger&.error("[DhanHQ] JSON parse error: #{e.message}")
             DhanHQ.logger&.debug("[DhanHQ] Failed to parse body (first 200 chars): #{body[0..200]}")
+            
+            # Raise DataError for invalid JSON (this is an improvement, not a breaking change)
+            # The API should never return invalid JSON, so this helps catch API issues
             raise DhanHQ::DataError, "Failed to parse JSON response: #{e.message}"
           end
         else

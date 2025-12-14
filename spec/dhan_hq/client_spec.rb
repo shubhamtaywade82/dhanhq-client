@@ -48,11 +48,17 @@ RSpec.describe DhanHQ::Client do
       before do
         ENV["CLIENT_ID"] = "test_client_id"
         ENV.delete("ACCESS_TOKEN")
+        DhanHQ.configure_with_env
       end
 
-      it "raises InvalidAuthenticationError" do
-        expect { described_class.new(api_type: api_type) }
-          .to raise_error(DhanHQ::InvalidAuthenticationError, /ACCESS_TOKEN must be set/)
+      it "does not raise error during initialization (validation happens at request time)" do
+        expect { described_class.new(api_type: api_type) }.not_to raise_error
+      end
+
+      it "raises error when making a request without access_token" do
+        client = described_class.new(api_type: api_type)
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::InvalidAuthenticationError, /access_token is required/)
       end
     end
 
@@ -60,6 +66,7 @@ RSpec.describe DhanHQ::Client do
       before do
         ENV.delete("CLIENT_ID")
         ENV["ACCESS_TOKEN"] = "test_access_token"
+        DhanHQ.configure_with_env
       end
 
       it "does not raise error (CLIENT_ID not required for all APIs)" do
