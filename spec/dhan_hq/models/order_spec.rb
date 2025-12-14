@@ -435,27 +435,35 @@ RSpec.describe DhanHQ::Models::Order do
       it "places a new order when valid" do
         allow(order).to receive_messages(valid?: true, new_record?: true)
         expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
+        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order placed successfully/)
 
         expect(order.save).to be(true)
       end
 
-      it "returns false when create fails" do
+      it "returns false when create fails and logs error" do
         allow(order).to receive_messages(valid?: true, new_record?: true)
-        expect(resource_double).to receive(:create).and_return({})
+        expect(resource_double).to receive(:create).and_return({ errorMessage: "Insufficient funds" })
+        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
+        expect(DhanHQ.logger).to receive(:error).with(/Order placement failed/)
 
         expect(order.save).to be(false)
       end
 
-      it "updates existing orders" do
+      it "updates existing orders and logs" do
         allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
         expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
+        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order modified successfully/)
 
         expect(order.save).to be(true)
       end
 
-      it "returns false when update fails" do
+      it "returns false when update fails and logs error" do
         allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
-        expect(resource_double).to receive(:update).and_return({})
+        expect(resource_double).to receive(:update).and_return({ errorMessage: "Order not found" })
+        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
+        expect(DhanHQ.logger).to receive(:error).with(/Order modification failed/)
 
         expect(order.save).to be(false)
       end

@@ -29,11 +29,12 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def handle_response(response)
       case response.status
-      when 200..299 then parse_json(response.body)
+      when 200..201 then parse_json(response.body)
       when 202 then
         # 202 Accepted is used for async operations (e.g., position conversion)
-        # Return empty hash to indicate success for async operations
+        # Return status hash to indicate success for async operations
         { status: "accepted" }.with_indifferent_access
+      when 203..299 then parse_json(response.body)
       else handle_error(response)
       end
     end
