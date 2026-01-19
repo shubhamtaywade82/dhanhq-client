@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "DhanHQ is a simple CLI for DhanHQ API."
   spec.homepage = "https://github.com/shubhamtaywade82/dhanhq-client"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1.0"
+  spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
