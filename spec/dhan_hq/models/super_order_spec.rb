@@ -33,10 +33,9 @@ RSpec.describe DhanHQ::Models::SuperOrder do
 
     it "returns model with id and status when orderId present" do
       allow(resource_double).to receive(:create).and_return({ "orderId" => "OID-1", "orderStatus" => "PENDING" })
-      # rubocop:disable RSpec/VerifiedDoubles
       dummy = double(order_id: "OID-1", order_status: "PENDING")
-      # rubocop:enable RSpec/VerifiedDoubles
-      allow(described_class).to receive(:new).with(order_id: "OID-1", order_status: "PENDING", skip_validation: true)
+      allow(described_class).to receive(:new).with(order_id: "OID-1", order_status: "PENDING",
+                                                   skip_validation: true)
                                              .and_return(dummy)
 
       record = described_class.create({})

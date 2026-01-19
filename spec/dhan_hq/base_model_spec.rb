@@ -121,20 +121,20 @@ RSpec.describe DhanHQ::BaseModel do
     describe "#parse_collection_response" do
       it "logs warning for unexpected response formats" do
         expect(DhanHQ.logger).to receive(:warn).with(/Unexpected response format/)
-        result = DhanHQ::BaseModel.parse_collection_response("invalid")
+        result = described_class.parse_collection_response("invalid")
         expect(result).to eq([])
       end
 
       it "handles array responses" do
         response = [{ id: 1 }, { id: 2 }]
-        result = DhanHQ::BaseModel.parse_collection_response(response)
+        result = described_class.parse_collection_response(response)
         expect(result).to be_an(Array)
         expect(result.size).to eq(2)
       end
 
       it "handles hash with data key" do
         response = { data: [{ id: 1 }] }
-        result = DhanHQ::BaseModel.parse_collection_response(response)
+        result = described_class.parse_collection_response(response)
         expect(result).to be_an(Array)
         expect(result.size).to eq(1)
       end
@@ -142,17 +142,17 @@ RSpec.describe DhanHQ::BaseModel do
 
     describe "#id" do
       it "converts id to string" do
-        model = DhanHQ::BaseModel.new({ id: 123 }, skip_validation: true)
+        model = described_class.new({ id: 123 }, skip_validation: true)
         expect(model.id).to eq("123")
       end
 
       it "handles order_id" do
-        model = DhanHQ::BaseModel.new({ order_id: 456 }, skip_validation: true)
+        model = described_class.new({ order_id: 456 }, skip_validation: true)
         expect(model.id).to eq("456")
       end
 
       it "returns nil when no id present" do
-        model = DhanHQ::BaseModel.new({}, skip_validation: true)
+        model = described_class.new({}, skip_validation: true)
         expect(model.id).to be_nil
       end
     end

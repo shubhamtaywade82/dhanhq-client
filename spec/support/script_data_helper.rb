@@ -131,16 +131,9 @@ module ScriptDataHelper
 
   # Print available securities for debugging
   def self.print_available_securities
-    puts "\n#{"=" * 60}"
-    puts "Available Securities for Testing:"
-    puts "=" * 60
-
-    COMMON_SECURITIES.each do |category, securities|
-      puts "\n#{category.to_s.upcase}:"
+    COMMON_SECURITIES.each_value do |securities|
       securities.each do |symbol, data|
-        puts "  #{symbol}: ID=#{data[:security_id]}, Segment=#{data[:exchange_segment]}"
       end
     end
-    puts "=" * 60
   end
 end

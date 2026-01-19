@@ -18,9 +18,9 @@ module DhanHQ
       end
 
       def run_all
-        puts "\n" + ("=" * 80)
+        puts "\n#{"=" * 80}"
         puts "DhanHQ Client Gem - Comprehensive Test Suite"
-        puts ("=" * 80) + "\n"
+        puts "#{"=" * 80}\n"
 
         # Setup & Configuration
         test_setup_and_configuration
@@ -125,7 +125,7 @@ module DhanHQ
           puts "  ✓ Total positions: #{positions.size}"
           nse_positions = positions.select { |p| p.exchange_segment == "NSE_EQ" }
           puts "  ✓ NSE positions: #{nse_positions.size}"
-          long_positions = positions.select { |p| p.net_qty > 0 }
+          long_positions = positions.select { |p| p.net_qty.positive? }
           puts "  ✓ Long positions: #{long_positions.size}"
         end
       end
@@ -270,7 +270,7 @@ module DhanHQ
           # Market might be closed today or it's a weekend
           test_date = Date.today - 1
           # If it's Sunday (0) or Saturday (6), go back to Friday
-          test_date -= 1 if test_date.wday == 0
+          test_date -= 1 if test_date.wday.zero?
           test_date -= 1 if test_date.wday == 6
 
           historical_data = DhanHQ::Models::HistoricalData.intraday(
@@ -347,7 +347,7 @@ module DhanHQ
           if holdings.any?
             # Use first holding's ISIN and available quantity
             first_holding = holdings.first
-            if first_holding.isin && first_holding.isin != "" && first_holding.available_qty.to_i > 0
+            if first_holding.isin && first_holding.isin != "" && first_holding.available_qty.to_i.positive?
               edis_form = DhanHQ::Models::Edis.form(
                 exchange: "NSE",
                 segment: "EQ",
@@ -714,7 +714,7 @@ module DhanHQ
       end
 
       def section(title)
-        puts "\n" + ("-" * 80)
+        puts "\n#{"-" * 80}"
         puts "  #{title}"
         puts "-" * 80
       end
@@ -735,7 +735,7 @@ module DhanHQ
       end
 
       def print_summary
-        puts "\n" + ("=" * 80)
+        puts "\n#{"=" * 80}"
         puts "Test Summary"
         puts "=" * 80
         puts "  Passed:  #{@results[:passed]}"
@@ -750,9 +750,9 @@ module DhanHQ
           end
         end
 
-        puts "\n" + ("=" * 80)
+        puts "\n#{"=" * 80}"
         puts "All tests completed!"
-        puts ("=" * 80) + "\n"
+        puts "#{"=" * 80}\n"
       end
 
       def cleanup

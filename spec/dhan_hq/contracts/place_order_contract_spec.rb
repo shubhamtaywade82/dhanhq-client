@@ -71,7 +71,8 @@ RSpec.describe DhanHQ::Contracts::PlaceOrderContract do
       result = contract.call({})
       expect(result.success?).to be false
       error_keys = result.errors.to_h.keys
-      expect(error_keys).to include(:transaction_type, :exchange_segment, :product_type, :order_type, :validity, :security_id, :quantity)
+      expect(error_keys).to include(:transaction_type, :exchange_segment, :product_type, :order_type, :validity,
+                                    :security_id, :quantity)
     end
 
     it "accepts valid order parameters" do

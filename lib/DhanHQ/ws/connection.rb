@@ -151,10 +151,10 @@ module DhanHQ
             begin
               EM.cancel_timer(@timer) if @timer
               @timer = nil
-            rescue StandardError => cleanup_error
-              DhanHQ.logger&.debug("[DhanHQ::WS] cleanup error: #{cleanup_error.message}")
+            rescue StandardError => e
+              DhanHQ.logger&.debug("[DhanHQ::WS] cleanup error: #{e.message}")
             end
-            
+
             break if @stop
 
             if got_429

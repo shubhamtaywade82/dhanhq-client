@@ -30,7 +30,7 @@ module DhanHQ
     def handle_response(response)
       case response.status
       when 200..201 then parse_json(response.body)
-      when 202 then
+      when 202
         # 202 Accepted is used for async operations (e.g., position conversion)
         # Return status hash to indicate success for async operations
         { status: "accepted" }.with_indifferent_access
@@ -57,7 +57,7 @@ module DhanHQ
       unless error_class
         # Log unmapped error codes for investigation
         DhanHQ.logger&.warn("[DhanHQ] Unmapped error code: #{error_code} (status: #{response.status})")
-        
+
         error_class =
           case response.status
           when 400 then DhanHQ::InputExceptionError
@@ -90,7 +90,7 @@ module DhanHQ
         if body.is_a?(String)
           # Handle empty strings gracefully (backward compatible)
           return {}.with_indifferent_access if body.strip.empty?
-          
+
           begin
             JSON.parse(body, symbolize_names: true)
           rescue JSON::ParserError => e
@@ -98,7 +98,7 @@ module DhanHQ
             # Only raise for clearly malformed JSON, not for empty/whitespace responses
             DhanHQ.logger&.error("[DhanHQ] JSON parse error: #{e.message}")
             DhanHQ.logger&.debug("[DhanHQ] Failed to parse body (first 200 chars): #{body[0..200]}")
-            
+
             # Raise DataError for invalid JSON (this is an improvement, not a breaking change)
             # The API should never return invalid JSON, so this helps catch API issues
             raise DhanHQ::DataError, "Failed to parse JSON response: #{e.message}"

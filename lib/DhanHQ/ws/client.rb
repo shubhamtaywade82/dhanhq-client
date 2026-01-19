@@ -170,7 +170,7 @@ module DhanHQ
         rescue StandardError
           [].freeze
         end
-        
+
         callbacks_snapshot.each { |cb| cb.call(payload) }
       rescue StandardError => e
         DhanHQ.logger&.error("[DhanHQ::WS::Client] Error in event handler for #{event}: #{e.class} #{e.message}")

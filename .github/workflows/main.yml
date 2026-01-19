@@ -1,22 +1,23 @@
-name: Ruby Gem CI & Release
+name: Ruby Gem CI
 
 on:
   push:
     branches:
+      - main
       - master
-    tags:
-      - 'v*.*.*'
-
+    # Don't run on tags - release.yml handles that
   pull_request:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     name: Ruby ${{ matrix.ruby }}
     strategy:
       matrix:
         ruby:
           - '3.3.4'
+          - '3.2.0'
+          - '3.1.0'
 
     steps:
       - uses: actions/checkout@v4
@@ -30,27 +31,6 @@ jobs:
       - name: Run tests
         run: bundle exec rake
 
-  release:
-    name: Release to RubyGems
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3.4'
-
-      - name: Build gem
-        run: gem build DhanHQ.gemspec
-
-      - name: Push to RubyGems
-        env:
-          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
-        run: |
-          mkdir -p ~/.gem
-          echo -e "---\n:rubygems_api_key: $RUBYGEMS_API_KEY\n" > ~/.gem/credentials
-          chmod 0600 ~/.gem/credentials
-          gem push DhanHQ-*.gem
+      - name: Run RuboCop
+        run: bundle exec rubocop
+        continue-on-error: true

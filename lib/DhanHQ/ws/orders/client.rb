@@ -13,7 +13,7 @@ module DhanHQ
       class Client
         # Maximum number of orders to keep in tracker (default: 10,000)
         MAX_TRACKED_ORDERS = ENV.fetch("DHAN_WS_MAX_TRACKED_ORDERS", 10_000).to_i
-        
+
         # Maximum age of orders in tracker in seconds (default: 7 days)
         MAX_ORDER_AGE = ENV.fetch("DHAN_WS_MAX_ORDER_AGE", 604_800).to_i
 
@@ -232,7 +232,7 @@ module DhanHQ
           rescue StandardError
             [].freeze
           end
-          
+
           callbacks_snapshot.each { |cb| cb.call(payload) }
         rescue StandardError => e
           DhanHQ.logger&.error("[DhanHQ::WS::Orders] Error in event handler: #{e.class} #{e.message}")
@@ -246,8 +246,10 @@ module DhanHQ
           @cleanup_thread = Thread.new do
             loop do
               break unless @started.true?
+
               sleep(3600) # Run cleanup every hour
               break unless @started.true?
+
               cleanup_old_orders
             end
           end
@@ -284,7 +286,9 @@ module DhanHQ
               @order_timestamps.delete(order_no)
             end
 
-            DhanHQ.logger&.debug("[DhanHQ::WS::Orders] Cleaned up #{orders_to_remove.size} old orders") if orders_to_remove.any?
+            if orders_to_remove.any?
+              DhanHQ.logger&.debug("[DhanHQ::WS::Orders] Cleaned up #{orders_to_remove.size} old orders")
+            end
           end
         end
       end

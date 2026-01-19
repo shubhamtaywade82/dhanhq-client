@@ -1,0 +1,74 @@
+name: Release to RubyGems
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build and Release Gem
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.4"
+          bundler-cache: true
+
+      - name: Validate tag matches gem version
+        run: |
+          tag_version="${GITHUB_REF#refs/tags/v}"
+          gem_version=$(ruby -e "require_relative 'lib/DhanHQ/version'; puts DhanHQ::VERSION")
+
+          echo "Tag version: $tag_version"
+          echo "Gem version: $gem_version"
+
+          if [ "$tag_version" != "$gem_version" ]; then
+            echo "❌ Error: Tag version ($tag_version) does not match gem version ($gem_version)"
+            exit 1
+          fi
+
+          echo "✅ Version validation passed"
+
+      - name: Install ROTP for OTP generation
+        run: gem install rotp
+
+      - name: Build gem
+        run: |
+          gem build DhanHQ.gemspec
+          echo "✅ Gem built successfully"
+
+      - name: Publish to RubyGems with OTP
+        env:
+          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+          RUBYGEMS_OTP_SECRET: ${{ secrets.RUBYGEMS_OTP_SECRET }}
+        run: |
+          # Generate OTP code from secret
+          otp_code=$(ruby -r rotp -e "puts ROTP::TOTP.new(ENV['RUBYGEMS_OTP_SECRET']).now")
+
+          # Get gem version
+          gem_version=$(ruby -e "require_relative 'lib/DhanHQ/version'; puts DhanHQ::VERSION")
+
+          # Configure RubyGems credentials
+          mkdir -p ~/.gem
+          echo -e "---\n:rubygems_api_key: $RUBYGEMS_API_KEY" > ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+
+          # Push to RubyGems with OTP
+          echo "📦 Publishing DhanHQ-${gem_version}.gem to RubyGems..."
+          gem push "DhanHQ-${gem_version}.gem" --otp "$otp_code"
+
+          echo "✅ Successfully published DhanHQ version ${gem_version} to RubyGems!"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: DhanHQ-*.gem
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

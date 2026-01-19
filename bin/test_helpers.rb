@@ -10,7 +10,7 @@ module DhanHQ
     def self.check_config
       puts "=== DhanHQ Configuration ==="
       puts "Client ID: #{DhanHQ.configuration.client_id}"
-      puts "Access Token: #{DhanHQ.configuration.access_token ? 'Set' : 'Not Set'}"
+      puts "Access Token: #{DhanHQ.configuration.access_token ? "Set" : "Not Set"}"
       puts "WS User Type: #{DhanHQ.configuration.ws_user_type}"
       puts "Base URL: #{DhanHQ.configuration.base_url}"
       puts "============================"
@@ -21,7 +21,7 @@ module DhanHQ
       puts "Testing Market Feed..."
       payload = { "IDX_I" => [13] } # NIFTY
       response = DhanHQ::Models::MarketFeed.ltp(payload)
-      puts "NIFTY LTP: ₹#{response[:data]['IDX_I']['13'][:last_price]}"
+      puts "NIFTY LTP: ₹#{response[:data]["IDX_I"]["13"][:last_price]}"
     rescue StandardError => e
       puts "Error: #{e.class} - #{e.message}"
     end
@@ -163,7 +163,7 @@ module DhanHQ
       else
         puts "❌ Validation failed:"
         result.errors.to_h.each do |key, messages|
-          puts "  #{key}: #{messages.join(', ')}"
+          puts "  #{key}: #{messages.join(", ")}"
         end
       end
       result
@@ -186,9 +186,7 @@ module DhanHQ
       puts "Monitoring order #{order_id} via WebSocket..."
       client = DhanHQ::WS::Orders.client
       client.on(:update) do |order|
-        if order.order_no == order_id
-          puts "Order Update: #{order.status} - #{order.traded_qty}/#{order.quantity}"
-        end
+        puts "Order Update: #{order.status} - #{order.traded_qty}/#{order.quantity}" if order.order_no == order_id
       end
       client.start
       puts "Monitoring started. Press Ctrl+C to stop."

@@ -257,7 +257,7 @@ RSpec.describe DhanHQ::RateLimiter do
       cleanup_threads = limiter.instance_variable_get(:@cleanup_threads)
 
       expect(cleanup_threads).not_to be_empty
-      expect(cleanup_threads.all? { |t| t.alive? }).to be true
+      expect(cleanup_threads.all?(&:alive?)).to be true
 
       limiter.send(:shutdown)
 
