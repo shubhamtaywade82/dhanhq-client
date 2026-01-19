@@ -9,7 +9,6 @@ module DhanHQ
       ##
       # Enhanced WebSocket client for real-time order updates
       # Provides comprehensive order state tracking and event handling
-      # rubocop:disable Metrics/ClassLength
       class Client
         # Maximum number of orders to keep in tracker (default: 10,000)
         MAX_TRACKED_ORDERS = ENV.fetch("DHAN_WS_MAX_TRACKED_ORDERS", 10_000).to_i
@@ -158,7 +157,6 @@ module DhanHQ
         ##
         # Handle order update and track state changes
         # @param order_update [OrderUpdate] Parsed order update
-        # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
         def handle_order_update(order_update)
           order_no = order_update.order_no
           previous_state = @order_tracker[order_no]
@@ -195,14 +193,12 @@ module DhanHQ
           # Emit specific status events
           emit_status_specific_events(order_update, previous_state)
         end
-        # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
         ##
         # Emit status-specific events
         #
         # @param order_update [OrderUpdate] Current order update
         # @param _previous_state [OrderUpdate, nil] Previous order state (unused parameter)
-        # rubocop:disable Metrics/MethodLength
         def emit_status_specific_events(order_update, _previous_state)
           case order_update.status
           when "TRANSIT"
@@ -219,7 +215,6 @@ module DhanHQ
             emit(:order_expired, order_update)
           end
         end
-        # rubocop:enable Metrics/MethodLength
 
         ##
         # Emit events to registered callbacks
@@ -292,7 +287,6 @@ module DhanHQ
           end
         end
       end
-      # rubocop:enable Metrics/ClassLength
     end
   end
 end

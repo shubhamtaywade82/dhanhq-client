@@ -42,7 +42,6 @@ module DhanHQ
     #   call_data = data.call_data
     #   put_data = data.put_data
     #
-    # rubocop:disable Metrics/ClassLength
     class ExpiredOptionsData < BaseModel
       # All expired options data attributes
       attributes :exchange_segment, :interval, :security_id, :instrument,
@@ -257,7 +256,6 @@ module DhanHQ
       #   - **:low** [Array<Float>] Low prices for each time point
       #   - **:close** [Array<Float>] Close prices for each time point
       # @return [Hash{Symbol => Array}] Empty hash if option data is not available
-      # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
       def ohlc_data(option_type = nil)
         option_type ||= drv_option_type
         option_data = data_for_type(option_type)
@@ -270,7 +268,6 @@ module DhanHQ
           close: option_data["close"] || option_data[:close] || []
         }
       end
-      # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
       ##
       # Gets volume data for the specified option type.
@@ -444,7 +441,6 @@ module DhanHQ
       #   - **:has_volume** [Boolean] Whether volume data is available
       #   - **:has_open_interest** [Boolean] Whether open interest data is available
       #   - **:has_implied_volatility** [Boolean] Whether implied volatility data is available
-      # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def summary_stats(option_type = nil)
         option_type ||= drv_option_type
         ohlc = ohlc_data(option_type)
@@ -464,7 +460,6 @@ module DhanHQ
           has_implied_volatility: !iv_data.empty?
         }
       end
-      # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
       ##
       # Checks if this is index options data.
@@ -551,6 +546,5 @@ module DhanHQ
         sign * offset
       end
     end
-    # rubocop:enable Metrics/ClassLength
   end
 end

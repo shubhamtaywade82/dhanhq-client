@@ -5,7 +5,6 @@ module DhanHQ
     ##
     # Represents a real-time order update received via WebSocket
     # Parses and provides access to all order update fields as per DhanHQ API documentation
-    # rubocop:disable Metrics/ClassLength
     class OrderUpdate < BaseModel
       # All order update attributes as per API documentation
       attributes :exchange, :segment, :source, :security_id, :client_id,
@@ -206,7 +205,6 @@ module DhanHQ
 
       ##
       # Status summary for logging/debugging
-      # rubocop:disable Metrics/MethodLength
       def status_summary
         {
           order_no: order_no,
@@ -222,7 +220,6 @@ module DhanHQ
           super_order: super_order?
         }
       end
-      # rubocop:enable Metrics/MethodLength
 
       ##
       # Convert to hash for serialization
@@ -230,6 +227,5 @@ module DhanHQ
         @attributes.dup
       end
     end
-    # rubocop:enable Metrics/ClassLength
   end
 end

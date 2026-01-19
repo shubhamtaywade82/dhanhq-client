@@ -10,7 +10,6 @@ module DhanHQ
                :amo_time, :bo_profit_value, :bo_stop_loss_value
 
     class << self
-      # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       def validation_contract
         @validation_contract ||= Class.new(Dry::Validation::Contract) do
           params do
@@ -33,7 +32,6 @@ module DhanHQ
           end
         end
       end
-      # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
     end
   end
 end

@@ -64,8 +64,8 @@ module DhanHQ
       # @example
       #   instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
       #   instrument.daily(from_date: "2024-01-01", to_date: "2024-01-31")
-      def daily(from_date:, to_date:, **options)
-        params = build_historical_data_params(from_date: from_date, to_date: to_date, **options)
+      def daily(from_date:, to_date:, **)
+        params = build_historical_data_params(from_date: from_date, to_date: to_date, **)
         DhanHQ::Models::HistoricalData.daily(params)
       end
 
@@ -80,8 +80,8 @@ module DhanHQ
       # @example
       #   instrument = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
       #   instrument.intraday(from_date: "2024-09-11", to_date: "2024-09-15", interval: "15")
-      def intraday(from_date:, to_date:, interval:, **options)
-        params = build_historical_data_params(from_date: from_date, to_date: to_date, interval: interval, **options)
+      def intraday(from_date:, to_date:, interval:, **)
+        params = build_historical_data_params(from_date: from_date, to_date: to_date, interval: interval, **)
         DhanHQ::Models::HistoricalData.intraday(params)
       end
 
