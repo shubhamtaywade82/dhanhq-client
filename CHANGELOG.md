@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [2.2.2] - 2026-01-31
+
+### Contracts (date validation)
+
+- **from_date / to_date**: `from_date` must be strictly before `to_date` and must be a valid trading date (no weekend). `to_date` may be any date after `from_date` (format YYYY-MM-DD). Applied in `HistoricalDataContract`, `TradeHistoryContract`, and `ExpiredOptionsDataContract`.
+- **HistoricalDataContract**: Added trading-day check for `from_date` and `from_date < to_date`; inherits `BaseContract`.
+
+### Specs & tooling
+
+- **Specs**: Base model, expired options, trade, and historical data specs updated to use weekday dates and expect `from_date must be before to_date`; VCR cassette `trade_history.yml` updated for new date.
+- **RuboCop**: RSpec/ExampleLength in expired options contract spec fixed via `next_weekday` helper.
+
+---
+
 ## [2.2.1] - 2026-01-31
 
 ### Authentication
