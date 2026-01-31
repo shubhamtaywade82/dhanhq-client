@@ -29,23 +29,23 @@ git add lib/DhanHQ/version.rb CHANGELOG.md
 git commit -m "Release v2.1.12"
 git tag v2.1.12
 
-# 4. Push (this triggers automatic release)
+# 4. Push tag (this triggers automatic release)
 git push origin main
 git push origin v2.1.12
 ```
 
-That's it! GitHub Actions will:
-- ✅ Run tests
+That's it! Pushing a tag `v*` triggers `.github/workflows/release.yml`, which will:
+- ✅ Validate tag version matches `lib/DhanHQ/version.rb`
 - ✅ Build gem
-- ✅ Generate OTP automatically
-- ✅ Publish to RubyGems
-- ✅ Create GitHub Release
+- ✅ Generate OTP from `RUBYGEMS_OTP_SECRET`
+- ✅ Publish to RubyGems using `GEM_HOST_API_KEY` (secret: `RUBYGEMS_API_KEY`)
+
+Tests run on push/PR via `main.yml`; the release job does not run tests.
 
 ## Check Release Status
 
 - **GitHub Actions:** https://github.com/shubhamtaywade82/dhanhq-client/actions
 - **RubyGems:** https://rubygems.org/gems/DhanHQ
-- **GitHub Releases:** https://github.com/shubhamtaywade82/dhanhq-client/releases
 
 ## Troubleshooting
 

@@ -142,15 +142,14 @@ git push origin v2.1.12
 
 ### What Happens Automatically
 
-When you push a tag (e.g., `v2.1.12`), GitHub Actions will:
+When you push a tag (e.g., `v2.1.12`), the **Release** workflow (`.github/workflows/release.yml`) runs:
 
-1. ✅ **Validate** tag version matches `lib/DhanHQ/version.rb`
-2. ✅ **Run tests** to ensure everything works
-3. ✅ **Generate OTP code** automatically from your secret
-4. ✅ **Build gem** using `gem build DhanHQ.gemspec`
-5. ✅ **Push to RubyGems** with OTP authentication
-6. ✅ **Create GitHub Release** with release notes
-7. ✅ **Publish successfully** - gem is live!
+1. ✅ **Validate** tag version matches `lib/DhanHQ/version.rb` (tag `v2.1.12` → gem version `2.1.12`)
+2. ✅ **Generate OTP code** from secret `RUBYGEMS_OTP_SECRET`
+3. ✅ **Build gem** using `gem build DhanHQ.gemspec`
+4. ✅ **Push to RubyGems** with OTP using `GEM_HOST_API_KEY` (from secret `RUBYGEMS_API_KEY`)
+
+Tests run on push/PR via the main CI workflow; the release job does not run tests. No GitHub Release is created (tag-only publish, same pattern as ollama-client).
 
 **No manual intervention needed!** ⚡
 
@@ -158,7 +157,6 @@ When you push a tag (e.g., `v2.1.12`), GitHub Actions will:
 
 - **GitHub Actions:** https://github.com/shubhamtaywade82/dhanhq-client/actions
 - **RubyGems:** https://rubygems.org/gems/DhanHQ
-- **GitHub Releases:** https://github.com/shubhamtaywade82/dhanhq-client/releases
 
 ---
 
@@ -263,8 +261,9 @@ on:
 
 1. **Tag Validation**
    ```bash
-   # Ensures tag matches gem version
-   tag_version="${GITHUB_REF#refs/tags/v}"
+   # Ensures tag (e.g. v2.1.12) matches gem version (2.1.12)
+   tag="${GITHUB_REF#refs/tags/}"
+   tag_version="${tag#v}"
    gem_version=$(ruby -e "require_relative 'lib/DhanHQ/version'; puts DhanHQ::VERSION")
    [ "$tag_version" = "$gem_version" ] || exit 1
    ```
@@ -283,6 +282,7 @@ on:
 
 4. **Publish with OTP**
    ```bash
+   # RubyGems uses GEM_HOST_API_KEY from the environment (set from secret RUBYGEMS_API_KEY)
    gem push "DhanHQ-${gem_version}.gem" --otp "$otp_code"
    ```
 
@@ -292,7 +292,7 @@ on:
 - 🔐 **Encrypted Secrets** - API key and OTP secret stored securely in GitHub
 - ✅ **Tag Validation** - Prevents accidental version mismatches
 - 🔍 **Audit Trail** - All releases logged in GitHub Actions
-- 🧪 **Test Before Release** - Ensures code quality
+- 🧪 **Test on main/PR** - Main CI workflow runs tests on push/PR; release runs only on tag
 
 ### Why OTP is Needed
 
@@ -415,9 +415,8 @@ git push origin main v2.1.12
 
 - **GitHub Actions:** https://github.com/shubhamtaywade82/dhanhq-client/actions
 - **GitHub Secrets:** https://github.com/shubhamtaywade82/dhanhq-client/settings/secrets/actions
-- **GitHub Releases:** https://github.com/shubhamtaywade82/dhanhq-client/releases
 - **RubyGems Gem:** https://rubygems.org/gems/DhanHQ
-- **RubyGems API Keys:** https://rubygems.org/profile/api_keys
+- **RubyGems API Keys:** https://rubygems.org/profile/api_keys (use value as `RUBYGEMS_API_KEY`; workflow exposes it as `GEM_HOST_API_KEY`)
 - **RubyGems MFA:** https://rubygems.org/profile/edit (Multi-factor Authentication section)
 
 ### Gem Information
@@ -466,7 +465,6 @@ The old workflow (`.github/workflows/main.yml`):
 4. **Monitor first release**
    - Check GitHub Actions: https://github.com/shubhamtaywade82/dhanhq-client/actions
    - Verify gem appears on RubyGems: https://rubygems.org/gems/DhanHQ
-   - Check GitHub Releases: https://github.com/shubhamtaywade82/dhanhq-client/releases
 
 ---
 
@@ -478,7 +476,7 @@ The old workflow (`.github/workflows/main.yml`):
 ✅ **MFA secured:** OTP authentication on every release
 ✅ **Production ready:** Battle-tested release workflow
 ✅ **Tests integrated:** Ensures quality before release
-✅ **GitHub Releases:** Automatic release notes generation
+✅ **Tag-only release:** Same pattern as ollama-client; push tag `v*` to publish
 
 Questions or issues? Check the [Troubleshooting](#troubleshooting) section above.
 
@@ -488,7 +486,6 @@ Questions or issues? Check the [Troubleshooting](#troubleshooting) section above
 
 Track your releases at:
 - **RubyGems:** https://rubygems.org/gems/DhanHQ/versions
-- **GitHub:** https://github.com/shubhamtaywade82/dhanhq-client/releases
 
 ### Recent Versions
 
