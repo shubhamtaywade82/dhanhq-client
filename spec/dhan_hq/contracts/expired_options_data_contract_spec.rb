@@ -3,6 +3,7 @@
 require "spec_helper"
 
 RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
+  # Use weekday dates only (no weekends); from_date must be before to_date
   let(:valid_params) do
     {
       exchange_segment: "NSE_FNO",
@@ -14,8 +15,8 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       strike: "ATM",
       drv_option_type: "CALL",
       required_data: %w[open high low close volume],
-      from_date: "2021-08-01",
-      to_date: "2021-08-30"
+      from_date: "2021-08-02",
+      to_date: "2021-08-31"
     }
   end
 
@@ -213,8 +214,15 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
   end
 
   describe "date validation" do
-    it "validates correct date format" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-08-15")
+    def next_weekday(date)
+      return date + 1 if date.wday == 0
+      return date + 2 if date.wday == 6
+
+      date
+    end
+
+    it "validates correct date format and trading days" do
+      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-16")
       contract = described_class.new
       result = contract.call(params)
 
@@ -234,8 +242,8 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       end
     end
 
-    it "validates date range order" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-08-15")
+    it "validates date range order (from_date before to_date)" do
+      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-16")
       contract = described_class.new
       result = contract.call(params)
 
@@ -243,24 +251,25 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "rejects when from_date is after to_date" do
-      params = valid_params.merge(from_date: "2021-09-01", to_date: "2021-08-01")
+      params = valid_params.merge(from_date: "2021-09-01", to_date: "2021-08-02")
       contract = described_class.new
       result = contract.call(params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be on or before to_date/)
+      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
     end
 
-    it "allows when from_date equals to_date" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-08-01")
+    it "rejects when from_date equals to_date" do
+      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-02")
       contract = described_class.new
       result = contract.call(params)
 
-      expect(result.success?).to be true
+      expect(result.failure?).to be true
+      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
     end
 
     it "validates date range length (31 days max, non-inclusive)" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-09-01")
+      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-09-02")
       contract = described_class.new
       result = contract.call(params)
 
@@ -268,7 +277,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "rejects date range longer than 31 days" do
-      params = valid_params.merge(from_date: "2021-08-01", to_date: "2021-09-15")
+      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-09-15")
       contract = described_class.new
       result = contract.call(params)
 
@@ -277,12 +286,12 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "validates historical date limit (5 years max)" do
-      five_years_ago = (Date.today - (5 * 365)).strftime("%Y-%m-%d")
-      to_date = (Date.parse(five_years_ago) + 15).strftime("%Y-%m-%d") # 15 days later
-      params = valid_params.merge(from_date: five_years_ago, to_date: to_date)
+      base = Date.today - (5 * 365)
+      from_date = next_weekday(base)
+      to_date = next_weekday(from_date + 15)
+      params = valid_params.merge(from_date: from_date.strftime("%Y-%m-%d"), to_date: to_date.strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
-
       expect(result.success?).to be true
     end
 

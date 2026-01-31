@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "date"
+
 module DhanHQ
   module Contracts
     ##
@@ -20,6 +22,7 @@ module DhanHQ
 
       rule(:from_date) do
         key.failure("must be in YYYY-MM-DD format (e.g., 2024-01-15)") unless valid_date_format?(value)
+        key.failure("must be a valid trading date (no weekend dates)") if valid_date_format?(value) && !trading_day?(Date.parse(value))
       end
 
       rule(:to_date) do
@@ -35,9 +38,8 @@ module DhanHQ
             from_date = Date.parse(values[:from_date])
             to_date = Date.parse(values[:to_date])
 
-            key.failure("from_date must be before or equal to to_date") if from_date > to_date
+            key.failure("from_date must be before to_date") if from_date >= to_date
           rescue Date::Error
-            # This shouldn't happen since we already validated format, but just in case
             key.failure("invalid date format")
           end
         end
@@ -49,13 +51,18 @@ module DhanHQ
         return false unless date_string.is_a?(String)
         return false unless date_string.match?(/\A\d{4}-\d{2}-\d{2}\z/)
 
-        # Additional check to ensure it's a valid date
         begin
           Date.parse(date_string)
           true
         rescue Date::Error
           false
         end
+      end
+
+      def trading_day?(date)
+        return false unless date.is_a?(Date)
+
+        (1..5).cover?(date.wday)
       end
     end
 

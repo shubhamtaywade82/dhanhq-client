@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: get
-    uri: https://api.dhan.co/v2/trades/2024-12-01/2024-12-31/0
+    uri: https://api.dhan.co/v2/trades/2024-12-02/2024-12-31/0
     body:
       encoding: US-ASCII
       string: ''

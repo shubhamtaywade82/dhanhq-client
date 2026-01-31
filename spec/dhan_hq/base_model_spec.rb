@@ -17,7 +17,7 @@ RSpec.describe DhanHQ::BaseModel do
         instrument: "INDEX",
         interval: "5",
         from_date: "2024-01-15",
-        to_date: "2024-01-15"
+        to_date: "2024-01-16"
       )
 
       expect(data).to be_a(Hash)
@@ -32,7 +32,7 @@ RSpec.describe DhanHQ::BaseModel do
         instrument: "INDEX",
         interval: "5",
         from_date: "2024-01-15",
-        to_date: "2024-01-15"
+        to_date: "2024-01-16"
       )
 
       expect(data["open"]).to be_an(Array)

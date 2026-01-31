@@ -126,4 +126,101 @@ RSpec.describe DhanHQ::Configuration do
       expect(config.detailed_csv_url).to eq("https://custom.detailed.csv")
     end
   end
+
+  describe ".configure_from_token_endpoint" do
+    let(:token_url) { "https://myapp.com/auth/dhan/token" }
+    let(:bearer_token) { "secret-token-to-access-access-token" }
+
+    before do
+      DhanHQ.configuration = nil
+    end
+
+    context "when endpoint returns 200 with access_token and client_id" do
+      before do
+        stub_request(:get, token_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { access_token: "fetched_token", client_id: "fetched_client_id" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "sets configuration from the token endpoint response" do
+        result = DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: bearer_token)
+
+        expect(result).to eq(DhanHQ.configuration)
+        expect(DhanHQ.configuration.access_token).to eq("fetched_token")
+        expect(DhanHQ.configuration.client_id).to eq("fetched_client_id")
+      end
+
+      it "optionally sets base_url when present in response" do
+        stub_request(:get, token_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { access_token: "t", client_id: "c", base_url: "https://custom.dhan.co/v2" }.to_json, headers: { "Content-Type" => "application/json" })
+
+        DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: bearer_token)
+
+        expect(DhanHQ.configuration.base_url).to eq("https://custom.dhan.co/v2")
+      end
+    end
+
+    context "when base_url or bearer_token are missing" do
+      it "raises TokenEndpointError when base_url is empty" do
+        expect { DhanHQ.configure_from_token_endpoint(base_url: "", bearer_token: "x") }
+          .to raise_error(DhanHQ::TokenEndpointError, /base_url and bearer_token.*required/)
+      end
+
+      it "raises TokenEndpointError when bearer_token is empty" do
+        expect { DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: "") }
+          .to raise_error(DhanHQ::TokenEndpointError, /base_url and bearer_token.*required/)
+      end
+    end
+
+    context "when endpoint returns non-2xx" do
+      before do
+        stub_request(:get, token_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 401, body: { error: "Unauthorized" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "raises TokenEndpointError with status and message" do
+        expect { DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: bearer_token) }
+          .to raise_error(DhanHQ::TokenEndpointError, /401.*Unauthorized/)
+      end
+    end
+
+    context "when response lacks access_token or client_id" do
+      before do
+        stub_request(:get, token_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { access_token: "t" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "raises TokenEndpointError" do
+        expect { DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: bearer_token) }
+          .to raise_error(DhanHQ::TokenEndpointError, /missing access_token or client_id/)
+      end
+    end
+
+    context "when using ENV (DHAN_TOKEN_ENDPOINT_BASE_URL and DHAN_TOKEN_ENDPOINT_BEARER)" do
+      around do |example|
+        ENV["DHAN_TOKEN_ENDPOINT_BASE_URL"] = "https://myapp.com"
+        ENV["DHAN_TOKEN_ENDPOINT_BEARER"] = bearer_token
+        example.run
+      ensure
+        ENV.delete("DHAN_TOKEN_ENDPOINT_BASE_URL")
+        ENV.delete("DHAN_TOKEN_ENDPOINT_BEARER")
+      end
+
+      before do
+        stub_request(:get, token_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { access_token: "env_token", client_id: "env_client" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "uses ENV when called with no arguments" do
+        DhanHQ.configure_from_token_endpoint
+
+        expect(DhanHQ.configuration.access_token).to eq("env_token")
+        expect(DhanHQ.configuration.client_id).to eq("env_client")
+      end
+    end
+  end
 end

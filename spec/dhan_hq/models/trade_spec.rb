@@ -42,7 +42,7 @@ RSpec.describe DhanHQ::Models::Trade do
   end
 
   describe ".history" do
-    let(:from_date) { "2024-12-01" }
+    let(:from_date) { "2024-12-02" }
     let(:to_date)   { "2024-12-31" }
     let(:page)      { 0 }
 
@@ -80,17 +80,17 @@ RSpec.describe DhanHQ::Models::Trade do
         .to raise_error(DhanHQ::ValidationError, /must be in YYYY-MM-DD format/)
 
       # Invalid date range (from_date after to_date)
-      expect { trade_model.history(from_date: "2024-12-31", to_date: "2024-12-01") }
-        .to raise_error(DhanHQ::ValidationError, /from_date must be before or equal to to_date/)
+      expect { trade_model.history(from_date: "2024-12-31", to_date: "2024-12-02") }
+        .to raise_error(DhanHQ::ValidationError, /from_date must be before to_date/)
 
       # Invalid page number
-      expect { trade_model.history(from_date: "2024-12-01", to_date: "2024-12-31", page: -1) }
+      expect { trade_model.history(from_date: "2024-12-02", to_date: "2024-12-31", page: -1) }
         .to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
   end
 
   describe ".all" do
-    let(:from_date) { "2024-12-01" }
+    let(:from_date) { "2024-12-02" }
     let(:to_date)   { "2024-12-31" }
 
     it "is an alias for history method" do

@@ -145,5 +145,75 @@ module DhanHQ
       configuration.partner_id = ENV.fetch("DHAN_PARTNER_ID", configuration.partner_id)
       configuration.partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", configuration.partner_secret)
     end
+
+    # Configures the DhanHQ client by fetching credentials from a token endpoint.
+    #
+    # Performs GET <base_url>/auth/dhan/token with Authorization: Bearer <bearer_token>.
+    # Expects JSON with at least +access_token+ and +client_id+. Optional +base_url+ in
+    # the response overrides the Dhan API base URL.
+    #
+    # @param base_url [String, nil] Base URL of your app (e.g. https://myapp.com). If nil, uses ENV["DHAN_TOKEN_ENDPOINT_BASE_URL"].
+    # @param bearer_token [String, nil] Secret token for the endpoint. If nil, uses ENV["DHAN_TOKEN_ENDPOINT_BEARER"].
+    # @return [DhanHQ::Configuration] The configured configuration.
+    # @raise [DhanHQ::TokenEndpointError] On HTTP error or when response lacks access_token/client_id.
+    #
+    # @example Explicit
+    #   DhanHQ.configure_from_token_endpoint(base_url: "https://myapp.com", bearer_token: "secret-token")
+    #
+    # @example From ENV (DHAN_TOKEN_ENDPOINT_BASE_URL and DHAN_TOKEN_ENDPOINT_BEARER set)
+    #   DhanHQ.configure_from_token_endpoint
+    def configure_from_token_endpoint(base_url: nil, bearer_token: nil)
+      base_url ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
+      bearer_token ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
+
+      raise TokenEndpointError, "base_url and bearer_token (or ENV DHAN_TOKEN_ENDPOINT_*) are required" if base_url.to_s.empty? || bearer_token.to_s.empty?
+
+      url = "#{base_url.to_s.chomp("/")}/auth/dhan/token"
+      conn = Faraday.new(url: url) do |c|
+        c.response :json, content_type: /\bjson$/
+        c.adapter Faraday.default_adapter
+      end
+
+      response = conn.get("") do |req|
+        req.headers["Authorization"] = "Bearer #{bearer_token}"
+        req.headers["Accept"] = "application/json"
+      end
+
+      unless response.success?
+        body = if response.body.is_a?(Hash)
+                 response.body
+               else
+                 begin
+                   JSON.parse(response.body.to_s)
+                 rescue StandardError
+                   {}
+                 end
+               end
+        msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
+        raise TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
+      end
+
+      data = if response.body.is_a?(Hash)
+               response.body
+             else
+               begin
+                 JSON.parse(response.body.to_s)
+               rescue StandardError
+                 {}
+               end
+             end
+      data = data.transform_keys(&:to_s) if data.is_a?(Hash)
+
+      access_token = data["access_token"] || data[:access_token]
+      client_id = data["client_id"] || data[:client_id]
+      raise TokenEndpointError, "Token endpoint response missing access_token or client_id" if access_token.to_s.empty? || client_id.to_s.empty?
+
+      self.configuration ||= Configuration.new
+      configuration.access_token = access_token.to_s
+      configuration.client_id = client_id.to_s
+      dhan_base = data["base_url"] || data[:base_url]
+      configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
+      configuration
+    end
   end
 end

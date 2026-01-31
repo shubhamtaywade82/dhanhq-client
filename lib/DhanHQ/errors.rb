@@ -21,6 +21,8 @@ module DhanHQ
   class InvalidTokenError < Error; end
   # DH-810
   class InvalidClientIDError < Error; end
+  # Raised when fetching credentials from a token endpoint fails (HTTP error or invalid response).
+  class TokenEndpointError < Error; end
 
   # Rate limits and input validation errors
   # DH-904, 805

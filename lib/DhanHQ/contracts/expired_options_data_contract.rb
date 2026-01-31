@@ -69,7 +69,8 @@ module DhanHQ
             from_date = Date.parse(values[:from_date])
             to_date = Date.parse(values[:to_date])
 
-            key.failure("from_date must be on or before to_date") if from_date > to_date
+            key.failure("from_date must be before to_date") if from_date >= to_date
+            key.failure("from_date must be a valid trading date (no weekend dates)") unless trading_day?(from_date)
 
             # Check if date range is not too large (max 31 days; to_date is non-inclusive)
             key.failure("date range cannot exceed 31 days") if (to_date - from_date).to_i > 31
@@ -97,6 +98,13 @@ module DhanHQ
         rescue Date::Error
           false
         end
+      end
+
+      def trading_day?(date)
+        return false unless date.is_a?(Date)
+
+        # Sunday = 0, Saturday = 6; trading days are Monday (1) through Friday (5)
+        (1..5).cover?(date.wday)
       end
     end
   end

@@ -26,7 +26,7 @@ RSpec.describe DhanHQ::Models::HistoricalData do
       instrument: "EQUITY",
       interval: "15", # 1, 5, 15, 25, 60
       from_date: "2024-09-11",
-      to_date: "2024-09-15"
+      to_date: "2024-09-13"
     }
   end
 
