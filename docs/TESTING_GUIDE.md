@@ -50,12 +50,20 @@ DhanHQ.configure do |config|
   config.ws_user_type = "SELF" # or "PARTNER"
 end
 
+# Optional: dynamic token at request time (e.g. from DB or OAuth)
+# DhanHQ.configure do |config|
+#   config.client_id = ENV["DHAN_CLIENT_ID"]
+#   config.access_token_provider = -> { YourTokenStore.active_token }
+#   config.on_token_expired = ->(err) { YourTokenStore.refresh! }
+# end
+
 # Set log level for debugging
 DhanHQ.logger.level = Logger::DEBUG
 
 # Verify configuration
 puts "Client ID: #{DhanHQ.configuration.client_id}"
 puts "Access Token: #{DhanHQ.configuration.access_token ? 'Set' : 'Not Set'}"
+puts "Token provider: #{DhanHQ.configuration.access_token_provider ? 'Set' : 'Not Set'}"
 ```
 
 ### Environment Variables

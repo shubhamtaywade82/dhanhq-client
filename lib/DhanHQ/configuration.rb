@@ -20,6 +20,17 @@ module DhanHQ
     # @return [String, nil] The access token or `nil` if not set.
     attr_accessor :access_token
 
+    # Optional callable (Proc/lambda) that returns the access token at request time.
+    # When set, {#resolved_access_token} calls this instead of using {#access_token}.
+    # @return [Proc, nil]
+    attr_accessor :access_token_provider
+
+    # Optional callable invoked when the API returns 401/token-expired and the client
+    # is about to retry (when {#access_token_provider} is set). Use for logging or
+    # refreshing token in your store before the retry fetches a new token.
+    # @return [Proc, nil]
+    attr_accessor :on_token_expired
+
     # The base URL for API requests.
     # @return [String] The base URL for the DhanHQ API.
     attr_accessor :base_url
@@ -63,6 +74,21 @@ module DhanHQ
     # Partner secret for order updates when `ws_user_type` is "PARTNER".
     # @return [String, nil]
     attr_accessor :partner_secret
+
+    # Returns the access token to use for this request.
+    # If {#access_token_provider} is set, calls it (no memoization; token per request).
+    # Otherwise returns {#access_token}.
+    # @return [String]
+    # @raise [DhanHQ::AuthenticationError] if provider returns nil/empty or no token is set.
+    def resolved_access_token
+      if access_token_provider
+        token = access_token_provider.call
+        raise DhanHQ::AuthenticationError, "access_token_provider returned nil or empty" if token.nil? || token.to_s.empty?
+        token.to_s
+      else
+        access_token
+      end
+    end
 
     # Initializes a new configuration instance with default values.
     #

@@ -5,6 +5,8 @@ module DhanHQ
   class Error < StandardError; end
 
   # Authentication and access errors
+  # Raised when access token cannot be resolved (missing config or provider returned nil).
+  class AuthenticationError < Error; end
   # DH-901
   class InvalidAuthenticationError < Error; end
   # DH-902
@@ -13,6 +15,8 @@ module DhanHQ
   class UserAccountError < Error; end
   # DH-808
   class AuthenticationFailedError < Error; end
+  # DH-807: token expired (detected from API response; use with retry-on-401)
+  class TokenExpiredError < Error; end
   # DH-807, DH-809
   class InvalidTokenError < Error; end
   # DH-810

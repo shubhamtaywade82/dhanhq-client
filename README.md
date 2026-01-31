@@ -92,6 +92,28 @@ override defaults supplied by the gem:
 | `DHAN_WS_MAX_TRACKED_ORDERS`             | Maximum orders to track in WebSocket (default: 10,000). |
 | `DHAN_WS_MAX_ORDER_AGE`                  | Maximum order age in seconds before cleanup (default: 604,800 = 7 days). |
 
+### Dynamic access token (optional)
+
+For production or OAuth-style flows you can resolve the token at **request time** so it can rotate without restarting the app:
+
+```ruby
+DhanHQ.configure do |config|
+  config.client_id = ENV["DHAN_CLIENT_ID"]
+  config.access_token_provider = lambda do
+    token = YourTokenStore.active_token  # e.g. from DB or OAuth
+    raise "Token expired or missing" unless token
+    token
+  end
+  # Optional: called when the API returns 401/token-expired and the client is about to retry
+  config.on_token_expired = ->(error) { YourTokenStore.refresh! }
+end
+```
+
+- **`access_token_provider`**: Callable (Proc/lambda) that returns the access token string. Called on every request (no memoization). When set, the gem uses it instead of `access_token`.
+- **`on_token_expired`**: Optional callable invoked when a 401/token-expired triggers a **single retry** (only when `access_token_provider` is set). Use for logging or refreshing your store; the retry then uses the token from the provider.
+
+If the API returns **401** or error code **807** (token expired) and `access_token_provider` is set, the client retries the request **once** with a fresh token from the provider. Otherwise it raises `DhanHQ::InvalidAuthenticationError` or `DhanHQ::TokenExpiredError`. Missing or nil token from config raises `DhanHQ::AuthenticationError`.
+
 ### Logging
 
 ```ruby
@@ -406,6 +428,7 @@ All methods automatically use the instrument's `security_id`, `exchange_segment`
 
 The gem includes detailed documentation for different integration scenarios:
 
+- **[Authentication & token handling](docs/AUTHENTICATION.md)** - Dynamic access token, retry-on-401, and auth-related errors
 - **[WebSocket Integration Guide](docs/websocket_integration.md)** - Complete guide covering all WebSocket types and trading fields
 - **[Rails Integration Guide](docs/rails_websocket_integration.md)** - Rails-specific patterns and best practices
 - **[Standalone Ruby Guide](docs/standalone_ruby_websocket_integration.md)** - Scripts, daemons, and CLI tools

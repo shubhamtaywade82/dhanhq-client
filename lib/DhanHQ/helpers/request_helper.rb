@@ -30,16 +30,13 @@ module DhanHQ
       # Public CSV endpoint for segment-wise instruments requires no auth
       return { "Accept" => "text/csv" } if path.start_with?("/v2/instrument/")
 
-      access_token = DhanHQ.configuration&.access_token
-      unless access_token
-        raise DhanHQ::InvalidAuthenticationError,
-              "access_token is required but not set. Please configure DhanHQ with CLIENT_ID and ACCESS_TOKEN."
-      end
+      token = resolved_access_token
+      raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
 
       headers = {
         "Content-Type" => "application/json",
         "Accept" => "application/json",
-        "access-token" => access_token
+        "access-token" => token
       }
 
       # Add client-id for DATA APIs
@@ -53,6 +50,10 @@ module DhanHQ
       end
 
       headers
+    end
+
+    def resolved_access_token
+      DhanHQ.configuration&.resolved_access_token
     end
 
     # Determines if the API path requires a `client-id` header.

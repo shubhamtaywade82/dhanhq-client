@@ -1,5 +1,46 @@
 ## [Unreleased]
 
+## [2.2.0] - 2026-01-31
+
+### Authentication & token handling
+
+- **Dynamic access token resolution**: Token can be resolved at request time via `config.access_token_provider` (Proc/lambda). When set, the provider is called on each request; when not set, the gem falls back to `config.access_token`. No memoization — token is fetched per request for production-safe rotation.
+- **Auto-expiry detection**: API error code **807** (token expired) now raises `DhanHQ::TokenExpiredError` so callers can handle expiry explicitly. Error codes 401, 807, 809, and 808 are treated as auth failures for retry logic.
+- **Retry-on-401 with token re-fetch**: When the API returns 401 or token-expired (InvalidAuthenticationError, InvalidTokenError, TokenExpiredError, AuthenticationFailedError) and `config.access_token_provider` is set, the client retries the request **once** after the next token resolution (provider is called again). No separate “refresh” call — the provider is the source of the new token.
+- **Optional `on_token_expired` hook**: `config.on_token_expired` (callable) is invoked when an auth failure triggers a retry, before the retry is performed. Use for logging or refreshing token in your store; the retry then uses the token from `access_token_provider`.
+- **`DhanHQ::AuthenticationError`**: New error for local auth failures (missing token or provider returned nil/empty). API-level auth errors continue to use `InvalidAuthenticationError` / `InvalidTokenError` / `TokenExpiredError` as before.
+
+### Configuration
+
+- **New**: `config.access_token_provider` — callable that returns the access token string at request time.
+- **New**: `config.on_token_expired` — optional callable invoked when 401/token-expired triggers a retry (only when `access_token_provider` is set).
+- **New**: `config.resolved_access_token` — returns the token to use (from provider or static `access_token`); raises `AuthenticationError` if provider returns nil/empty.
+
+### Errors
+
+- **New**: `DhanHQ::AuthenticationError` — raised when token cannot be resolved (missing config or provider returned nil/empty).
+- **New**: `DhanHQ::TokenExpiredError` — raised when API returns error code 807 (token expired). Mapped from `DHAN_ERROR_MAPPING["807"]`.
+
+### Tests
+
+- **WebMock specs for auth failures**: `spec/dhan_hq/client_spec.rb` — contexts for 401, 403, 807, retry-on-401 with provider, retry then raise when 401 persists, and `on_token_expired` hook.
+- **Response helper**: Spec for 807 → TokenExpiredError in `spec/dhan_hq/helpers/response_helper_spec.rb`.
+
+### Documentation
+
+- **README.md**: New subsection “Dynamic access token (optional)” under Configuration.
+- **GUIDE.md**: Short “Dynamic access token” note and link to docs/AUTHENTICATION.md.
+- **docs/AUTHENTICATION.md**: New doc for static vs dynamic token, retry-on-401, and auth-related errors.
+- **docs/TESTING_GUIDE.md**: Optional access_token_provider / on_token_expired in config examples.
+- **docs/rails_integration.md**: “Dynamic access token (optional)” with Rails initializer example.
+- **docs/websocket_integration.md**, **docs/live_order_updates.md**: Pointer to docs/AUTHENTICATION.md for dynamic token.
+
+### Backward compatibility
+
+- **Non-breaking**: Existing `config.access_token = "static-token"` continues to work. `access_token_provider` is optional. Safe to release as a **minor** version bump.
+
+---
+
 ## [2.1.11] - 2025-01-27
 
 This release includes comprehensive bug fixes, security improvements, and reliability enhancements. All changes are **backward compatible** - no breaking changes.

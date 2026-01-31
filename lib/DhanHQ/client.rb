@@ -75,6 +75,7 @@ module DhanHQ
       @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
 
       attempt = 0
+      auth_retry_done = false
       begin
         response = connection.send(method) do |req|
           req.url path
@@ -83,6 +84,16 @@ module DhanHQ
         end
 
         handle_response(response)
+      rescue DhanHQ::InvalidAuthenticationError, DhanHQ::InvalidTokenError,
+             DhanHQ::TokenExpiredError, DhanHQ::AuthenticationFailedError => e
+        config = DhanHQ.configuration
+        if !auth_retry_done && config&.access_token_provider
+          auth_retry_done = true
+          config.on_token_expired&.call(e)
+          DhanHQ.logger&.warn("[DhanHQ::Client] Auth failure (#{e.class}), retrying once with fresh token")
+          retry
+        end
+        raise
       rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
         attempt += 1
         if attempt <= retries

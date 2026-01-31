@@ -32,6 +32,7 @@ DhanHQ.configure do |config|
   config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
+# For dynamic token at request time (REST + WebSocket), use config.access_token_provider; see docs/AUTHENTICATION.md
 ```
 
 ### 2. Market Feed WebSocket (Recommended for Beginners)

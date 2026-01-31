@@ -87,6 +87,36 @@ RSpec.describe DhanHQ::Configuration do
     end
   end
 
+  describe "#resolved_access_token" do
+    it "uses access_token_provider if present" do
+      config = described_class.new
+      config.access_token_provider = -> { "dynamic-token" }
+
+      expect(config.resolved_access_token).to eq("dynamic-token")
+    end
+
+    it "falls back to static access_token when provider is not set" do
+      config = described_class.new
+      config.access_token = "static-token"
+
+      expect(config.resolved_access_token).to eq("static-token")
+    end
+
+    it "raises AuthenticationError if provider returns nil" do
+      config = described_class.new
+      config.access_token_provider = -> { nil }
+
+      expect { config.resolved_access_token }.to raise_error(DhanHQ::AuthenticationError)
+    end
+
+    it "raises AuthenticationError if provider returns empty string" do
+      config = described_class.new
+      config.access_token_provider = -> { "" }
+
+      expect { config.resolved_access_token }.to raise_error(DhanHQ::AuthenticationError)
+    end
+  end
+
   describe "Custom URLs" do
     it "allows setting custom compact and detailed CSV URLs" do
       config.compact_csv_url = "https://custom.compact.csv"

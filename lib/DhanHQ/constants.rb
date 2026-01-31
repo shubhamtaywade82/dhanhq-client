@@ -171,7 +171,7 @@ module DhanHQ
       "804" => DhanHQ::Error, # Too many instruments
       "805" => DhanHQ::RateLimitError, # Too many requests
       "806" => DhanHQ::DataError, # Data API not subscribed
-      "807" => DhanHQ::InvalidTokenError, # Token expired
+      "807" => DhanHQ::TokenExpiredError, # Token expired
       "808" => DhanHQ::AuthenticationFailedError, # Auth failed
       "809" => DhanHQ::InvalidTokenError, # Invalid token
       "810" => DhanHQ::InvalidClientIDError, # Invalid Client ID

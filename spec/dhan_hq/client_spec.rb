@@ -60,7 +60,7 @@ RSpec.describe DhanHQ::Client do
       it "raises error when making a request without access_token" do
         client = described_class.new(api_type: api_type)
         expect { client.get("/v2/orders") }
-          .to raise_error(DhanHQ::InvalidAuthenticationError, /access_token is required/)
+          .to raise_error(DhanHQ::AuthenticationError, /Missing access token/)
       end
     end
 
@@ -148,9 +148,9 @@ RSpec.describe DhanHQ::Client do
         DhanHQ.configuration.access_token = nil
       end
 
-      it "raises InvalidAuthenticationError" do
+      it "raises AuthenticationError" do
         expect { client.send(:build_headers, non_data_api_path) }
-          .to raise_error(DhanHQ::InvalidAuthenticationError, /access_token is required/)
+          .to raise_error(DhanHQ::AuthenticationError, /Missing access token/)
       end
     end
 
@@ -212,6 +212,174 @@ RSpec.describe DhanHQ::Client do
       it "raises InputExceptionError for invalid request", vcr: { cassette_name: "client/error_response" } do
         expect { client.request(:put, endpoint, {}) }
           .to raise_error(DhanHQ::InputExceptionError, /Missing required fields, bad values for parameters/i)
+      end
+    end
+  end
+
+  describe "auth failures (WebMock)" do
+    # VCR shows final URI as https://api.dhan.co/v2/orders when path is /v2/orders
+    let(:orders_url) { "https://api.dhan.co/v2/orders" }
+
+    context "when API returns 401" do
+      before do
+        DhanHQ.configure do |c|
+          c.client_id = "test_client_id"
+          c.access_token = "test_access_token"
+          c.access_token_provider = nil
+        end
+        stub_request(:get, orders_url)
+          .to_return(
+            status: 401,
+            body: { errorType: "Invalid_Authentication", errorCode: "DH-901",
+                    errorMessage: "Client ID or user generated access token is invalid or expired." }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "raises InvalidAuthenticationError" do
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::InvalidAuthenticationError, /DH-901|invalid or expired/)
+      end
+    end
+
+    context "when API returns 403" do
+      before do
+        DhanHQ.configure do |c|
+          c.client_id = "test_client_id"
+          c.access_token = "test_access_token"
+          c.access_token_provider = nil
+        end
+        stub_request(:get, orders_url)
+          .to_return(
+            status: 403,
+            body: { errorCode: "DH-902", errorMessage: "Access denied" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "raises InvalidAccessError" do
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::InvalidAccessError, /DH-902|Access denied/)
+      end
+    end
+
+    context "when API returns 401 then 200 and access_token_provider is set" do
+      before do
+        DhanHQ.configure do |config|
+          config.client_id = "test_client_id"
+          config.access_token = nil
+          config.access_token_provider = lambda do
+            @token_call_count = (@token_call_count || 0) + 1
+            @token_call_count == 1 ? "expired_token" : "fresh_token"
+          end
+        end
+
+        stub_request(:get, orders_url)
+          .with(headers: { "Access-Token" => "expired_token" })
+          .to_return(
+            status: 401,
+            body: { errorCode: "DH-901", errorMessage: "Token invalid or expired" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+
+        stub_request(:get, orders_url)
+          .with(headers: { "Access-Token" => "fresh_token" })
+          .to_return(
+            status: 200,
+            body: { orderId: "123", orderStatus: "PENDING" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "retries once with fresh token and returns success" do
+        response = client.get("/v2/orders")
+        expect(response["orderId"]).to eq("123")
+        expect(response["orderStatus"]).to eq("PENDING")
+      end
+
+      it "calls access_token_provider twice (initial + retry)" do
+        client.get("/v2/orders")
+        expect(@token_call_count).to eq(2)
+      end
+    end
+
+    context "when API returns 401 twice and access_token_provider is set" do
+      before do
+        DhanHQ.configure do |config|
+          config.client_id = "test_client_id"
+          config.access_token = nil
+          config.access_token_provider = -> { "same_token" }
+        end
+
+        stub_request(:get, orders_url)
+          .with(headers: { "Access-Token" => "same_token" })
+          .to_return(
+            status: 401,
+            body: { errorCode: "DH-901", errorMessage: "Token invalid" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "retries once then raises InvalidAuthenticationError" do
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::InvalidAuthenticationError)
+      end
+    end
+
+    context "when API returns 401 with errorCode 807 (token expired)" do
+      before do
+        DhanHQ.configure do |c|
+          c.client_id = "test_client_id"
+          c.access_token = "test_access_token"
+          c.access_token_provider = nil
+        end
+        stub_request(:get, orders_url)
+          .to_return(
+            status: 401,
+            body: { errorCode: "807", errorMessage: "Token expired" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "raises TokenExpiredError" do
+        expect { client.get("/v2/orders") }
+          .to raise_error(DhanHQ::TokenExpiredError, /807|Token expired/)
+      end
+    end
+
+    context "when on_token_expired hook is set and 401 triggers retry" do
+      before do
+        @hook_called = false
+        @hook_error = nil
+        DhanHQ.configure do |config|
+          config.client_id = "test_client_id"
+          config.access_token = nil
+          config.access_token_provider = -> { "fresh_token" }
+          config.on_token_expired = lambda do |err|
+            @hook_called = true
+            @hook_error = err
+          end
+        end
+
+        stub_request(:get, orders_url)
+          .with(headers: { "Access-Token" => "fresh_token" })
+          .to_return(
+            status: 401,
+            body: { errorCode: "DH-901", errorMessage: "Expired" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .then.to_return(
+            status: 200,
+            body: { orderId: "456", orderStatus: "PENDING" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+      end
+
+      it "invokes on_token_expired with the auth error before retry" do
+        response = client.get("/v2/orders")
+        expect(@hook_called).to be true
+        expect(@hook_error).to be_a(DhanHQ::InvalidAuthenticationError)
+        expect(response["orderId"]).to eq("456")
       end
     end
   end

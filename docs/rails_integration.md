@@ -103,6 +103,25 @@ or enable partner streaming flows:
 Set the variables in ENV (or in credentials copied to ENV) **before** the
 initializer calls `DhanHQ.configure_with_env`.
 
+**Dynamic access token (optional)**
+
+For token rotation without restarting the app (e.g. token stored in DB or refreshed via OAuth), use `access_token_provider` so the token is resolved at request time:
+
+```ruby
+# config/initializers/dhanhq.rb (alternative to static ACCESS_TOKEN)
+DhanHQ.configure do |config|
+  config.client_id = ENV["DHAN_CLIENT_ID"] || Rails.application.credentials.dig(:dhanhq, :client_id)
+  config.access_token_provider = lambda do
+    record = DhanAccessToken.active  # your model or service
+    raise "Dhan token expired or missing" unless record
+    record.access_token
+  end
+  config.on_token_expired = ->(error) { DhanAccessToken.refresh! }  # optional: run before retry
+end
+```
+
+When the API returns 401 or token-expired (error code 807) and `access_token_provider` is set, the client retries the request **once** with a fresh token from the provider. `on_token_expired` is called before that retry so you can refresh your store if needed.
+
 ## 3. Build service objects for REST flows
 
 Wrap trading actions in plain-old Ruby objects so controllers and jobs stay thin:

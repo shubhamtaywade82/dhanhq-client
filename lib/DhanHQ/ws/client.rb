@@ -27,7 +27,8 @@ module DhanHQ
         @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
         @started = Concurrent::AtomicBoolean.new(false)
 
-        token = DhanHQ.configuration.access_token or raise "DhanHQ.access_token not set"
+        token = DhanHQ.configuration.resolved_access_token
+        raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
         cid   = DhanHQ.configuration.client_id or raise "DhanHQ.client_id not set"
         ver   = (DhanHQ.configuration.respond_to?(:ws_version) && DhanHQ.configuration.ws_version) || 2
         @url  = url || "wss://api-feed.dhan.co?version=#{ver}&token=#{token}&clientId=#{cid}&authType=2"

@@ -18,7 +18,7 @@ The DhanHQ Ruby client provides comprehensive real-time order update functionali
 ```ruby
 require 'dhan_hq'
 
-# Configure credentials
+# Configure credentials (or use config.access_token_provider for dynamic token; see docs/AUTHENTICATION.md)
 DhanHQ.configure do |config|
   config.client_id = "your_client_id"
   config.access_token = "your_access_token"

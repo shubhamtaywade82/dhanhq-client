@@ -101,6 +101,16 @@ RSpec.describe DhanHQ::ResponseHelper do
       end
     end
 
+    context "with error code 807 (token expired)" do
+      let(:status) { 401 }
+      let(:body) { { errorCode: "807", errorMessage: "Token expired" } }
+
+      it "raises TokenExpiredError" do
+        expect { helper.send(:handle_error, response) }
+          .to raise_error(DhanHQ::TokenExpiredError, /807|Token expired/)
+      end
+    end
+
     context "with unmapped error code" do
       let(:status) { 400 }
       let(:body) { { errorCode: "DH-999", errorMessage: "Unknown error" } }

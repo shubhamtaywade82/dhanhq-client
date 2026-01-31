@@ -69,6 +69,10 @@ Set any of the following environment variables _before_ calling
 | `DHAN_WS_MAX_TRACKED_ORDERS`             | Maximum orders to track in WebSocket (default: 10,000). |
 | `DHAN_WS_MAX_ORDER_AGE`                  | Maximum order age in seconds before cleanup (default: 604,800 = 7 days). |
 
+**Dynamic access token**
+
+For token rotation without restarting the app, set `access_token_provider` (Proc/lambda) so the token is resolved at request time. When the API returns 401 or token-expired (error code 807) and the provider is set, the client retries the request once with a fresh token. Optional `on_token_expired` is called before that retry. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) and README “Dynamic access token”.
+
 ---
 
 ## Working With Models
