@@ -88,6 +88,7 @@ module DhanHQ
           else
             token = cfg.resolved_access_token
             raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
+
             cid = cfg.client_id or raise "DhanHQ.client_id not set"
             payload = {
               LoginReq: { MsgCode: 42, ClientId: cid, Token: token },

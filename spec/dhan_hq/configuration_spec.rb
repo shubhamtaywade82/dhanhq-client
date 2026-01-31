@@ -104,7 +104,7 @@ RSpec.describe DhanHQ::Configuration do
 
     it "raises AuthenticationError if provider returns nil" do
       config = described_class.new
-      config.access_token_provider = -> { nil }
+      config.access_token_provider = -> {}
 
       expect { config.resolved_access_token }.to raise_error(DhanHQ::AuthenticationError)
     end

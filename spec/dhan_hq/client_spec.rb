@@ -264,14 +264,20 @@ RSpec.describe DhanHQ::Client do
     end
 
     context "when API returns 401 then 200 and access_token_provider is set" do
+      let(:token_call_count) { [0] }
+      let(:token_provider) do
+        count = token_call_count
+        lambda do
+          count[0] += 1
+          count[0] == 1 ? "expired_token" : "fresh_token"
+        end
+      end
+
       before do
         DhanHQ.configure do |config|
           config.client_id = "test_client_id"
           config.access_token = nil
-          config.access_token_provider = lambda do
-            @token_call_count = (@token_call_count || 0) + 1
-            @token_call_count == 1 ? "expired_token" : "fresh_token"
-          end
+          config.access_token_provider = token_provider
         end
 
         stub_request(:get, orders_url)
@@ -299,7 +305,7 @@ RSpec.describe DhanHQ::Client do
 
       it "calls access_token_provider twice (initial + retry)" do
         client.get("/v2/orders")
-        expect(@token_call_count).to eq(2)
+        expect(token_call_count[0]).to eq(2)
       end
     end
 
@@ -348,16 +354,16 @@ RSpec.describe DhanHQ::Client do
     end
 
     context "when on_token_expired hook is set and 401 triggers retry" do
+      let(:hook_state) { { called: false, error: nil } }
+
       before do
-        @hook_called = false
-        @hook_error = nil
         DhanHQ.configure do |config|
           config.client_id = "test_client_id"
           config.access_token = nil
           config.access_token_provider = -> { "fresh_token" }
           config.on_token_expired = lambda do |err|
-            @hook_called = true
-            @hook_error = err
+            hook_state[:called] = true
+            hook_state[:error] = err
           end
         end
 
@@ -377,8 +383,8 @@ RSpec.describe DhanHQ::Client do
 
       it "invokes on_token_expired with the auth error before retry" do
         response = client.get("/v2/orders")
-        expect(@hook_called).to be true
-        expect(@hook_error).to be_a(DhanHQ::InvalidAuthenticationError)
+        expect(hook_state[:called]).to be true
+        expect(hook_state[:error]).to be_a(DhanHQ::InvalidAuthenticationError)
         expect(response["orderId"]).to eq("456")
       end
     end

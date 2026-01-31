@@ -82,6 +82,7 @@ module DhanHQ
         def build_market_depth_url(config)
           token = config.resolved_access_token
           raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
+
           cid = config.client_id or raise "DhanHQ.client_id not set"
           depth_level = config.market_depth_level || 20 # Default to 20 level depth
 

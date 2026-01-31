@@ -84,6 +84,7 @@ module DhanHQ
       if access_token_provider
         token = access_token_provider.call
         raise DhanHQ::AuthenticationError, "access_token_provider returned nil or empty" if token.nil? || token.to_s.empty?
+
         token.to_s
       else
         access_token
