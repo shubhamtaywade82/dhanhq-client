@@ -56,6 +56,8 @@ end
 #   config.access_token_provider = -> { YourTokenStore.active_token }
 #   config.on_token_expired = ->(err) { YourTokenStore.refresh! }
 # end
+# Optional: refresh web-generated tokens with DhanHQ::Auth.renew_token(current_token, client_id)
+# See docs/AUTHENTICATION.md (API key/Partner flows are implemented in your app, not in the gem)
 
 # Set log level for debugging
 DhanHQ.logger.level = Logger::DEBUG

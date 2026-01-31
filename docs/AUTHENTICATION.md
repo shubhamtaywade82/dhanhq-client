@@ -1,6 +1,20 @@
 # Authentication & token handling
 
-This document describes how the gem handles access tokens, including dynamic resolution, retry-on-401, and related errors.
+This document describes how the gem handles access tokens, dynamic resolution, retry-on-401, and how that fits with Dhan’s authentication methods.
+
+## How you get the token (Dhan’s responsibility)
+
+Dhan supports several ways to obtain an access token. **The gem does not implement these flows**; your app or the user obtains the token, and the gem uses it.
+
+| User type | Method | Where it happens |
+| --------- |--------|------------------|
+| **Individual** | **Access token from Dhan Web** | User logs in at web.dhan.co → My Profile → Access DhanHQ APIs → Generate token (24h). You can refresh it with **RenewToken** (see below); the gem can call that for you. |
+| **Individual** | **API key & secret (OAuth)** | User creates API key/secret at web.dhan.co. Your app does: (1) Generate consent, (2) Browser login, (3) Consume consent to get `accessToken` and `expiryTime`. Implement this flow in your app; then pass the token to the gem via `access_token` or `access_token_provider`. |
+| **Partner** | **Partner consent flow** | You have `partner_id` and `partner_secret`. Your app does: (1) Generate consent, (2) User logs in on browser, (3) Consume consent to get `accessToken`. Implement in your app; pass the token to the gem. |
+
+**What the gem provides:** It accepts a token (static or from a provider), sends it on every request, and can retry once on 401 when you use `access_token_provider`. It also provides **`DhanHQ::Auth.renew_token`** for refreshing **web-generated** tokens (RenewToken API). It does **not** implement API key/secret consent or Partner consent; use Dhan’s docs and your own HTTP client for those.
+
+For full details and curl examples, see [DhanHQ API docs](https://dhanhq.co/docs) (Authentication).
 
 ## Static token (default)
 
@@ -34,6 +48,37 @@ end
 
 REST and WebSocket clients both use `config.resolved_access_token`, which calls the provider when set or falls back to `access_token`.
 
+## RenewToken (web-generated tokens only)
+
+If the token was **generated from Dhan Web** (not API key flow), you can refresh it (24h validity) using Dhan’s RenewToken API. The gem provides a helper:
+
+```ruby
+# Returns a hash with API response (e.g. accessToken, expiryTime). Use the new token for subsequent requests.
+response = DhanHQ::Auth.renew_token(current_access_token, client_id)
+new_token = response["accessToken"] || response[:accessToken]
+# Optional: response may include "expiryTime"
+```
+
+Use this inside `access_token_provider` or in `on_token_expired` to refresh and then return the new token (e.g. store it and return it from the provider on the next request).
+
+Example: refresh in provider and cache the result until near expiry:
+
+```ruby
+# Pseudocode: store current token + expiry; in provider, refresh if expired or near expiry
+config.access_token_provider = lambda do
+  stored = YourTokenStore.current
+  if stored.nil? || stored.expired_soon?
+    response = DhanHQ::Auth.renew_token(stored&.access_token || ENV["ACCESS_TOKEN"], config.client_id)
+    YourTokenStore.update!(response["accessToken"], response["expiryTime"])
+    stored = YourTokenStore.current
+  end
+  raise "Token missing" unless stored
+  stored.access_token
+end
+```
+
+**Note:** RenewToken is only for tokens generated from Dhan Web. For API key or Partner flows, obtain a new token using Dhan’s consent APIs in your app.
+
 ## Retry-on-401
 
 When the API returns **401** or a token-expired error (e.g. error code **807**), and `access_token_provider` is set:
@@ -59,5 +104,7 @@ Rescue `AuthenticationError` for local config/token resolution failures; rescue 
 ## See also
 
 - [README.md](../README.md) — Configuration and “Dynamic access token”
-- [rails_integration.md](rails_integration.md) — Rails initializer with optional `access_token_provider`
-- [CHANGELOG.md](../CHANGELOG.md) — 2.2.0 auth and token changes
+- [GUIDE.md](../GUIDE.md) — Dynamic access token and RenewToken
+- [rails_integration.md](rails_integration.md) — Rails initializer with optional `access_token_provider` and RenewToken
+- [TESTING_GUIDE.md](TESTING_GUIDE.md) — Config examples and RenewToken
+- [CHANGELOG.md](../CHANGELOG.md) — 2.2.0 and 2.2.1 auth and token changes

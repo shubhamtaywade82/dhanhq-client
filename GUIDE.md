@@ -71,7 +71,11 @@ Set any of the following environment variables _before_ calling
 
 **Dynamic access token**
 
-For token rotation without restarting the app, set `access_token_provider` (Proc/lambda) so the token is resolved at request time. When the API returns 401 or token-expired (error code 807) and the provider is set, the client retries the request once with a fresh token. Optional `on_token_expired` is called before that retry. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) and README “Dynamic access token”.
+For token rotation without restarting the app, set `access_token_provider` (Proc/lambda) so the token is resolved at request time. When the API returns 401 or token-expired (error code 807) and the provider is set, the client retries the request once with a fresh token. Optional `on_token_expired` is called before that retry.
+
+**RenewToken (web-generated tokens):** If the token was generated from Dhan Web (24h validity), use `DhanHQ::Auth.renew_token(access_token, client_id)` to refresh it; use the returned token in your provider or store. The gem does **not** implement API key/secret or Partner consent flows—implement those in your app and pass the token to the gem.
+
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) and README “Dynamic access token”.
 
 ---
 

@@ -99,6 +99,8 @@ end
 
 ## Configuration
 
+For dynamic token use `config.access_token_provider`. For web-generated tokens refresh with `DhanHQ::Auth.renew_token(access_token, client_id)`. API key/Partner flows: implement in your app. See [AUTHENTICATION.md](AUTHENTICATION.md).
+
 ### Environment-Specific Configuration
 
 ```ruby

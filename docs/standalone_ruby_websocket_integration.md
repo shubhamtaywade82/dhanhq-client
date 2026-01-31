@@ -68,6 +68,8 @@ ruby market_feed_script.rb
 
 ## Configuration
 
+For dynamic token at request time use `config.access_token_provider`. For web-generated tokens (24h) refresh with `DhanHQ::Auth.renew_token(access_token, client_id)`. API key/Partner flows: implement in your app and pass the token to the gem. See [AUTHENTICATION.md](AUTHENTICATION.md).
+
 ### Environment Variables
 
 ```bash

@@ -122,6 +122,8 @@ end
 
 When the API returns 401 or token-expired (error code 807) and `access_token_provider` is set, the client retries the request **once** with a fresh token from the provider. `on_token_expired` is called before that retry so you can refresh your store if needed.
 
+**RenewToken (web-generated tokens only):** If the token was generated from Dhan Web (24h validity), you can refresh it with `DhanHQ::Auth.renew_token(access_token, client_id)` and store the result; use it in your provider or call it from `on_token_expired`. The gem does **not** implement API key/secret or Partner consent flows—implement those in your app and pass the token to the gem. See [docs/AUTHENTICATION.md](AUTHENTICATION.md).
+
 ## 3. Build service objects for REST flows
 
 Wrap trading actions in plain-old Ruby objects so controllers and jobs stay thin:

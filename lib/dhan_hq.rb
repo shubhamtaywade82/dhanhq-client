@@ -23,6 +23,7 @@ require_relative "DhanHQ/error_object"
 require_relative "DhanHQ/client"
 require_relative "DhanHQ/configuration"
 require_relative "DhanHQ/rate_limiter"
+require_relative "DhanHQ/auth"
 
 # Contracts
 require_relative "DhanHQ/contracts/base_contract"

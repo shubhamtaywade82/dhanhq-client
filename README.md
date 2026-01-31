@@ -114,6 +114,8 @@ end
 
 If the API returns **401** or error code **807** (token expired) and `access_token_provider` is set, the client retries the request **once** with a fresh token from the provider. Otherwise it raises `DhanHQ::InvalidAuthenticationError` or `DhanHQ::TokenExpiredError`. Missing or nil token from config raises `DhanHQ::AuthenticationError`.
 
+**RenewToken (web-generated tokens):** For tokens generated from Dhan Web (24h validity), use `DhanHQ::Auth.renew_token(access_token, client_id)` to refresh; use the returned token in your provider or store. The gem does **not** implement API key/secret or Partner consent flows—implement those in your app and pass the token to the gem. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
+
 ### Logging
 
 ```ruby

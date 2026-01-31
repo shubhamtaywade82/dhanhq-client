@@ -1,5 +1,38 @@
 ## [Unreleased]
 
+## [2.2.1] - 2026-01-31
+
+### Authentication
+
+- **RenewToken API**: Added `DhanHQ::Auth.renew_token(access_token, client_id, base_url: nil)` to refresh web-generated access tokens (24h validity). Calls GET `/v2/RenewToken` with `access-token` and `dhanClientId` headers; returns response hash with indifferent access (e.g. `accessToken`, `expiryTime`). Use in `access_token_provider` or `on_token_expired` to refresh and store the new token. Only valid for tokens generated from Dhan Web (not API key flow).
+- **Dhan auth scope**: Documented that the gem does **not** implement API key/secret consent or Partner consent flows; apps obtain tokens via Dhan Web, API key OAuth, or Partner flow and pass them to the gem. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
+
+### Documentation
+
+- **docs/AUTHENTICATION.md**: Added “How you get the token (Dhan’s responsibility)” (Individual: Web token, RenewToken, API key; Partner: consent flow) and “RenewToken (web-generated tokens only)” with `DhanHQ::Auth.renew_token` usage and example. “See also” updated for GUIDE, rails_integration, TESTING_GUIDE, CHANGELOG 2.2.0/2.2.1.
+- **README.md**: Note under Dynamic access token for RenewToken via `DhanHQ::Auth.renew_token` and that API key/Partner flows are implemented in the app.
+- **GUIDE.md**: “Dynamic access token” section extended with RenewToken (`DhanHQ::Auth.renew_token`) and note that API key/Partner flows are in the app.
+- **docs/TESTING_GUIDE.md**: Optional config comment for RenewToken and pointer to AUTHENTICATION.md (API key/Partner in app).
+- **docs/rails_integration.md**: “Dynamic access token” section extended with RenewToken (web-generated tokens) and link to AUTHENTICATION.md.
+- **docs/websocket_integration.md**, **docs/live_order_updates.md**: Notes updated for dynamic token, RenewToken, and API key/Partner in app.
+- **docs/standalone_ruby_websocket_integration.md**, **docs/rails_websocket_integration.md**: Configuration section updated with RenewToken and AUTHENTICATION.md link.
+
+### CI / Release
+
+- **Release workflow**: Aligned with ollama-client: tag-based release (`on: push: tags: v*`), validate tag vs gem version, use `GEM_HOST_API_KEY` for RubyGems push (no credentials file), single retry with OTP. Removed GitHub Release step.
+- **RELEASING.md**, **docs/RELEASE_GUIDE.md**: Updated to describe tag-only publish and `GEM_HOST_API_KEY`; removed references to “Create GitHub Release” and “Run tests” in release job.
+
+### Fixes
+
+- **RuboCop**: Layout/EmptyLineAfterGuardClause — added blank line after guard clauses in Configuration, WS client, market depth client, orders connection. Style/NilLambda — `-> { nil }` → `-> {}` in configuration_spec. RSpec/InstanceVariable — replaced `@token_call_count` and `@hook_called`/`@hook_error` with `let(:token_call_count)`, `let(:token_provider)`, `let(:hook_state)` in client_spec auth-failure examples.
+- **CI**: Gemfile.lock updated for path gem version (DhanHQ 2.2.1) so `bundle install` in frozen mode succeeds.
+
+### Added
+
+- **lib/DhanHQ/auth.rb**: New module with `Auth.renew_token` for Dhan RenewToken API.
+
+---
+
 ## [2.2.0] - 2026-01-31
 
 ### Authentication & token handling
