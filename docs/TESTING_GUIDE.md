@@ -922,65 +922,63 @@ end
 
 ### EDIS
 
-#### Get EDIS Form
+EDIS is resource-only per [dhanhq.co/docs/v2/edis](https://dhanhq.co/docs/v2/edis/). Use `DhanHQ::Resources::Edis`.
+
+#### Get TPIN (GET /edis/tpin)
 
 ```ruby
-# Get EDIS form
-edis_form = DhanHQ::Models::Edis.form
-puts "EDIS Form:"
-puts "  ISIN: #{edis_form[:isin]}"
-puts "  Quantity: #{edis_form[:quantity]}"
+edis = DhanHQ::Resources::Edis.new
+tpin_response = edis.tpin
+puts "TPIN: #{tpin_response}"
 ```
 
-#### Get Bulk EDIS Form
+#### Form (POST /edis/form)
 
 ```ruby
-# Get bulk EDIS form
-bulk_form = DhanHQ::Models::Edis.bulk_form
-puts "Bulk Form: #{bulk_form.size} entries"
+edis = DhanHQ::Resources::Edis.new
+response = edis.form(isin: "INE467B01029", qty: 10, exchange: "NSE", segment: "EQ", bulk: false)
+puts "EDIS form: #{response.is_a?(Hash) ? 'OK' : response.class}"
 ```
 
-#### Generate TPIN
+#### Bulk form (POST /edis/bulkform)
 
 ```ruby
-# Generate TPIN
-tpin = DhanHQ::Models::Edis.generate_tpin
-puts "TPIN: #{tpin[:tpin]}"
+edis = DhanHQ::Resources::Edis.new
+response = edis.bulk_form(exchange: "NSE", segment: "EQ", bulk: true)
+puts "EDIS bulk form: #{response.is_a?(Hash) ? 'OK' : response.class}"
 ```
 
-#### Inquire EDIS Status
+#### Inquire (GET /edis/inquire/{isin})
 
 ```ruby
-# Inquire EDIS status by ISIN
-isin = "INE467B01029"  # Example ISIN
-status = DhanHQ::Models::Edis.inquire(isin: isin)
-puts "EDIS Status: #{status[:status]}"
+edis = DhanHQ::Resources::Edis.new
+status = edis.inquire("INE467B01029")
+puts "EDIS status: #{status}"
+# Or pass "ALL" for all holdings
+all_status = edis.inquire("ALL")
 ```
 
 ### Kill Switch
 
-#### Activate Kill Switch
+#### Trader Control (resource-only)
+
+```ruby
+tc = DhanHQ::Resources::TraderControl.new
+tc.disable   # Kill switch ON
+tc.enable    # Trading resumed
+tc.status
+```
+
+#### Kill Switch (model, backward compatible)
 
 ```ruby
 # Activate kill switch
-result = DhanHQ::Models::KillSwitch.update(status: "ACTIVATE")
-if result
-  puts "Kill switch activated"
-else
-  puts "Failed to activate kill switch"
-end
-```
+result = DhanHQ::Models::KillSwitch.update("ACTIVATE")
+puts result[:kill_switch_status] if result.is_a?(Hash)
 
-#### Deactivate Kill Switch
-
-```ruby
 # Deactivate kill switch
-result = DhanHQ::Models::KillSwitch.update(status: "DEACTIVATE")
-if result
-  puts "Kill switch deactivated"
-else
-  puts "Failed to deactivate kill switch"
-end
+result = DhanHQ::Models::KillSwitch.update("DEACTIVATE")
+puts result[:kill_switch_status] if result.is_a?(Hash)
 ```
 
 ### Expired Options Data

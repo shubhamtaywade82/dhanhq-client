@@ -4,7 +4,7 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 
 * ActiveRecord-style models: `find`, `all`, `where`, `save`, `update`, `cancel`
 * Validations & errors exposed via ActiveModel-like interfaces
-* REST coverage: Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed, ExpiredOptionsData
+* REST coverage: Orders, Alert Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed, ExpiredOptionsData, EDIS, IP Setup, Trader Control (Kill Switch)
 * **WebSocket**: Orders, Market Feed, Market Depth - subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
 
 ## ⚠️ BREAKING CHANGE NOTICE

@@ -40,7 +40,7 @@ The comprehensive test suite covers:
 - **Option Chain**: Expiry list and option chain
 - **Super Orders**: Get all super orders
 - **Forever Orders**: Get all forever orders (GTT)
-- **EDIS**: Get EDIS forms
+- **EDIS**: TPIN, form, bulk form, inquire (resource-only; see dhanhq.co/docs/v2/edis)
 - **Margin Calculator**: Calculate margin requirements
 - **Ledger Entries**: Get ledger entries
 

@@ -641,33 +641,75 @@ profile.active_segment   # => "Equity, Derivative, Currency, Commodity"
 
 If the credentials are invalid the helper raises `DhanHQ::InvalidAuthenticationError`.
 
-### EDIS (Electronic Delivery Instruction Slip)
+### Alert Orders
 
 ```ruby
-# Generate a CDSL form for a single ISIN
-form = DhanHQ::Models::Edis.form(
-  isin: "INE0ABCDE123",
-  qty: 1,
-  exchange: "NSE",
-  segment: "EQ",
-  bulk: false
+# Model (CRUD)
+DhanHQ::Models::AlertOrder.all
+alert = DhanHQ::Models::AlertOrder.find("alert-id")
+alert = DhanHQ::Models::AlertOrder.create(
+  exchange_segment: "NSE_EQ",
+  security_id: "11536",
+  condition: "GTE",
+  trigger_price: 100.0,
+  transaction_type: "BUY",
+  quantity: 10
 )
+alert.save
+alert.destroy
 
-# Prepare a bulk file
-bulk_form = DhanHQ::Models::Edis.bulk_form(
-  isin: %w[INE0ABCDE123 INE0XYZ89012],
-  exchange: "NSE",
-  segment: "EQ"
-)
-
-# Manage T-PIN and status inquiries
-DhanHQ::Models::Edis.tpin                    # => {"status"=>"TPIN sent"}
-authorisations = DhanHQ::Models::Edis.inquire("ALL")
+# Resource only
+DhanHQ::Resources::AlertOrders.new.all
 ```
 
-All helpers accept snake_case keys; the client camelizes them before calling `/v2/edis/...`.
+### EDIS (Electronic Delivery Instruction Slip)
 
-### Kill Switch
+EDIS is resource-only (no model). Use `DhanHQ::Resources::Edis` per [dhanhq.co/docs/v2/edis](https://dhanhq.co/docs/v2/edis/):
+
+```ruby
+edis = DhanHQ::Resources::Edis.new
+
+# Generate T-PIN (GET /edis/tpin)
+edis.tpin
+
+# Retrieve form & enter T-PIN (POST /edis/form): isin, qty, exchange, segment, bulk
+edis.form(isin: "INE733E01010", qty: 1, exchange: "NSE", segment: "EQ", bulk: false)
+
+# Bulk form (POST /edis/bulkform)
+edis.bulk_form(exchange: "NSE", segment: "EQ", bulk: true)
+
+# Inquire status (GET /edis/inquire/{isin})
+edis.inquire("INE002A01018")
+edis.inquire("ALL")
+```
+
+Params use snake_case; the client camelizes them before calling `/edis/...`.
+
+### IP Setup
+
+Resource-only (account configuration) per API docs: GET /ip/getIP, POST /ip/setIP, PUT /ip/modifyIP.
+
+```ruby
+ip = DhanHQ::Resources::IPSetup.new
+ip.current              # GET /ip/getIP
+ip.set(ip: "103.21.58.121")
+ip.update(ip: "103.21.58.121")
+```
+
+### Trader Control (Kill Switch)
+
+Resource-only control toggle:
+
+```ruby
+tc = DhanHQ::Resources::TraderControl.new
+tc.status               # GET /trader-control
+tc.disable             # Kill switch ON — trading blocked
+tc.enable              # Trading resumed
+```
+
+### Kill Switch (model)
+
+Existing model API for backward compatibility:
 
 ```ruby
 activate_payload   = DhanHQ::Models::KillSwitch.activate

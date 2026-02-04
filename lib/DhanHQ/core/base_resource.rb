@@ -11,7 +11,7 @@ module DhanHQ
     #
     # @return [Array<Hash>, Hash]
     def all
-      get(self.class::HTTP_PATH)
+      get("")
     end
 
     # Retrieves a single resource by identifier.
@@ -19,7 +19,7 @@ module DhanHQ
     # @param id [String, Integer]
     # @return [Hash]
     def find(id)
-      get("#{self.class::HTTP_PATH}/#{id}")
+      get("/#{id}")
     end
 
     # Creates a new resource instance.
@@ -27,7 +27,7 @@ module DhanHQ
     # @param params [Hash]
     # @return [Hash]
     def create(params)
-      post(self.class::HTTP_PATH, params: params)
+      post("", params: params)
     end
 
     # Updates an existing resource.
@@ -36,7 +36,7 @@ module DhanHQ
     # @param params [Hash]
     # @return [Hash]
     def update(id, params)
-      put("#{self.class::HTTP_PATH}/#{id}", params: params)
+      put("/#{id}", params: params)
     end
 
     # Deletes a resource by identifier.
@@ -44,7 +44,7 @@ module DhanHQ
     # @param id [String, Integer]
     # @return [Hash]
     def delete(id)
-      super("#{self.class::HTTP_PATH}/#{id}")
+      super("/#{id}")
     end
   end
 end

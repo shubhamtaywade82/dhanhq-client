@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+---
+
+## [2.3.0] - 2026-02-04
+
+### Added
+- **Alert Orders**: `DhanHQ::Resources::AlertOrders` (BaseResource) and `DhanHQ::Models::AlertOrder` with full CRUD. Endpoints: GET/POST `/alerts/orders`, GET/PUT/DELETE `/alerts/orders/{id}` (per API docs). Validation via `DhanHQ::Contracts::AlertOrderContract`.
+- **IP Setup**: `DhanHQ::Resources::IPSetup` (resource-only). Methods: `current` (GET `/ip/getIP`), `set(ip:)` (POST `/ip/setIP`), `update(ip:)` (PUT `/ip/modifyIP`) per API docs.
+- **Trader Control (Kill Switch)**: `DhanHQ::Resources::TraderControl` (resource-only). Methods: `status` (GET `/trader-control`), `enable` (POST action ENABLE), `disable` (POST action DISABLE). `DhanHQ::Resources::KillSwitch` and `DhanHQ::Models::KillSwitch` remain for backward compatibility.
+- **docs/API_VERIFICATION.md**: Documents alignment with [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/) and [api.dhan.co/v2](https://api.dhan.co/v2/#/) for EDIS, Alert Orders, IP Setup.
+
+### Changed
+- **EDIS**: Resource-only, aligned with [dhanhq.co/docs/v2/edis](https://dhanhq.co/docs/v2/edis/). Use `DhanHQ::Resources::Edis`: `form(params)` (POST `/edis/form`; isin, qty, exchange, segment, bulk), `bulk_form(params)` (POST `/edis/bulkform`), `tpin` (GET `/edis/tpin`), `inquire(isin)` (GET `/edis/inquire/{isin}`).
+- **BaseResource**: Fixed path building: `all`/`find`/`create`/`update`/`delete` now pass relative endpoints (`""`, `"/#{id}"`) so the base path is not doubled.
+
+---
+
 ## [2.2.2] - 2026-01-31
 
 ### Contracts (date validation)

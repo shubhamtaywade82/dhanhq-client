@@ -348,14 +348,16 @@ module DhanHQ
             # Use first holding's ISIN and available quantity
             first_holding = holdings.first
             if first_holding.isin && first_holding.isin != "" && first_holding.available_qty.to_i.positive?
-              edis_form = DhanHQ::Models::Edis.form(
+              edis = DhanHQ::Resources::Edis.new
+              edis_response = edis.form(
+                isin: first_holding.isin,
+                qty: first_holding.available_qty.to_i,
                 exchange: "NSE",
                 segment: "EQ",
-                isin: first_holding.isin,
-                qty: first_holding.available_qty.to_i
+                bulk: false
               )
-              puts "  ✓ EDIS form retrieved"
-              puts "    Form HTML present: #{edis_form[:edis_form_html] ? "Yes" : "No"}"
+              puts "  ✓ EDIS form requested"
+              puts "    Response: #{edis_response.is_a?(Hash) ? "OK" : edis_response.class}"
             else
               puts "  ⚠ Skipping - holding missing ISIN or available quantity"
             end
@@ -368,13 +370,10 @@ module DhanHQ
           # Bulk EDIS form should work even without specific holdings
           # But it may still require valid exchange/segment
 
-          bulk_form = DhanHQ::Models::Edis.bulk_form(
-            exchange: "NSE",
-            segment: "EQ",
-            bulk: true
-          )
-          puts "  ✓ Bulk EDIS form retrieved"
-          puts "    Form HTML present: #{bulk_form[:edis_form_html] ? "Yes" : "No"}"
+          edis = DhanHQ::Resources::Edis.new
+          bulk_response = edis.bulk_form(exchange: "NSE", segment: "EQ", bulk: true)
+          puts "  ✓ Bulk EDIS form requested"
+          puts "    Response: #{bulk_response.is_a?(Hash) ? "OK" : bulk_response.class}"
         rescue DhanHQ::InputExceptionError => e
           # If bulk form fails, it might be because user has no holdings
           holdings = DhanHQ::Models::Holding.all
