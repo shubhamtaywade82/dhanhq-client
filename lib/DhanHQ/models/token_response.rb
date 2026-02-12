@@ -4,6 +4,35 @@ require "time"
 
 module DhanHQ
   module Models
+    # Represents a Dhan API token response with expiry tracking and validation.
+    #
+    # TokenResponse wraps the response from Dhan's token generation and renewal
+    # endpoints, providing convenient methods for checking token validity and
+    # determining when refresh is needed.
+    #
+    # @example From token generation
+    #   response = Auth.generate_access_token(
+    #     dhan_client_id: "123",
+    #     pin: "1234",
+    #     totp: "654321"
+    #   )
+    #   token = TokenResponse.new(response)
+    #   token.expired?       # => false
+    #   token.expires_in     # => 86400 (seconds)
+    #   token.needs_refresh? # => false
+    #
+    # @example Checking token status
+    #   if token.needs_refresh?(buffer_seconds: 600)
+    #     # Refresh token 10 minutes before expiry
+    #     new_token = Auth.renew_token(...)
+    #   end
+    #
+    # @attr_reader [String] client_id Dhan client ID
+    # @attr_reader [String] client_name Dhan client name
+    # @attr_reader [String] ucc Unique client code
+    # @attr_reader [Boolean] power_of_attorney POA status
+    # @attr_reader [String] access_token The authentication token
+    # @attr_reader [Time] expiry_time Token expiration timestamp
     class TokenResponse
       attr_reader :client_id,
                   :client_name,
