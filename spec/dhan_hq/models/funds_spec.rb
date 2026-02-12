@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Models::Funds, vcr: { cassette_name: "models/funds" } do
   subject(:funds_model) { described_class }
 
   before do
-    # Ensure we have credentials in ENV (CLIENT_ID, ACCESS_TOKEN) or
+    # Ensure we have credentials in ENV (DHAN_CLIENT_ID, DHAN_ACCESS_TOKEN) or
     # that DhanHQ.configure is being invoked properly.
     DhanHQ.configure_with_env
   end

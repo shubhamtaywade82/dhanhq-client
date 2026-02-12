@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Models::HistoricalData do
   subject(:historical_data_model) { described_class }
 
   before do
-    # Ensure gem is configured and environment variables (CLIENT_ID, ACCESS_TOKEN) are available
+    # Ensure gem is configured and environment variables (DHAN_CLIENT_ID, DHAN_ACCESS_TOKEN) are available
     DhanHQ.configure_with_env
   end
 

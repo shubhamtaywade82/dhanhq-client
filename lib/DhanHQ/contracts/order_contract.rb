@@ -75,28 +75,5 @@ module DhanHQ
         end
       end
     end
-
-    # Contract enforcing additional requirements for new order placement.
-    class PlaceOrderContract < OrderContract
-      # Additional placement specific rules
-      rule(:after_market_order) do
-        key.failure("amo_time required for after market orders") if value == true && !values[:amo_time]
-      end
-    end
-
-    # Contract extending {OrderContract} for order modification payloads.
-    class ModifyOrderContract < OrderContract
-      # Modification specific requirements
-      params do
-        required(:order_id).filled(:string)
-        optional(:quantity).maybe(:integer, gt?: 0)
-      end
-
-      rule do
-        if !values[:price] && !values[:quantity] && !values[:trigger_price]
-          key.failure("at least one modification field required")
-        end
-      end
-    end
   end
 end

@@ -12,6 +12,8 @@ PATH
       faraday
       faraday_middleware
       faye-websocket
+      rotp
+      zeitwerk
 
 GEM
   remote: https://rubygems.org/
@@ -186,6 +188,7 @@ GEM
     reline (0.6.3)
       io-console (~> 0.5)
     rexml (3.4.4)
+    rotp (6.3.0)
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)

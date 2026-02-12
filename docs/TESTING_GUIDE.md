@@ -72,8 +72,8 @@ puts "Token provider: #{DhanHQ.configuration.access_token_provider ? 'Set' : 'No
 
 ```ruby
 # Check current environment variables
-puts "CLIENT_ID: #{ENV['CLIENT_ID']}"
-puts "ACCESS_TOKEN: #{ENV['ACCESS_TOKEN'] ? 'Set' : 'Not Set'}"
+puts "DHAN_CLIENT_ID: #{ENV['DHAN_CLIENT_ID']}"
+puts "DHAN_ACCESS_TOKEN: #{ENV['DHAN_ACCESS_TOKEN'] ? 'Set' : 'Not Set'}"
 puts "DHAN_LOG_LEVEL: #{ENV['DHAN_LOG_LEVEL'] || 'INFO'}"
 puts "DHAN_CONNECT_TIMEOUT: #{ENV['DHAN_CONNECT_TIMEOUT'] || '10'}"
 puts "DHAN_READ_TIMEOUT: #{ENV['DHAN_READ_TIMEOUT'] || '30'}"
@@ -521,7 +521,7 @@ if position
     to_product_type: "MARGIN",
     quantity: position.net_qty.abs
   )
-  
+
   if result
     puts "Position converted successfully"
   else
@@ -784,22 +784,22 @@ if instrument
   # Get LTP
   ltp_data = instrument.ltp
   puts "LTP: ₹#{ltp_data[:last_price]}"
-  
+
   # Get OHLC
   ohlc_data = instrument.ohlc
   puts "OHLC: #{ohlc_data[:ohlc]}"
-  
+
   # Get Quote
   quote_data = instrument.quote
   puts "Quote: #{quote_data[:ltp]}"
-  
+
   # Get Daily Historical Data
   daily_data = instrument.daily(
     from_date: Date.today - 7,
     to_date: Date.today
   )
   puts "Daily candles: #{daily_data.size}"
-  
+
   # Get Intraday Historical Data
   intraday_data = instrument.intraday(
     from_date: Date.today,
@@ -807,7 +807,7 @@ if instrument
     interval: 5
   )
   puts "Intraday candles: #{intraday_data.size}"
-  
+
   # Get Expiry List (for F&O instruments)
   if instrument.instrument == "FUTSTK" || instrument.instrument == "OPTSTK"
     expiry_list = instrument.expiry_list

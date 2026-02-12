@@ -28,8 +28,8 @@ require 'dhan_hq'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 # For dynamic token: use config.access_token_provider. For web-generated tokens, refresh with DhanHQ::Auth.renew_token. API key/Partner flows: implement in your app. See docs/AUTHENTICATION.md.
@@ -787,8 +787,8 @@ puts "Depth subscriptions: #{depth_client.subscriptions}"
 ```ruby
 # ✅ Good: Environment variables
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"]
-  config.access_token = ENV["ACCESS_TOKEN"]
+  config.client_id = ENV["DHAN_CLIENT_ID"]
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"]
 end
 
 # ❌ Bad: Hardcoded credentials

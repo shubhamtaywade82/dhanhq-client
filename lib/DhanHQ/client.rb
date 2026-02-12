@@ -29,6 +29,8 @@ module DhanHQ
     # @return [Faraday::Connection] The connection instance used for API requests.
     attr_reader :connection
 
+    attr_reader :token_manager
+
     # Initializes a new DhanHQ Client instance with a Faraday connection.
     #
     # @example Create a new client:
@@ -38,9 +40,9 @@ module DhanHQ
     # @return [DhanHQ::Client] A new client instance.
     # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
     def initialize(api_type:)
-      # Configure from ENV if CLIENT_ID is present (backward compatible behavior)
+      # Configure from ENV if DHAN_CLIENT_ID is present (backward compatible behavior)
       # Validation happens at request time in build_headers, not here
-      DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
+      DhanHQ.configure_with_env if ENV.fetch("DHAN_CLIENT_ID", nil)
 
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)
@@ -72,6 +74,7 @@ module DhanHQ
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload, retries: 3)
+      @token_manager&.ensure_valid_token!
       @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
 
       attempt = 0
@@ -157,6 +160,43 @@ module DhanHQ
     # @see #request
     def delete(path, params = {})
       request(:delete, path, params)
+    end
+
+    def generate_access_token(dhan_client_id:, pin:, totp: nil, totp_secret: nil)
+      token = Auth::TokenGenerator.new.generate(
+        dhan_client_id: dhan_client_id,
+        pin: pin,
+        totp: totp,
+        totp_secret: totp_secret
+      )
+
+      DhanHQ.configure do |config|
+        config.access_token = token.access_token
+        config.client_id = token.client_id if token.client_id.to_s.strip != ""
+      end
+
+      token
+    end
+
+    def renew_access_token
+      token = Auth::TokenRenewal.new.renew
+
+      DhanHQ.configure do |config|
+        config.access_token = token.access_token
+        config.client_id = token.client_id if token.client_id.to_s.strip != ""
+      end
+
+      token
+    end
+
+    def enable_auto_token_management!(dhan_client_id:, pin:, totp_secret:)
+      @token_manager = Auth::TokenManager.new(
+        dhan_client_id: dhan_client_id,
+        pin: pin,
+        totp_secret: totp_secret
+      )
+
+      @token_manager.generate!
     end
 
     private

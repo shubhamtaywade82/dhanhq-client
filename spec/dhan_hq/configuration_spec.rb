@@ -7,28 +7,28 @@ RSpec.describe DhanHQ::Configuration do
 
   # Store original ENV values for this spec
   before(:all) do
-    @original_client_id = ENV.fetch("CLIENT_ID", nil)
-    @original_access_token = ENV.fetch("ACCESS_TOKEN", nil)
+    @original_client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
+    @original_access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
   end
 
   after do
     # Restore original ENV values instead of deleting
     if @original_client_id
-      ENV["CLIENT_ID"] = @original_client_id
+      ENV["DHAN_CLIENT_ID"] = @original_client_id
     else
-      ENV.delete("CLIENT_ID")
+      ENV.delete("DHAN_CLIENT_ID")
     end
     if @original_access_token
-      ENV["ACCESS_TOKEN"] = @original_access_token
+      ENV["DHAN_ACCESS_TOKEN"] = @original_access_token
     else
-      ENV.delete("ACCESS_TOKEN")
+      ENV.delete("DHAN_ACCESS_TOKEN")
     end
   end
 
   describe "#initialize" do
     before do
-      ENV.delete("ACCESS_TOKEN")
-      ENV.delete("CLIENT_ID")
+      ENV.delete("DHAN_ACCESS_TOKEN")
+      ENV.delete("DHAN_CLIENT_ID")
     end
 
     it "sets default values" do
@@ -38,8 +38,8 @@ RSpec.describe DhanHQ::Configuration do
     end
 
     it "loads access_token and client_id from ENV if present" do
-      ENV["ACCESS_TOKEN"] = "env_access_token"
-      ENV["CLIENT_ID"] = "env_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "env_access_token"
+      ENV["DHAN_CLIENT_ID"] = "env_client_id"
 
       config_with_env = described_class.new
 
@@ -50,8 +50,8 @@ RSpec.describe DhanHQ::Configuration do
 
   describe ".configure_with_env" do
     before do
-      ENV["ACCESS_TOKEN"] = "env_access_token"
-      ENV["CLIENT_ID"] = "env_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "env_access_token"
+      ENV["DHAN_CLIENT_ID"] = "env_client_id"
     end
 
     it "configures access_token and client_id from environment variables" do

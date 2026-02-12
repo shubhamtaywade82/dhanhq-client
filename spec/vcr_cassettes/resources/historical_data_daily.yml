@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/charts/historical
     body:
       encoding: UTF-8
-      string: '{"securityId":"1333","exchangeSegment":"NSE_EQ","instrument":"EQUITY","fromDate":"2022-01-08","toDate":"2022-02-08","dhanClientId":"<CLIENT_ID>"}'
+      string: '{"securityId":"1333","exchangeSegment":"NSE_EQ","instrument":"EQUITY","fromDate":"2022-01-08","toDate":"2022-02-08","dhanClientId":"<DHAN_CLIENT_ID>"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:

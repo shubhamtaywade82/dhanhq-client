@@ -44,7 +44,7 @@ module DhanHQ
         client_id = DhanHQ.configuration&.client_id
         unless client_id
           raise DhanHQ::InvalidAuthenticationError,
-                "client_id is required for DATA APIs but not set. Please configure DhanHQ with CLIENT_ID."
+                "client_id is required for DATA APIs but not set. Please configure DhanHQ with DHAN_CLIENT_ID."
         end
         headers["client-id"] = client_id
       end

@@ -44,8 +44,8 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 
 | Variable       | Description                                          |
 | -------------- | ---------------------------------------------------- |
-| `CLIENT_ID`    | Your Dhan trading client id.                         |
-| `ACCESS_TOKEN` | REST/WebSocket access token generated via Dhan APIs. |
+| `DHAN_CLIENT_ID`    | Your Dhan trading client id.                         |
+| `DHAN_ACCESS_TOKEN` | REST/WebSocket access token generated via Dhan APIs. |
 
 Provide them via `.env`, Rails credentials, or your secret manager of choice
 before the initializer runs.

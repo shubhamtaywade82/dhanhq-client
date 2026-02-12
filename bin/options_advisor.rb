@@ -47,7 +47,7 @@ OptionParser.new do |o|
   o.on("--throttle-seconds N", Float, "Throttle seconds (default: 2.5)") { |v| opts[:throttle_seconds] = v }
   o.on("--max-retries N", Integer, "Max retries on rate limits (default: 3)") { |v| opts[:max_retries] = v }
   o.on("--debug", "Enable verbose debug logging to STDERR") { opts[:debug] = true }
-  o.on("--print-creds", "Print CLIENT_ID and masked ACCESS_TOKEN, then continue") { opts[:print_creds] = true }
+  o.on("--print-creds", "Print DHAN_CLIENT_ID and masked DHAN_ACCESS_TOKEN, then continue") { opts[:print_creds] = true }
   o.on("-h", "--help") do
     puts o
     exit
@@ -55,15 +55,15 @@ OptionParser.new do |o|
 end.parse!
 
 if opts[:print_creds]
-  cid = ENV.fetch("CLIENT_ID", nil)
-  tok = ENV.fetch("ACCESS_TOKEN", nil)
+  cid = ENV.fetch("DHAN_CLIENT_ID", nil)
+  tok = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
   masked = if tok && tok.size >= 8
              "#{tok[0, 4]}...#{tok[-4, 4]}"
            else
              (tok ? tok[0, 4] : nil)
            end
-  puts "CLIENT_ID=#{cid.inspect}"
-  puts "ACCESS_TOKEN=#{masked || "nil"}"
+  puts "DHAN_CLIENT_ID=#{cid.inspect}"
+  puts "DHAN_ACCESS_TOKEN=#{masked || "nil"}"
 end
 
 raise "--security-id is required" if opts[:security_id].to_s.strip.empty?

@@ -194,8 +194,8 @@ client.start
 ### Environment Variables
 ```bash
 # Required
-CLIENT_ID=your_client_id
-ACCESS_TOKEN=your_access_token
+DHAN_CLIENT_ID=your_client_id
+DHAN_ACCESS_TOKEN=your_access_token
 
 # Optional WebSocket settings
 DHAN_WS_ORDER_URL=wss://api-order-update.dhan.co

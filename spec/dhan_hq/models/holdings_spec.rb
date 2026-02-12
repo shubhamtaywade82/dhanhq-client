@@ -5,7 +5,7 @@ RSpec.describe DhanHQ::Models::Holding, vcr: {
   record: :once
 } do
   before do
-    # Make sure your DhanHQ gem is configured with CLIENT_ID and ACCESS_TOKEN
+    # Make sure your DhanHQ gem is configured with DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN
     DhanHQ.configure_with_env
   end
 

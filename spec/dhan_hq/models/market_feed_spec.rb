@@ -6,7 +6,7 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
 } do
   before do
     # Ensure the DhanHQ gem is configured with valid credentials.
-    # This pulls from ENV["CLIENT_ID"] and ENV["ACCESS_TOKEN"], for example.
+    # This pulls from ENV["DHAN_CLIENT_ID"] and ENV["DHAN_ACCESS_TOKEN"], for example.
     DhanHQ.configure_with_env
   end
 

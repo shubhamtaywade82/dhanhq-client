@@ -24,8 +24,8 @@ RSpec.describe DhanHQ::Client do
 
   describe "#initialize" do
     before do
-      ENV["CLIENT_ID"] = "test_client_id"
-      ENV["ACCESS_TOKEN"] = "test_access_token"
+      ENV["DHAN_CLIENT_ID"] = "test_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "test_access_token"
       DhanHQ.configure_with_env
     end
 
@@ -46,10 +46,10 @@ RSpec.describe DhanHQ::Client do
       end.to raise_error(DhanHQ::Error, /RateLimiter initialization failed/)
     end
 
-    context "when CLIENT_ID is set but ACCESS_TOKEN is missing" do
+    context "when DHAN_CLIENT_ID is set but DHAN_ACCESS_TOKEN is missing" do
       before do
-        ENV["CLIENT_ID"] = "test_client_id"
-        ENV.delete("ACCESS_TOKEN")
+        ENV["DHAN_CLIENT_ID"] = "test_client_id"
+        ENV.delete("DHAN_ACCESS_TOKEN")
         DhanHQ.configure_with_env
       end
 
@@ -64,14 +64,14 @@ RSpec.describe DhanHQ::Client do
       end
     end
 
-    context "when ACCESS_TOKEN is set but CLIENT_ID is missing" do
+    context "when DHAN_ACCESS_TOKEN is set but DHAN_CLIENT_ID is missing" do
       before do
-        ENV.delete("CLIENT_ID")
-        ENV["ACCESS_TOKEN"] = "test_access_token"
+        ENV.delete("DHAN_CLIENT_ID")
+        ENV["DHAN_ACCESS_TOKEN"] = "test_access_token"
         DhanHQ.configure_with_env
       end
 
-      it "does not raise error (CLIENT_ID not required for all APIs)" do
+      it "does not raise error (DHAN_CLIENT_ID not required for all APIs)" do
         expect { described_class.new(api_type: api_type) }.not_to raise_error
       end
     end
@@ -128,8 +128,8 @@ RSpec.describe DhanHQ::Client do
     let(:non_data_api_path) { "/v2/orders" }
 
     before do
-      ENV["CLIENT_ID"] = "test_client_id"
-      ENV["ACCESS_TOKEN"] = "test_access_token"
+      ENV["DHAN_CLIENT_ID"] = "test_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "test_access_token"
       DhanHQ.configure_with_env
     end
 
@@ -144,7 +144,7 @@ RSpec.describe DhanHQ::Client do
     context "when access_token is missing" do
       before do
         # Clear ENV to prevent Client#initialize from auto-reloading access_token
-        ENV.delete("ACCESS_TOKEN")
+        ENV.delete("DHAN_ACCESS_TOKEN")
         DhanHQ.configuration.access_token = nil
       end
 
@@ -157,7 +157,7 @@ RSpec.describe DhanHQ::Client do
     context "when client_id is missing for data API" do
       before do
         # Clear ENV to prevent Client#initialize from auto-reloading client_id
-        ENV.delete("CLIENT_ID")
+        ENV.delete("DHAN_CLIENT_ID")
         DhanHQ.configuration.client_id = nil
       end
 

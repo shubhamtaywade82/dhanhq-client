@@ -2,52 +2,112 @@
 
 require "faraday"
 require "json"
+require "rotp"
+require_relative "errors"
 
 module DhanHQ
-  # Helpers for Dhan authentication APIs.
-  # The gem does not implement API key/secret consent flows or Partner consent;
-  # use Dhan Web or your own OAuth flow to obtain tokens, then pass them via
-  # configuration. This module supports refreshing web-generated tokens only.
+  # Module-level helpers for Dhan authentication APIs.
+  #
+  # Supports:
+  # - Generating access tokens via TOTP (for automated systems)
+  # - Renewing web-generated tokens (web-only tokens)
+  #
+  # @example Generate token with TOTP
+  #   totp = DhanHQ::Auth.generate_totp(ENV["DHAN_TOTP_SECRET"])
+  #   response = DhanHQ::Auth.generate_access_token(
+  #     dhan_client_id: ENV["DHAN_CLIENT_ID"],
+  #     pin: ENV["DHAN_PIN"],
+  #     totp: totp
+  #   )
+  #   token = response["accessToken"]
+  #
+  # @example Renew web token
+  #   response = DhanHQ::Auth.renew_token(
+  #     access_token: current_token,
+  #     client_id: ENV["DHAN_CLIENT_ID"]
+  #   )
   module Auth
-    # Refreshes a web-generated access token (24h validity).
-    # Calls POST /v2/RenewToken; expires the current token and returns a new one.
-    # Only valid for tokens generated from Dhan Web (not API key flow).
-    #
-    # @param access_token [String] Current JWT from Dhan Web
-    # @param client_id [String] Dhan client ID (dhanClientId)
-    # @param base_url [String, nil] API base URL (default: DhanHQ.configuration.base_url)
-    # @return [HashWithIndifferentAccess] Response with :access_token and :expiry_time (if present)
-    # @raise [DhanHQ::Error] On HTTP or API error
-    def self.renew_token(access_token, client_id, base_url: nil)
-      base_url ||= DhanHQ.configuration&.base_url || Configuration::BASE_URL
-      url = "#{base_url.chomp("/")}/RenewToken"
+    AUTH_BASE_URL = "https://auth.dhan.co"
+    API_BASE_URL  = "https://api.dhan.co/v2"
 
-      conn = Faraday.new(url: url) do |c|
-        c.request :json
-        c.response :json, content_type: /\bjson$/
-        c.adapter Faraday.default_adapter
+    # Generates an access token using TOTP authentication.
+    #
+    # POST https://auth.dhan.co/app/generateAccessToken
+    #
+    # @param dhan_client_id [String] Your Dhan client ID
+    # @param pin [String] Your 6-digit Dhan PIN
+    # @param totp [String] 6-digit TOTP code (or use generate_totp helper)
+    # @return [Hash] Response hash with accessToken, expiryTime, etc.
+    # @raise [DhanHQ::InvalidAuthenticationError] On authentication failure
+    def self.generate_access_token(dhan_client_id:, pin:, totp:)
+      conn = build_connection(AUTH_BASE_URL)
+
+      response = conn.post("/app/generateAccessToken") do |req|
+        req.headers["Accept"] = "application/json"
+
+        req.params = {
+          dhanClientId: dhan_client_id,
+          pin: pin,
+          totp: totp
+        }
       end
 
-      response = conn.get("") do |req|
+      handle_response(response, context: "GenerateAccessToken")
+    end
+
+    # Renews a web-generated access token (24h validity).
+    #
+    # POST https://api.dhan.co/v2/RenewToken
+    #
+    # ⚠️ Works ONLY for tokens generated from Dhan Web dashboard.
+    # For TOTP-generated tokens, regenerate instead of renewing.
+    #
+    # @param access_token [String] Current JWT access token
+    # @param client_id [String] Dhan client ID (dhanClientId)
+    # @return [Hash] Response hash with new accessToken and expiryTime
+    # @raise [DhanHQ::InvalidAuthenticationError] On renewal failure
+    def self.renew_token(access_token:, client_id:)
+      conn = build_connection(API_BASE_URL)
+
+      response = conn.post("/RenewToken") do |req|
         req.headers["access-token"] = access_token
         req.headers["dhanClientId"] = client_id
         req.headers["Accept"] = "application/json"
       end
 
+      handle_response(response, context: "RenewToken")
+    end
+
+    # Generates a 6-digit TOTP code from a secret.
+    #
+    # @param secret [String] TOTP secret (from authenticator app setup)
+    # @return [String] 6-digit TOTP code
+    def self.generate_totp(secret)
+      ROTP::TOTP.new(secret).now
+    end
+
+    private
+
+    def self.build_connection(base_url)
+      Faraday.new(url: base_url) do |c|
+        c.request :url_encoded
+        c.response :json, content_type: /\bjson$/
+        c.adapter Faraday.default_adapter
+      end
+    end
+    private_class_method :build_connection
+
+    def self.handle_response(response, context:)
       unless response.success?
-        body = begin
-          JSON.parse(response.body.to_s)
-        rescue JSON::ParserError
-          {}
-        end
+        body = response.body.is_a?(Hash) ? response.body : {}
         error_message = body["errorMessage"] || body["message"] || response.body.to_s
-        raise DhanHQ::InvalidAuthenticationError, "RenewToken failed: #{response.status} #{error_message}"
+
+        raise DhanHQ::InvalidAuthenticationError,
+              "#{context} failed: #{response.status} #{error_message}"
       end
 
-      data = response.body
-      data = JSON.parse(data) if data.is_a?(String)
-      result = data.is_a?(Hash) ? data : {}
-      result.with_indifferent_access
+      response.body.is_a?(Hash) ? response.body : {}
     end
+    private_class_method :handle_response
   end
 end

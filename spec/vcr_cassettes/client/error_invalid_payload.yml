@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Content-Length:
       - '0'
       Accept-Encoding:

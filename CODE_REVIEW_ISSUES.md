@@ -12,9 +12,9 @@
 **Location**: `lib/DhanHQ/client.rb:40`
 **Issue**: The client initializes configuration conditionally, which can lead to runtime errors:
 ```ruby
-DhanHQ.configure_with_env if ENV.fetch("CLIENT_ID", nil)
+DhanHQ.configure_with_env if ENV.fetch("DHAN_CLIENT_ID", nil)
 ```
-**Problem**: If `CLIENT_ID` exists but `ACCESS_TOKEN` doesn't, configuration will be partially initialized, leading to authentication failures later.
+**Problem**: If `DHAN_CLIENT_ID` exists but `DHAN_ACCESS_TOKEN` doesn't, configuration will be partially initialized, leading to authentication failures later.
 **Recommendation**: Validate both required credentials before proceeding or fail fast with a clear error message.
 
 ### 2. **Race Condition in Rate Limiter**

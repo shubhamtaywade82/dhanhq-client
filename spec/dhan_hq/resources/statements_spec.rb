@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Resources::Statements do
   subject(:statements_resource) { described_class.new }
 
   before do
-    # Ensure ENV credentials (CLIENT_ID, ACCESS_TOKEN) are loaded
+    # Ensure ENV credentials (DHAN_CLIENT_ID, DHAN_ACCESS_TOKEN) are loaded
     DhanHQ.configure_with_env
   end
 

@@ -10,9 +10,9 @@ http_interactions:
       User-Agent:
       - Faraday v1.10.4
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Client-Id:
-      - "<CLIENT_ID>"
+      - "<DHAN_CLIENT_ID>"
       Accept:
       - application/json
       Content-Type:

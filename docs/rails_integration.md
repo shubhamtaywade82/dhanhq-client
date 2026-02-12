@@ -29,8 +29,8 @@ boot successfully:
 
 | Variable | Description |
 | --- | --- |
-| `CLIENT_ID` | Dhan trading client id for the account you want to trade with. |
-| `ACCESS_TOKEN` | REST/WebSocket access token (regenerate via the Dhan console or APIs). |
+| `DHAN_CLIENT_ID` | Dhan trading client id for the account you want to trade with. |
+| `DHAN_ACCESS_TOKEN` | REST/WebSocket access token (regenerate via the Dhan console or APIs). |
 
 ```bash
 bin/rails credentials:edit
@@ -61,8 +61,8 @@ environment variables (Rails credentials can be copied into ENV on boot):
 require 'dhan_hq'
 
 if (creds = Rails.application.credentials.dig(:dhanhq))
-  ENV['CLIENT_ID']        ||= creds[:client_id]
-  ENV['ACCESS_TOKEN']     ||= creds[:access_token]
+  ENV['DHAN_CLIENT_ID']        ||= creds[:client_id]
+  ENV['DHAN_ACCESS_TOKEN']     ||= creds[:access_token]
   ENV['DHAN_LOG_LEVEL']   ||= creds[:log_level]&.upcase
   ENV['DHAN_BASE_URL']    ||= creds[:base_url]
   ENV['DHAN_WS_ORDER_URL'] ||= creds[:ws_order_url]
@@ -77,8 +77,8 @@ if (creds = Rails.application.credentials.dig(:dhanhq))
 end
 
 # fall back to traditional ENV variables when credentials are not defined
-ENV['CLIENT_ID']    ||= ENV.fetch('DHAN_CLIENT_ID', nil)
-ENV['ACCESS_TOKEN'] ||= ENV.fetch('DHAN_ACCESS_TOKEN', nil)
+ENV['DHAN_CLIENT_ID']    ||= ENV.fetch('DHAN_CLIENT_ID', nil)
+ENV['DHAN_ACCESS_TOKEN'] ||= ENV.fetch('DHAN_ACCESS_TOKEN', nil)
 
 DhanHQ.configure_with_env
 
@@ -108,7 +108,7 @@ initializer calls `DhanHQ.configure_with_env`.
 For token rotation without restarting the app (e.g. token stored in DB or refreshed via OAuth), use `access_token_provider` so the token is resolved at request time:
 
 ```ruby
-# config/initializers/dhanhq.rb (alternative to static ACCESS_TOKEN)
+# config/initializers/dhanhq.rb (alternative to static DHAN_ACCESS_TOKEN)
 DhanHQ.configure do |config|
   config.client_id = ENV["DHAN_CLIENT_ID"] || Rails.application.credentials.dig(:dhanhq, :client_id)
   config.access_token_provider = lambda do

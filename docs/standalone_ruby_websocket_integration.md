@@ -31,8 +31,8 @@ require 'dhan_hq'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -59,8 +59,8 @@ market_client.stop
 
 ```bash
 # Set environment variables
-export CLIENT_ID="your_client_id"
-export ACCESS_TOKEN="your_access_token"
+export DHAN_CLIENT_ID="your_client_id"
+export DHAN_ACCESS_TOKEN="your_access_token"
 
 # Run the script
 ruby market_feed_script.rb
@@ -74,8 +74,8 @@ For dynamic token at request time use `config.access_token_provider`. For web-ge
 
 ```bash
 # Required
-export CLIENT_ID="your_client_id"
-export ACCESS_TOKEN="your_access_token"
+export DHAN_CLIENT_ID="your_client_id"
+export DHAN_ACCESS_TOKEN="your_access_token"
 
 # Optional
 export DHAN_WS_USER_TYPE="SELF"  # or "PARTNER"
@@ -132,8 +132,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -264,8 +264,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -394,8 +394,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -542,8 +542,8 @@ WorkingDirectory=/opt/dhanhq-market-feed
 ExecStart=/usr/bin/ruby market_feed_daemon.rb
 Restart=always
 RestartSec=10
-Environment=CLIENT_ID=your_client_id
-Environment=ACCESS_TOKEN=your_access_token
+Environment=DHAN_CLIENT_ID=your_client_id
+Environment=DHAN_ACCESS_TOKEN=your_access_token
 Environment=DHAN_WS_USER_TYPE=SELF
 
 [Install]
@@ -562,8 +562,8 @@ require 'fileutils'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -779,8 +779,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -1061,8 +1061,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
@@ -1264,8 +1264,8 @@ end
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
   config.logger = logger
 end
@@ -1383,8 +1383,8 @@ require 'json'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 

@@ -89,8 +89,8 @@ DhanHQ Client Gem - Comprehensive Test Suite
     ✓ Base URL: https://api.dhan.co/v2
 
   Testing: Environment variables check... ✓
-    CLIENT_ID: Set
-    ACCESS_TOKEN: Set
+    DHAN_CLIENT_ID: Set
+    DHAN_ACCESS_TOKEN: Set
     DHAN_LOG_LEVEL: INFO
 
 ...
@@ -118,8 +118,8 @@ Test Summary
 
 ### Configuration Errors
 If you see configuration errors, ensure:
-- `CLIENT_ID` environment variable is set
-- `ACCESS_TOKEN` environment variable is set
+- `DHAN_CLIENT_ID` environment variable is set
+- `DHAN_ACCESS_TOKEN` environment variable is set
 - Run `DhanHQ.configure_with_env` in console
 
 ### WebSocket Connection Errors
