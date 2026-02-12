@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DhanHQ
   module Auth
     # Backward-compatible wrapper for token generation.

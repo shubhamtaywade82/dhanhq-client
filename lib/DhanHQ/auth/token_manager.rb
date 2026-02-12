@@ -29,9 +29,9 @@ module DhanHQ
       def ensure_valid_token!
         return generate! unless @token
 
-        if @token.needs_refresh?
-          refresh!
-        end
+        return unless @token.needs_refresh?
+
+        refresh!
       end
 
       def refresh!

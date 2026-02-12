@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "time"
 
 module DhanHQ
@@ -23,16 +25,19 @@ module DhanHQ
 
       def expired?
         return true unless expiry_time
+
         Time.now >= expiry_time
       end
 
       def expires_in
         return 0 unless expiry_time
+
         expiry_time - Time.now
       end
 
       def needs_refresh?(buffer_seconds: 300)
         return true unless expiry_time
+
         Time.now >= (expiry_time - buffer_seconds)
       end
 
@@ -41,9 +46,7 @@ module DhanHQ
       def normalize_keys(data)
         return {} unless data.is_a?(Hash)
 
-        data.each_with_object({}) do |(key, value), acc|
-          acc[key.to_s] = value
-        end
+        data.transform_keys(&:to_s)
       end
 
       def parse_time(value)
