@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Resources::Positions do
   subject(:positions_resource) { described_class.new }
 
   before do
-    # Configure with environment credentials (CLIENT_ID, ACCESS_TOKEN, etc.)
+    # Configure with environment credentials (DHAN_CLIENT_ID, DHAN_ACCESS_TOKEN, etc.)
     DhanHQ.configure_with_env
   end
 

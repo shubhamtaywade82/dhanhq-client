@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -36,8 +36,8 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '[{"dhanClientId":"<CLIENT_ID>","narration":"CLOSING BALANCE","voucherdate":"Jan
-        01, 1970","exchange":"NSE_CASH","voucherdesc":"CLOSING BALANCE","vouchernumber":"","debit":"0.00","credit":"0.0","runbal":"0"},{"dhanClientId":"<CLIENT_ID>","narration":"OPENING
+      string: '[{"dhanClientId":"<DHAN_CLIENT_ID>","narration":"CLOSING BALANCE","voucherdate":"Jan
+        01, 1970","exchange":"NSE_CASH","voucherdesc":"CLOSING BALANCE","vouchernumber":"","debit":"0.00","credit":"0.0","runbal":"0"},{"dhanClientId":"<DHAN_CLIENT_ID>","narration":"OPENING
         BALANCE","voucherdate":"Jan 01, 1970","exchange":"NSE_CASH","voucherdesc":"OPENING
         BALANCE","vouchernumber":"","debit":"0.00","credit":"0.0","runbal":"0"}]'
   recorded_at: Sat, 15 Mar 2025 10:38:12 GMT
@@ -55,7 +55,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:

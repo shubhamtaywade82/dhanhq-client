@@ -100,7 +100,7 @@ OptionParser.new do |o|
   o.on("--data-file PATH", "Read OHLC JSON from file instead of calling API") { |v| opts[:data_file] = v }
   o.on("--interval N", Integer, "Interval of --data-file in minutes (default: 1)") { |v| opts[:data_interval] = v }
   o.on("--debug", "Print debug info about OHLC sizes and last candles") { opts[:debug] = true }
-  o.on("--print-creds", "Print CLIENT_ID and masked ACCESS_TOKEN, then continue") { opts[:print_creds] = true }
+  o.on("--print-creds", "Print DHAN_CLIENT_ID and masked DHAN_ACCESS_TOKEN, then continue") { opts[:print_creds] = true }
   o.on("-h", "--help") do
     puts o
     exit
@@ -108,15 +108,15 @@ OptionParser.new do |o|
 end.parse!
 
 if opts[:print_creds]
-  cid = ENV.fetch("CLIENT_ID", nil)
-  tok = ENV.fetch("ACCESS_TOKEN", nil)
+  cid = ENV.fetch("DHAN_CLIENT_ID", nil)
+  tok = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
   masked = if tok && tok.size >= 8
              "#{tok[0, 4]}...#{tok[-4, 4]}"
            else
              (tok ? tok[0, 4] : nil)
            end
-  puts "CLIENT_ID=#{cid.inspect}"
-  puts "ACCESS_TOKEN=#{masked || "nil"}"
+  puts "DHAN_CLIENT_ID=#{cid.inspect}"
+  puts "DHAN_ACCESS_TOKEN=#{masked || "nil"}"
 end
 
 DhanHQ.configure_with_env

@@ -1,6 +1,6 @@
 # DhanHQ Client Gem - Review Summary
 
-**API Documentation**: https://api.dhan.co/v2/#/  
+**API Documentation**: https://api.dhan.co/v2/#/
 **Review Date**: 2025-01-27
 
 ## 🚨 Top 10 Critical Issues
@@ -15,7 +15,7 @@
 - **File**: `lib/DhanHQ/client.rb:40`
 - **Issue**: Partial configuration can lead to runtime authentication failures
 - **Impact**: Silent failures, difficult debugging
-- **Fix**: Validate both `CLIENT_ID` and `ACCESS_TOKEN` before proceeding
+- **Fix**: Validate both `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` before proceeding
 
 ### 3. **Memory Leak in Order Tracker** (HIGH)
 - **File**: `lib/DhanHQ/ws/orders/client.rb:18`

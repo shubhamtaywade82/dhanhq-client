@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -36,6 +36,6 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"dhanClientId":"<CLIENT_ID>","availabelBalance":115.64,"sodLimit":115.64,"collateralAmount":0.0,"receiveableAmount":0.0,"utilizedAmount":0.0,"blockedPayoutAmount":0.0,"withdrawableBalance":115.64}'
+      string: '{"dhanClientId":"<DHAN_CLIENT_ID>","availabelBalance":115.64,"sodLimit":115.64,"collateralAmount":0.0,"receiveableAmount":0.0,"utilizedAmount":0.0,"blockedPayoutAmount":0.0,"withdrawableBalance":115.64}'
   recorded_at: Sat, 15 Mar 2025 09:46:16 GMT
 recorded_with: VCR 6.3.1

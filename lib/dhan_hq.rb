@@ -1,96 +1,46 @@
 # frozen_string_literal: true
 
-require "dotenv/load"
+require "json"
 require "logger"
-
-# Helper Methods
+require "zeitwerk"
+require "dotenv/load"
+# Minimal eager requires for backward-compatible constants.
+# These are widely referenced (e.g. `DhanHQ::BaseAPI`) and should not depend on
+# the autoloader being fully configured.
 require_relative "DhanHQ/helpers/api_helper"
 require_relative "DhanHQ/helpers/attribute_helper"
 require_relative "DhanHQ/helpers/validation_helper"
 require_relative "DhanHQ/helpers/request_helper"
 require_relative "DhanHQ/helpers/response_helper"
-require_relative "DhanHQ/json_loader"
-
 require_relative "DhanHQ/core/base_api"
-require_relative "DhanHQ/core/base_resource"
 require_relative "DhanHQ/core/base_model"
-require_relative "DhanHQ/core/error_handler"
-
-require_relative "DhanHQ/version"
-require_relative "DhanHQ/errors"
-require_relative "DhanHQ/error_object"
-
-require_relative "DhanHQ/client"
-require_relative "DhanHQ/configuration"
-require_relative "DhanHQ/rate_limiter"
-require_relative "DhanHQ/auth"
-
-# Contracts
-require_relative "DhanHQ/contracts/base_contract"
-require_relative "DhanHQ/contracts/historical_data_contract"
-require_relative "DhanHQ/contracts/margin_calculator_contract"
-require_relative "DhanHQ/contracts/position_conversion_contract"
-require_relative "DhanHQ/contracts/slice_order_contract"
-require_relative "DhanHQ/contracts/trade_contract"
-require_relative "DhanHQ/contracts/expired_options_data_contract"
-require_relative "DhanHQ/contracts/alert_order_contract"
-
-# Resources
-require_relative "DhanHQ/resources/option_chain"
-require_relative "DhanHQ/resources/orders"
-require_relative "DhanHQ/resources/forever_orders"
-require_relative "DhanHQ/resources/super_orders"
-require_relative "DhanHQ/resources/funds"
-require_relative "DhanHQ/resources/holdings"
-require_relative "DhanHQ/resources/positions"
-require_relative "DhanHQ/resources/statements"
-require_relative "DhanHQ/resources/trades"
-require_relative "DhanHQ/resources/historical_data"
-require_relative "DhanHQ/resources/margin_calculator"
-require_relative "DhanHQ/resources/market_feed"
-require_relative "DhanHQ/resources/instruments"
-require_relative "DhanHQ/resources/alert_orders"
-require_relative "DhanHQ/resources/edis"
-require_relative "DhanHQ/resources/ip_setup"
-require_relative "DhanHQ/resources/kill_switch"
-require_relative "DhanHQ/resources/trader_control"
-require_relative "DhanHQ/resources/profile"
-require_relative "DhanHQ/resources/expired_options_data"
-
-# Models
-require_relative "DhanHQ/models/alert_order"
-require_relative "DhanHQ/models/order"
-require_relative "DhanHQ/models/funds"
-require_relative "DhanHQ/models/option_chain"
-require_relative "DhanHQ/models/forever_order"
-require_relative "DhanHQ/models/super_order"
-require_relative "DhanHQ/models/historical_data"
-require_relative "DhanHQ/models/market_feed"
-require_relative "DhanHQ/models/instrument"
-require_relative "DhanHQ/models/position"
-require_relative "DhanHQ/models/holding"
-require_relative "DhanHQ/models/ledger_entry"
-require_relative "DhanHQ/models/trade"
-require_relative "DhanHQ/models/margin"
-require_relative "DhanHQ/models/kill_switch"
-require_relative "DhanHQ/models/profile"
-require_relative "DhanHQ/models/order_update"
-require_relative "DhanHQ/models/expired_options_data"
-
-require_relative "DhanHQ/constants"
-require_relative "DhanHQ/ws"
-require_relative "DhanHQ/ws/singleton_lock"
-require_relative "ta"
-require_relative "dhanhq/analysis/multi_timeframe_analyzer"
-require_relative "dhanhq/analysis/helpers/bias_aggregator"
-require_relative "dhanhq/analysis/helpers/moneyness_helper"
-require_relative "dhanhq/contracts/options_buying_advisor_contract"
-require_relative "dhanhq/analysis/options_buying_advisor"
+require_relative "DhanHQ/core/base_resource"
 
 # The top-level module for the DhanHQ client library.
 #
 # Provides configuration management for setting credentials and API-related settings.
 module DhanHQ
+  LOADER = Zeitwerk::Loader.new
+  LOADER.tag = "dhanhq"
+  LOADER.inflector.inflect(
+    "api_helper" => "APIHelper",
+    "auth_api" => "AuthAPI",
+    "base_api" => "BaseAPI",
+    "ip_setup" => "IPSetup",
+    "json_loader" => "JSONLoader",
+    "ws" => "WS"
+  )
+  LOADER.push_dir(File.join(__dir__, "DhanHQ"), namespace: self)
+  LOADER.push_dir(File.join(__dir__, "dhanhq"), namespace: self)
+  LOADER.collapse(File.join(__dir__, "DhanHQ", "core"))
+  LOADER.collapse(File.join(__dir__, "DhanHQ", "helpers"))
+  LOADER.collapse(File.join(__dir__, "dhanhq", "analysis", "helpers"))
+  LOADER.ignore(
+    File.join(__dir__, "DhanHQ", "errors.rb"),
+    File.join(__dir__, "DhanHQ", "version.rb")
+  )
+  LOADER.setup
+
   class Error < StandardError; end
 
   class << self
@@ -131,7 +81,7 @@ module DhanHQ
 
     # Configures the DhanHQ client using environment variables.
     #
-    # When credentials are injected via `ACCESS_TOKEN` and `CLIENT_ID` this helper
+    # When credentials are injected via `DHAN_ACCESS_TOKEN` and `DHAN_CLIENT_ID` this helper
     # can be used to initialise a configuration without a block.
     #
     # @example
@@ -140,8 +90,8 @@ module DhanHQ
     # @return [void]
     def configure_with_env
       self.configuration ||= Configuration.new
-      configuration.access_token = ENV.fetch("ACCESS_TOKEN", nil)
-      configuration.client_id = ENV.fetch("CLIENT_ID", nil)
+      configuration.access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
+      configuration.client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
       configuration.base_url = ENV.fetch("DHAN_BASE_URL", BASE_URL)
       configuration.ws_version = ENV.fetch("DHAN_WS_VERSION", configuration.ws_version || 2).to_i
       configuration.ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", configuration.ws_order_url)

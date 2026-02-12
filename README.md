@@ -53,7 +53,7 @@ gem install DhanHQ
 
 ## Configuration
 
-### From ENV / .env
+### From ENV / .env (static token)
 
 ```ruby
 require 'dhan_hq'
@@ -66,8 +66,8 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 
 | Variable       | Purpose                                           |
 | -------------- | ------------------------------------------------- |
-| `CLIENT_ID`    | Trading account client id issued by Dhan.         |
-| `ACCESS_TOKEN` | API access token generated from the Dhan console. |
+| `DHAN_CLIENT_ID`    | Trading account client id issued by Dhan.         |
+| `DHAN_ACCESS_TOKEN` | API access token generated from the Dhan console. |
 
 `configure_with_env` raises if either value is missing. Load them via `dotenv`,
 Rails credentials, or any other mechanism that populates `ENV` before
@@ -114,7 +114,18 @@ end
 
 If the API returns **401** or error code **807** (token expired) and `access_token_provider` is set, the client retries the request **once** with a fresh token from the provider. Otherwise it raises `DhanHQ::InvalidAuthenticationError` or `DhanHQ::TokenExpiredError`. Missing or nil token from config raises `DhanHQ::AuthenticationError`.
 
-**RenewToken (web-generated tokens):** For tokens generated from Dhan Web (24h validity), use `DhanHQ::Auth.renew_token(access_token, client_id)` to refresh; use the returned token in your provider or store. The gem does **not** implement API key/secret or Partner consent flows—implement those in your app and pass the token to the gem. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
+### Authentication approaches (overview)
+
+The gem intentionally **does not own** Dhan’s consent flows (web, API key/secret, Partner). You obtain a token using Dhan’s docs, then choose one of these approaches:
+
+- **Static token (ENV / config)**: Set `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` via ENV and call `DhanHQ.configure_with_env`, or assign `config.client_id` / `config.access_token` manually. Best when you’re comfortable rotating tokens out-of-band (cron, runbook).
+- **Dynamic token provider**: Use `config.access_token_provider` (and optional `config.on_token_expired`) so the gem asks your app for the token on every request and retries **once** on 401 with a fresh token. Ideal for OAuth-style flows or central token stores.
+- **Token endpoint bootstrap**: Call `DhanHQ.configure_from_token_endpoint(base_url:, bearer_token:)` to fetch `{ access_token, client_id, base_url? }` from your own HTTP endpoint and populate configuration in one step.
+- **TOTP-based token generation (individuals)**: Use `DhanHQ::Auth.generate_totp(secret)` + `DhanHQ::Auth.generate_access_token(dhan_client_id:, pin:, totp:)` when you want fully automated, TOTP-backed tokens for a single account. The low-level API returns the raw response hash from Dhan.
+- **Client helpers + auto management**: Use `client.generate_access_token(dhan_client_id:, pin:, totp: nil, totp_secret: nil)` and `client.enable_auto_token_management!(dhan_client_id:, pin:, totp_secret:)` when you want `TokenResponse` objects, config auto-updates, and background token lifecycle (generate + renew) wrapped around each request.
+- **RenewToken (web-generated tokens)**: For 24h tokens generated from **Dhan Web**, call `DhanHQ::Auth.renew_token(access_token:, client_id:)` or `client.renew_access_token` / `TokenManager#refresh!` to renew. This only works for active web tokens; for TOTP-generated tokens prefer regenerating.
+
+For detailed behavior, timelines, and error types, see **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)**.
 
 ### Logging
 

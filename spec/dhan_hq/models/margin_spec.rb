@@ -13,7 +13,7 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
     let(:params) do
       {
         # Adjust these parameters for a valid margin calculation in your account
-        dhan_client_id: ENV.fetch("CLIENT_ID", "FAKE_ID"),
+        dhan_client_id: ENV.fetch("DHAN_CLIENT_ID", "FAKE_ID"),
         exchange_segment: "NSE_EQ",
         transaction_type: "BUY",
         product_type: "CNC",

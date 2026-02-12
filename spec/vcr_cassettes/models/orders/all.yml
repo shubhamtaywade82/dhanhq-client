@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -36,7 +36,7 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '[{"dhanClientId":"<CLIENT_ID>","orderId":"952502167319","exchangeOrderId":"0","correlationId":"NA","orderStatus":"PENDING","transactionType":"BUY","exchangeSegment":"BSE_EQ","productType":"CNC","orderType":"LIMIT","validity":"DAY","tradingSymbol":"THINKINK","securityId":"539310","quantity":20,"disclosedQuantity":0,"price":0.36,"triggerPrice":0.0,"afterMarketOrder":true,"boProfitValue":0.0,"boStopLossValue":0.0,"legName":"NA","createTime":"2025-02-16
+      string: '[{"dhanClientId":"<DHAN_CLIENT_ID>","orderId":"952502167319","exchangeOrderId":"0","correlationId":"NA","orderStatus":"PENDING","transactionType":"BUY","exchangeSegment":"BSE_EQ","productType":"CNC","orderType":"LIMIT","validity":"DAY","tradingSymbol":"THINKINK","securityId":"539310","quantity":20,"disclosedQuantity":0,"price":0.36,"triggerPrice":0.0,"afterMarketOrder":true,"boProfitValue":0.0,"boStopLossValue":0.0,"legName":"NA","createTime":"2025-02-16
         16:04:37","updateTime":"2025-02-16 16:04:37","exchangeTime":"0001-01-01 00:00:00","drvExpiryDate":"0001-01-01","drvOptionType":"NA","drvStrikePrice":0.0,"omsErrorCode":"0","omsErrorDescription":"","algoId":"0","remainingQuantity":20,"averageTradedPrice":0.0,"filledQty":0}]'
   recorded_at: Sun, 16 Feb 2025 11:05:31 GMT
 recorded_with: VCR 6.3.1

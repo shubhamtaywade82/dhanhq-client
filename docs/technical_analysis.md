@@ -12,7 +12,7 @@ This guide explains how to use the technical analysis modules bundled with this 
 
 ## Prerequisites
 
-- Environment variables set: `CLIENT_ID`, `ACCESS_TOKEN`
+- Environment variables set: `DHAN_CLIENT_ID`, `DHAN_ACCESS_TOKEN`
 - Optional indicator gems:
   - `gem install ruby-technical-analysis technical-analysis`
 

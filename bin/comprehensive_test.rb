@@ -76,8 +76,8 @@ module DhanHQ
         end
 
         test("Environment variables check") do
-          puts "  CLIENT_ID: #{ENV["CLIENT_ID"] ? "Set" : "Not Set"}"
-          puts "  ACCESS_TOKEN: #{ENV["ACCESS_TOKEN"] ? "Set" : "Not Set"}"
+          puts "  DHAN_CLIENT_ID: #{ENV["DHAN_CLIENT_ID"] ? "Set" : "Not Set"}"
+          puts "  DHAN_ACCESS_TOKEN: #{ENV["DHAN_ACCESS_TOKEN"] ? "Set" : "Not Set"}"
           puts "  DHAN_LOG_LEVEL: #{ENV["DHAN_LOG_LEVEL"] || "INFO"}"
         end
       end

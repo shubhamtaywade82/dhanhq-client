@@ -12,8 +12,8 @@ require "dhan_hq"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
-  config.client_id = ENV["CLIENT_ID"] || "your_client_id"
-  config.access_token = ENV["ACCESS_TOKEN"] || "your_access_token"
+  config.client_id = ENV["DHAN_CLIENT_ID"] || "your_client_id"
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"] || "your_access_token"
   config.ws_user_type = ENV["DHAN_WS_USER_TYPE"] || "SELF"
 end
 
