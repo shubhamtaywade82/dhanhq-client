@@ -2,6 +2,23 @@
 
 ---
 
+## [2.4.0] - 2026-02-18
+
+### Added
+- Support for Individual TOTP-based access token generation
+- `DhanHQ::Auth.generate_access_token`
+- `DhanHQ::Auth.generate_totp`
+
+### Updated
+- RenewToken now uses POST (aligned with Dhan API behavior)
+- Improved error handling for authentication APIs
+
+### Notes
+- TOTP tokens can now be programmatically regenerated without browser login
+- RenewToken still applies only to web-generated tokens
+
+---
+
 ## [2.3.0] - 2026-02-04
 
 ### Added
