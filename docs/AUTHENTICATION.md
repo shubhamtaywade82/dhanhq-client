@@ -113,50 +113,108 @@ Rescue `AuthenticationError` for local config/token resolution failures; rescue 
 # SUPPORTED AUTHENTICATION AND TOKEN GENERATION APPROACHES:
 
 We now support five distinct authentication approaches in this gem.
+
 1️⃣ Static token (manual, simplest)
 What: You paste a token you got from Dhan (web, OAuth, partner, whatever) into config.
 How:
-DhanHQ.configure do |config|  config.client_id    = ENV["DHAN_CLIENT_ID"]  config.access_token = ENV["DHAN_ACCESS_TOKEN"]end
+```ruby
+DhanHQ.configure do |config|
+  config.client_id    = ENV["DHAN_CLIENT_ID"]
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"]
+end
+```
 When: You’re OK rotating tokens manually (e.g. cron job, ops runbook).
+
 2️⃣ Dynamic token via access_token_provider
 What: Gem asks you for a token on every request (proc/lambda).
 How:
-DhanHQ.configure do |config|  config.client_id = ENV["DHAN_CLIENT_ID"]  config.access_token_provider = -> { MyTokenStore.fetch_current_token }  config.on_token_expired = ->(error) { MyTokenStore.refresh!(error) }end
+```ruby
+DhanHQ.configure do |config|
+  config.client_id = ENV["DHAN_CLIENT_ID"]
+  config.access_token_provider = -> { MyTokenStore.fetch_current_token }
+  config.on_token_expired = ->(error) { MyTokenStore.refresh!(error) }
+end
+```
 Behavior:
 On 401 (auth failure), client calls on_token_expired, then retries once using a fresh token from access_token_provider.
+
 3️⃣ Fetch-from-token-endpoint (configure_from_token_endpoint)
 What: Gem calls your HTTP endpoint once to get access_token + client_id.
 How:
-DhanHQ.configure_from_token_endpoint(  base_url:    "https://myapp.com",  bearer_token: ENV["DHAN_TOKEN_ENDPOINT_BEARER"])# expects JSON: { access_token: "...", client_id: "...", base_url: "..." (optional) }
+```ruby
+DhanHQ.configure_from_token_endpoint(
+  base_url:    "https://myapp.com",
+  bearer_token: ENV["DHAN_TOKEN_ENDPOINT_BEARER"]
+)
+# expects JSON: { access_token: "...", client_id: "...", base_url: "..." (optional) }
+```
 When: Multi-tenant or central credential service, you don’t want tokens in ENV directly.
+
 4️⃣ TOTP-based token generation (new DhanHQ::Auth flow)
 Module API (low-level)
 What: Direct call to Dhan’s generateAccessToken endpoint using TOTP.
-totp = DhanHQ::Auth.generate_totp(ENV["DHAN_TOTP_SECRET"])response = DhanHQ::Auth.generate_access_token(  dhan_client_id: ENV["DHAN_CLIENT_ID"],  pin:           ENV["DHAN_PIN"],  totp:          totp)token  = response["accessToken"]expiry = response["expiryTime"]
+```ruby
+totp = DhanHQ::Auth.generate_totp(ENV["DHAN_TOTP_SECRET"])
+response = DhanHQ::Auth.generate_access_token(
+  dhan_client_id: ENV["DHAN_CLIENT_ID"],
+  pin:           ENV["DHAN_PIN"],
+  totp:          totp
+)
+token  = response["accessToken"]
+expiry = response["expiryTime"]
+```
+
 Client API (high-level, returns TokenResponse)
-client = DhanHQ::Client.new(api_type: :order_api)token = client.generate_access_token(  dhan_client_id: ENV["DHAN_CLIENT_ID"],  pin:           ENV["DHAN_PIN"],  totp_secret:   ENV["DHAN_TOTP_SECRET"] # or `totp:` if you computed it)# auto-applies token + client_id to `DhanHQ.configuration`
+```
+client = DhanHQ::Client.new(api_type: :order_api)
+token = client.generate_access_token(
+  dhan_client_id: ENV["DHAN_CLIENT_ID"],
+  pin:           ENV["DHAN_PIN"],
+  totp_secret:   ENV["DHAN_TOTP_SECRET"] # or `totp:` if you computed it
+)
+# auto-applies token + client_id to `DhanHQ.configuration`
+```
+
 When: Fully automated individual setup (no manual web token generation).
+
 5️⃣ Auto token lifecycle management (TokenManager)
 What: Gem handles generate + renew + retry around every API call.
 How:
-client = DhanHQ::Client.new(api_type: :order_api)client.enable_auto_token_management!(  dhan_client_id: ENV["DHAN_CLIENT_ID"],  pin:           ENV["DHAN_PIN"],  totp_secret:   ENV["DHAN_TOTP_SECRET"])# From now on, `client.request` auto-ensures a valid token.
+```ruby
+client = DhanHQ::Client.new(api_type: :order_api)
+client.enable_auto_token_management!(
+  dhan_client_id: ENV["DHAN_CLIENT_ID"],
+  pin:           ENV["DHAN_PIN"],
+  totp_secret:   ENV["DHAN_TOTP_SECRET"]
+)
+# From now on, `client.request` auto-ensures a valid token.
+```
 Behavior:
 On first use: calls TOTP TokenGenerator → applies token.
 Before each request: ensure_valid_token!:
 If no token → generate.
 If needs_refresh? → TokenRenewal (POST /v2/RenewToken) with current token + dhanClientId.
 If renewal fails with auth error → falls back to full generate.
+
 6️⃣ Web-token renewal only (RenewToken)
 Module API:
-response = DhanHQ::Auth.renew_token(  access_token: current_token,  client_id:    ENV["DHAN_CLIENT_ID"])
+```ruby
+response = DhanHQ::Auth.renew_token(
+  access_token: current_token,
+  client_id:    ENV["DHAN_CLIENT_ID"]
+)
+```
 Client / manager (high-level):
-client.renew_access_token (returns TokenResponse, updates config).
-TokenManager#refresh! internally uses Auth::TokenRenewal.
+
+`client.renew_access_token` (returns TokenResponse, updates config).
+`TokenManager#refresh!` internally uses Auth::TokenRenewal.
 When: You’re using web-generated 24h tokens and want to extend them without switching to TOTP.
+
 TL;DR
 Manual: Static token (access_token)
 Dynamic: access_token_provider (+ optional on_token_expired)
 Central service: configure_from_token_endpoint
 Fully automated: TOTP generate (Auth / Client#generate_access_token)
 Production-grade automation: enable_auto_token_management! (generate + renew)
+
 If you tell me your exact deployment style (single user box, multi-user SaaS, on-prem, etc.), I can tell you which one you should actually use and what to delete as overkill.
