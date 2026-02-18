@@ -7,6 +7,20 @@ A clean Ruby client for **Dhan API v2** with ORM-like models (Orders, Positions,
 * REST coverage: Orders, Alert Orders, Super Orders, Forever Orders, Trades, Positions, Holdings, Funds/Margin, HistoricalData, OptionChain, MarketFeed, ExpiredOptionsData, EDIS, IP Setup, Trader Control (Kill Switch)
 * **WebSocket**: Orders, Market Feed, Market Depth - subscribe/unsubscribe dynamically, auto-reconnect with backoff, 429 cool-off, idempotent subs, header+payload binary parsing, normalized ticks
 
+## 🚀 60-Second Quick Start
+
+```ruby
+gem 'DhanHQ'
+require 'dhan_hq'
+
+DhanHQ.configure do |c|
+  c.client_id = ENV["DHAN_CLIENT_ID"]
+  c.access_token = ENV["DHAN_ACCESS_TOKEN"]
+end
+
+DhanHQ::Models::Position.all
+```
+
 ## ⚠️ BREAKING CHANGE NOTICE
 
 **IMPORTANT**: Starting from version 2.1.5, the require statement has changed:
