@@ -45,8 +45,8 @@ DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Lo
 
 **Minimum environment variables**
 
-* `CLIENT_ID` – trading account client id issued by Dhan.
-* `ACCESS_TOKEN` – API access token generated from the Dhan console.
+* `DHAN_CLIENT_ID` – trading account client id issued by Dhan.
+* `DHAN_ACCESS_TOKEN` – API access token generated from the Dhan console.
 
 If either key is missing `configure_with_env` raises an error. Ensure your
 application loads them into `ENV` before requiring the gem.
@@ -64,8 +64,8 @@ Create a `.env` file in your project root to supply the minimum values (and any
 optional overrides you need):
 
 ```dotenv
-CLIENT_ID=your_client_id
-ACCESS_TOKEN=your_access_token
+DHAN_CLIENT_ID=your_client_id
+DHAN_ACCESS_TOKEN=your_access_token
 ```
 
 The gem requires `dotenv/load`, so these variables are loaded automatically when you require `DhanHQ`.

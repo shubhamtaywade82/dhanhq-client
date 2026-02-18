@@ -44,6 +44,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday"
   spec.add_dependency "faraday_middleware"
   spec.add_dependency "faye-websocket"
+  spec.add_dependency "rotp"
+  spec.add_dependency "zeitwerk"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

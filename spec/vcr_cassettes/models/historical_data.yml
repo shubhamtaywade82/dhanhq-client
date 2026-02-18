@@ -14,7 +14,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -52,7 +52,7 @@ http_interactions:
       Accept:
       - application/json
       Access-Token:
-      - "<ACCESS_TOKEN>"
+      - "<DHAN_ACCESS_TOKEN>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:

@@ -98,8 +98,8 @@ module DhanHQ
     #   config.client_id = "your_client_id"
     #   config.access_token = "your_access_token"
     def initialize
-      @client_id = ENV.fetch("CLIENT_ID", nil)
-      @access_token = ENV.fetch("ACCESS_TOKEN", nil)
+      @client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
+      @access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
       @base_url       = ENV.fetch("DHAN_BASE_URL", "https://api.dhan.co/v2")
       @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
       @ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", "wss://api-order-update.dhan.co")
