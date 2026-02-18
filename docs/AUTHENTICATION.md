@@ -212,9 +212,13 @@ When: You’re using web-generated 24h tokens and want to extend them without sw
 
 TL;DR
 Manual: Static token (access_token)
+
 Dynamic: access_token_provider (+ optional on_token_expired)
+
 Central service: configure_from_token_endpoint
+
 Fully automated: TOTP generate (Auth / Client#generate_access_token)
+
 Production-grade automation: enable_auto_token_management! (generate + renew)
 
 If you tell me your exact deployment style (single user box, multi-user SaaS, on-prem, etc.), I can tell you which one you should actually use and what to delete as overkill.
