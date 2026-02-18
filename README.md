@@ -48,6 +48,10 @@ The gem name remains `DhanHQ` in your Gemfile, only the require statement change
 Add to your Gemfile:
 
 ```ruby
+gem 'DhanHQ'
+```
+OR
+```ruby
 gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
 ```
 
