@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    DhanHQ (2.4.0)
+    DhanHQ (2.5.0)
       activesupport
       base64
       bindata
@@ -308,4 +308,4 @@ DEPENDENCIES
   yard (~> 0.9.37)
 
 BUNDLED WITH
-   2.6.2
+  4.0.6

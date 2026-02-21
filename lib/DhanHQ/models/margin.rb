@@ -139,6 +139,55 @@ module DhanHQ
           response = resource.calculate(formatted_params)
           new(response, skip_validation: true)
         end
+
+        ##
+        # Calculates margin requirements for multiple scripts in a single request.
+        #
+        # Provides combined margin calculation including hedge benefit across multiple
+        # instruments. Useful for portfolio-level margin analysis.
+        #
+        # @param params [Hash{Symbol => Object}] Request parameters
+        #   @option params [Boolean] :include_position Whether to include existing positions
+        #   @option params [Boolean] :include_order Whether to include existing orders
+        #   @option params [String] :dhan_client_id User-specific identification
+        #   @option params [Array<Hash>] :scrip_list Array of instrument margin params, each with:
+        #     - :exchange_segment [String]
+        #     - :transaction_type [String]
+        #     - :quantity [Integer]
+        #     - :product_type [String]
+        #     - :security_id [String]
+        #     - :price [Float]
+        #     - :trigger_price [Float] (optional)
+        #
+        # @return [Hash{Symbol => String}] Response hash containing:
+        #   - **:total_margin** [String] Total margin required
+        #   - **:span_margin** [String] SPAN margin
+        #   - **:exposure_margin** [String] Exposure margin
+        #   - **:equity_margin** [String] Equity margin
+        #   - **:fo_margin** [String] F&O margin
+        #   - **:commodity_margin** [String] Commodity margin
+        #   - **:currency** [String] Currency (e.g., "INR")
+        #   - **:hedge_benefit** [String] Hedge benefit amount
+        #
+        # @example Calculate margin for multiple scripts
+        #   result = DhanHQ::Models::Margin.calculate_multi(
+        #     include_position: true,
+        #     include_order: true,
+        #     dhan_client_id: "1000000132",
+        #     scrip_list: [
+        #       { exchange_segment: "NSE_EQ", transaction_type: "BUY",
+        #         quantity: 100, product_type: "CNC", security_id: "1333", price: 1428.0 },
+        #       { exchange_segment: "NSE_FNO", transaction_type: "SELL",
+        #         quantity: 50, product_type: "INTRADAY", security_id: "43492", price: 200.0 }
+        #     ]
+        #   )
+        #   puts "Total margin: #{result[:total_margin]}"
+        #   puts "Hedge benefit: #{result[:hedge_benefit]}"
+        #
+        def calculate_multi(params)
+          formatted_params = camelize_keys(params)
+          resource.calculate_multi(formatted_params)
+        end
       end
 
       ##

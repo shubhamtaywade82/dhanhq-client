@@ -24,6 +24,14 @@ module DhanHQ
       def convert(params)
         post("/convert", params: params)
       end
+
+      ##
+      # Exit all active positions and cancel all open orders.
+      #
+      # @return [Hash] API response containing status and message.
+      def exit_all
+        delete("")
+      end
     end
   end
 end

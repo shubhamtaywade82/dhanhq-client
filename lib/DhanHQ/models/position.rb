@@ -205,6 +205,28 @@ module DhanHQ
           response = resource.convert(formatted_params)
           success_response?(response) ? response : DhanHQ::ErrorObject.new(response)
         end
+
+        ##
+        # Exits all active positions and cancels all open orders for the current trading day.
+        #
+        # This is a safety endpoint for emergency position closure. It sends a DELETE request
+        # to close all positions and cancel all pending orders in one call.
+        #
+        # @return [Hash{Symbol => String}] Response hash containing operation result.
+        #   - **:status** [String] "SUCCESS" or "ERROR"
+        #   - **:message** [String] Description of the result
+        #
+        # @example Emergency exit all positions
+        #   response = DhanHQ::Models::Position.exit_all!
+        #   if response[:status] == "SUCCESS"
+        #     puts "✓ All positions exited and orders cancelled"
+        #   else
+        #     puts "✗ Failed: #{response[:message]}"
+        #   end
+        #
+        def exit_all!
+          resource.exit_all
+        end
       end
     end
   end

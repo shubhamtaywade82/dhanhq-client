@@ -48,6 +48,28 @@ module DhanHQ
 
           find(response["alertId"])
         end
+
+        ##
+        # Modify an existing conditional trigger/alert order.
+        #
+        # @param alert_id [String] The alert ID to modify
+        # @param params [Hash] Updated parameters (condition, orders, etc.)
+        #
+        # @return [AlertOrder, nil] Updated AlertOrder instance, or nil on failure
+        #
+        # @example Modify an alert order's condition
+        #   updated = DhanHQ::Models::AlertOrder.modify("12345",
+        #     condition: { comparing_value: 300 },
+        #     orders: [{ quantity: 20 }]
+        #   )
+        #
+        def modify(alert_id, params)
+          normalized = snake_case(params)
+          response = resource.update(alert_id, camelize_keys(normalized))
+          return nil unless success_response?(response)
+
+          find(alert_id)
+        end
       end
 
       def id

@@ -109,6 +109,35 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
     end
   end
 
+  describe ".calculate_multi" do
+    let(:resource_double) { instance_double(DhanHQ::Resources::MarginCalculator) }
+
+    before do
+      allow(described_class).to receive(:resource).and_return(resource_double)
+    end
+
+    it "camelizes keys and delegates to resource.calculate_multi", vcr: false do # rubocop:disable RSpec/ExampleLength
+      params = {
+        include_position: true,
+        include_order: true,
+        dhan_client_id: "1100003626",
+        scrip_list: [
+          { exchange_segment: "NSE_EQ", transaction_type: "BUY",
+            quantity: 100, product_type: "CNC", security_id: "1333", price: 1428.0 }
+        ]
+      }
+
+      allow(resource_double).to receive(:calculate_multi) do |arg|
+        expect(arg).to include("includePosition" => true, "includeOrder" => true)
+        { "total_margin" => "150000.00", "hedge_benefit" => "" }
+      end
+
+      result = described_class.calculate_multi(params)
+      expect(result).to include("total_margin" => "150000.00")
+      expect(resource_double).to have_received(:calculate_multi)
+    end
+  end
+
   describe "#to_h" do
     it "returns normalised attributes" do
       margin = described_class.new({ "totalMargin" => 10.0, "spanMargin" => 5.0 }, skip_validation: true)

@@ -16,6 +16,14 @@ module DhanHQ
       def update(params)
         post("", params: params)
       end
+
+      ##
+      # Fetches the current kill switch status.
+      #
+      # @return [Hash] API response containing dhan_client_id and kill_switch_status.
+      def status
+        get("")
+      end
     end
   end
 end

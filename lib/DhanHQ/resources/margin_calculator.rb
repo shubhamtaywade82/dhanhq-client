@@ -17,6 +17,15 @@ module DhanHQ
       def calculate(params)
         post("", params: params)
       end
+
+      ##
+      # Calculate margin requirements for multiple scripts in one request.
+      #
+      # @param params [Hash] Request parameters including scripList, includePosition, includeOrder.
+      # @return [Hash] API response containing combined margin details with hedge benefit.
+      def calculate_multi(params)
+        post("/multi", params: params)
+      end
     end
   end
 end

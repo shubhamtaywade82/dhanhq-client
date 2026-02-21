@@ -53,7 +53,10 @@ You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
 - **Secure logging** — automatic token sanitization in all log output
 - **Super Orders** — entry + stop-loss + target + trailing jump in one request
 - **Instrument convenience methods** — `.ltp`, `.ohlc`, `.option_chain` directly on instruments
-- **Full REST coverage** — Orders, Trades, Forever Orders, Super Orders, Positions, Holdings, Funds, HistoricalData, OptionChain, MarketFeed, EDIS, Kill Switch
+- **Full REST coverage** — Orders, Trades, Forever Orders, Super Orders, Positions, Holdings, Funds, HistoricalData, OptionChain, MarketFeed, EDIS, Kill Switch, P&L Exit, Alert Orders, Margin Calculator
+- **P&L Based Exit** — automatic position exit on profit/loss thresholds
+- **Postback parser** — parse Dhan webhook payloads with `Postback.parse` and status predicates
+- **EDIS model** — ORM-style T-PIN, form, and status inquiry for delivery instruction slips
 
 ---
 

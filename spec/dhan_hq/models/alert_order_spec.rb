@@ -194,5 +194,25 @@ RSpec.describe DhanHQ::Models::AlertOrder do
         expect(record.delete).to be(true)
       end
     end
+
+    describe ".modify" do
+      it "updates and re-fetches the alert order on success" do
+        allow(resource_double).to receive(:update)
+          .with("AID-1", hash_including("comparingValue" => 300))
+          .and_return({ status: "success" })
+        allow(resource_double).to receive(:find).with("AID-1")
+                                                .and_return({ "alertId" => "AID-1", "triggerPrice" => 300.0 })
+
+        result = described_class.modify("AID-1", comparing_value: 300)
+        expect(result).to be_a(described_class)
+        expect(result.alert_id).to eq("AID-1")
+      end
+
+      it "returns nil when the update fails" do
+        allow(resource_double).to receive(:update).and_return({ "status" => "fail" })
+
+        expect(described_class.modify("AID-1", comparing_value: 300)).to be_nil
+      end
+    end
   end
 end

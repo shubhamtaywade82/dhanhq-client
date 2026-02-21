@@ -44,5 +44,16 @@ RSpec.describe DhanHQ::Models::KillSwitch do
         expect(described_class).to have_received(:update).with("DEACTIVATE")
       end
     end
+
+    describe ".status" do
+      it "delegates to resource.status" do
+        allow(resource_double).to receive(:status)
+          .and_return({ "killSwitchStatus" => "ACTIVATE" })
+
+        response = described_class.status
+        expect(response).to eq({ "killSwitchStatus" => "ACTIVATE" })
+        expect(resource_double).to have_received(:status)
+      end
+    end
   end
 end

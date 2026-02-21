@@ -68,4 +68,15 @@ RSpec.describe DhanHQ::Models::Position do
       expect(described_class.convert(params)).to be_a(DhanHQ::ErrorObject)
     end
   end
+
+  describe ".exit_all!" do
+    it "delegates to resource.exit_all" do
+      allow(resource_double).to receive(:exit_all)
+        .and_return({ "status" => "SUCCESS", "message" => "All orders and positions exited successfully" })
+
+      response = described_class.exit_all!
+      expect(response).to include("status" => "SUCCESS")
+      expect(resource_double).to have_received(:exit_all)
+    end
+  end
 end

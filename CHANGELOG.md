@@ -1,4 +1,36 @@
-## [Unreleased]
+## [2.5.0] - 2026-02-21
+
+### Added
+
+#### New Endpoints — Full Dhan API v2 Parity
+- **Exit All Positions**: `DhanHQ::Models::Position.exit_all!` — emergency closure of all positions and cancellation of all open orders via `DELETE /v2/positions`. Resource method: `DhanHQ::Resources::Positions#exit_all`.
+- **Kill Switch Status**: `DhanHQ::Models::KillSwitch.status` — query current kill switch state via `GET /v2/killswitch`. Resource method: `DhanHQ::Resources::KillSwitch#status`.
+- **P&L Based Exit**: New `DhanHQ::Models::PnlExit` model and `DhanHQ::Resources::PnlExit` resource for automatic profit/loss-based position exit:
+  - `PnlExit.configure(profit_value:, loss_value:, product_type:, enable_kill_switch:)` — `POST /v2/pnlExit`
+  - `PnlExit.stop` — `DELETE /v2/pnlExit`
+  - `PnlExit.status` — `GET /v2/pnlExit`
+- **Multi-Order Margin Calculator**: `DhanHQ::Models::Margin.calculate_multi` — batch margin calculation with hedge benefit across multiple instruments via `POST /v2/margincalculator/multi`. Resource method: `DhanHQ::Resources::MarginCalculator#calculate_multi`.
+- **EDIS Model**: New `DhanHQ::Models::Edis` wrapping existing `DhanHQ::Resources::Edis` with ORM-style class methods:
+  - `Edis.generate_tpin`, `Edis.generate_form`, `Edis.generate_bulk_form`, `Edis.inquire`
+- **Postback Payload Parser**: New `DhanHQ::Models::Postback` utility model for parsing Dhan webhook payloads:
+  - `Postback.parse(json_or_hash)` — accepts JSON string or Hash
+  - Status predicates: `traded?`, `rejected?`, `pending?`, `cancelled?`
+- **AlertOrder Modify**: Explicit `DhanHQ::Models::AlertOrder.modify(alert_id, params)` class method for updating conditional triggers with better discoverability.
+
+#### Tests
+- **28 new specs** across 7 files (442 total, 0 failures):
+  - `spec/dhan_hq/models/pnl_exit_spec.rb` — configure, stop, status, defaults, nil handling
+  - `spec/dhan_hq/models/edis_spec.rb` — generate_tpin, generate_form, bulk_form, inquire
+  - `spec/dhan_hq/models/postback_spec.rb` — JSON/Hash parsing, snake_case support, status predicates
+  - Updated: `kill_switch_spec.rb`, `positions_spec.rb`, `margin_spec.rb`, `alert_order_spec.rb`
+
+### Changed
+- **README.md**: Updated Key Features to reflect full API v2 parity including P&L Exit, Postback parser, and EDIS model.
+- **Bundler**: Updated `BUNDLED WITH` to latest version, eliminating platform constant re-definition warnings.
+
+### Notes
+- **Backward Compatible**: All changes are additive — no existing APIs or method signatures changed.
+- **Full API v2 Parity**: The gem now covers every endpoint documented at [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/).
 
 ---
 
