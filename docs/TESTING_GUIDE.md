@@ -95,10 +95,10 @@ market_client = DhanHQ::WS.connect(mode: :ticker) do |tick|
 end
 
 # Subscribe to NIFTY (Security ID: 13, Segment: IDX_I)
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 
 # Subscribe to BANKNIFTY (Security ID: 25, Segment: IDX_I)
-market_client.subscribe_one(segment: "IDX_I", security_id: "25")
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")
 
 # Wait for data (in console, you can continue working)
 sleep(10)
@@ -117,7 +117,7 @@ ohlc_client = DhanHQ::WS.connect(mode: :ohlc) do |data|
 end
 
 # Subscribe to NIFTY
-ohlc_client.subscribe_one(segment: "IDX_I", security_id: "13")
+ohlc_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 
 sleep(10)
 ohlc_client.stop
@@ -135,7 +135,7 @@ quote_client = DhanHQ::WS.connect(mode: :quote) do |data|
 end
 
 # Subscribe to NIFTY
-quote_client.subscribe_one(segment: "IDX_I", security_id: "13")
+quote_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 
 sleep(10)
 quote_client.stop
@@ -151,10 +151,10 @@ end
 
 # Subscribe to multiple indices
 indices = [
-  { segment: "IDX_I", security_id: "13" },   # NIFTY
-  { segment: "IDX_I", security_id: "25" },   # BANKNIFTY
-  { segment: "IDX_I", security_id: "29" },   # NIFTYIT
-  { segment: "IDX_I", security_id: "51" }    # SENSEX
+  { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13" },   # NIFTY
+  { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25" },   # BANKNIFTY
+  { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29" },   # NIFTYIT
+  { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51" }    # SENSEX
 ]
 
 indices.each do |idx|
@@ -169,7 +169,7 @@ market_client.stop
 
 ```ruby
 market_client = DhanHQ::WS.connect(mode: :ticker) { |tick| puts tick[:ltp] }
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 
 # Check connection state
 puts "Connected: #{market_client.connected?}"
@@ -326,11 +326,11 @@ depth_client.stop
 # Place a market order
 order = DhanHQ::Models::Order.place(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
-  order_type: "MARKET",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  order_type: DhanHQ::Constants::OrderType::MARKET,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",  # TCS
   quantity: 1
 )
@@ -345,11 +345,11 @@ puts "Status: #{order.order_status}"
 # Place a limit order
 order = DhanHQ::Models::Order.place(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -364,11 +364,11 @@ puts "Order ID: #{order.order_id}"
 # Place stop loss order
 order = DhanHQ::Models::Order.place(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
   order_type: "STOPLOSS",
-  validity: "DAY",
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",
   quantity: 1,
   price: 3500.0,
@@ -410,11 +410,11 @@ orders = DhanHQ::Models::Order.all
 puts "Total orders: #{orders.size}"
 
 # Filter pending orders
-pending = orders.select { |o| o.order_status == "PENDING" }
+pending = orders.select { |o| o.order_status == DhanHQ::Constants::OrderStatus::PENDING }
 puts "Pending orders: #{pending.size}"
 
 # Filter executed orders
-executed = orders.select { |o| o.order_status == "TRADED" }
+executed = orders.select { |o| o.order_status == DhanHQ::Constants::OrderStatus::TRADED }
 puts "Executed orders: #{executed.size}"
 ```
 
@@ -472,11 +472,11 @@ end
 # Create order instance
 order = DhanHQ::Models::Order.new(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
-  order_type: "MARKET",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  order_type: DhanHQ::Constants::OrderType::MARKET,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",
   quantity: 1
 )
@@ -499,7 +499,7 @@ positions = DhanHQ::Models::Position.all
 puts "Total positions: #{positions.size}"
 
 # Filter by exchange
-nse_positions = positions.select { |p| p.exchange_segment == "NSE_EQ" }
+nse_positions = positions.select { |p| p.exchange_segment == DhanHQ::Constants::ExchangeSegment::NSE_EQ }
 puts "NSE positions: #{nse_positions.size}"
 
 # Filter long positions
@@ -517,8 +517,8 @@ position = DhanHQ::Models::Position.all.first
 if position
   result = position.convert(
     dhan_client_id: "1000000003",
-    from_product_type: "INTRADAY",
-    to_product_type: "MARGIN",
+    from_product_type: DhanHQ::Constants::ProductType::INTRADAY,
+    to_product_type: DhanHQ::Constants::ProductType::MARGIN,
     quantity: position.net_qty.abs
   )
 
@@ -677,7 +677,7 @@ puts "  Ask Price: ₹#{quote_data[:ask_price]}"
 # Get daily candles
 historical_data = DhanHQ::Models::HistoricalData.daily(
   security_id: "11536",
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   from_date: Date.today - 30,
   to_date: Date.today
 )
@@ -694,7 +694,7 @@ end
 # Get intraday candles (5-minute interval)
 historical_data = DhanHQ::Models::HistoricalData.intraday(
   security_id: "11536",
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   from_date: Date.today,
   to_date: Date.today,
   interval: 5
@@ -714,7 +714,7 @@ end
 # Get expiry list for NIFTY
 expiry_list = DhanHQ::Models::OptionChain.fetch_expiry_list(
   underlying_scrip: "NIFTY",
-  underlying_seg: "IDX_I"
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I
 )
 
 puts "Available expiries:"
@@ -731,7 +731,7 @@ expiry_date = expiry_list.first[:expiry_date]  # Use first expiry from above
 
 option_chain = DhanHQ::Models::OptionChain.fetch(
   underlying_scrip: "NIFTY",
-  underlying_seg: "IDX_I",
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I,
   expiry: expiry_date
 )
 
@@ -835,22 +835,22 @@ super_order = DhanHQ::Models::SuperOrder.create(
   legs: [
     {
       leg_name: "ENTRY_LEG",
-      transaction_type: "BUY",
-      exchange_segment: "NSE_FNO",
-      product_type: "MARGIN",
-      order_type: "LIMIT",
-      validity: "DAY",
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,
+      product_type: DhanHQ::Constants::ProductType::MARGIN,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      validity: DhanHQ::Constants::Validity::DAY,
       security_id: "49081",
       quantity: 50,
       price: 18000.0
     },
     {
       leg_name: "EXIT_LEG",
-      transaction_type: "SELL",
-      exchange_segment: "NSE_FNO",
-      product_type: "MARGIN",
-      order_type: "LIMIT",
-      validity: "DAY",
+      transaction_type: DhanHQ::Constants::TransactionType::SELL,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,
+      product_type: DhanHQ::Constants::ProductType::MARGIN,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      validity: DhanHQ::Constants::Validity::DAY,
       security_id: "49081",
       quantity: 50,
       price: 18100.0
@@ -891,10 +891,10 @@ puts "Total forever orders: #{forever_orders.size}"
 # Create a forever order (GTT)
 forever_order = DhanHQ::Models::ForeverOrder.create(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
   validity: "GTC",
   security_id: "11536",
   quantity: 1,
@@ -1010,10 +1010,10 @@ end
 # Calculate margin for an order
 margin = DhanHQ::Models::Margin.calculate(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -1054,11 +1054,11 @@ end
 # Test valid order
 valid_params = {
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "INTRADAY",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -1074,8 +1074,8 @@ end
 
 # Test invalid order (missing required field)
 invalid_params = {
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ"
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ
   # Missing required fields
 }
 
@@ -1133,10 +1133,10 @@ end
 # Test valid margin calculation
 valid_params = {
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -1157,7 +1157,7 @@ end
 # Test valid option chain request
 valid_params = {
   underlying_scrip: "NIFTY",
-  underlying_seg: "IDX_I",
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I,
   expiry: "2024-01-25"
 }
 
@@ -1183,7 +1183,7 @@ end
 # Test valid historical data request
 valid_params = {
   security_id: "11536",
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   from_date: Date.today - 7,
   to_date: Date.today,
   interval: 5
@@ -1252,7 +1252,7 @@ end
 begin
   order = DhanHQ::Models::Order.place(
     transaction_type: "INVALID_TYPE",
-    exchange_segment: "NSE_EQ"
+    exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ
   )
 rescue DhanHQ::Error => e
   puts "Validation error caught: #{e.message}"
@@ -1327,10 +1327,10 @@ puts "1. Available Margin: ₹#{funds.available_margin}"
 # 2. Calculate margin
 margin = DhanHQ::Models::Margin.calculate(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -1340,11 +1340,11 @@ puts "2. Margin Required: ₹#{margin.margin_required}"
 # 3. Place order
 order = DhanHQ::Models::Order.place(
   dhan_client_id: "1000000003",
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "11536",
   quantity: 1,
   price: 3500.0
@@ -1363,7 +1363,7 @@ orders_client.start
 # 5. Modify order (if pending)
 sleep(2)
 order.refresh
-if order.order_status == "PENDING"
+if order.order_status == DhanHQ::Constants::OrderStatus::PENDING
   if order.modify(price: 3501.0)
     puts "5. Order Modified"
   end
@@ -1390,7 +1390,7 @@ puts "=== Test Complete ==="
 # Get historical data and analyze
 historical_data = DhanHQ::Models::HistoricalData.daily(
   security_id: "11536",
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   from_date: Date.today - 30,
   to_date: Date.today
 )
@@ -1419,13 +1419,13 @@ end
 # Get option chain
 expiry_list = DhanHQ::Models::OptionChain.fetch_expiry_list(
   underlying_scrip: "NIFTY",
-  underlying_seg: "IDX_I"
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I
 )
 
 expiry = expiry_list.first[:expiry_date]
 option_chain = DhanHQ::Models::OptionChain.fetch(
   underlying_scrip: "NIFTY",
-  underlying_seg: "IDX_I",
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I,
   expiry: expiry
 )
 

@@ -21,7 +21,7 @@ module DhanHQ
       puts "Testing Market Feed..."
       payload = { "IDX_I" => [13] } # NIFTY
       response = DhanHQ::Models::MarketFeed.ltp(payload)
-      puts "NIFTY LTP: ₹#{response[:data]["IDX_I"]["13"][:last_price]}"
+      puts "NIFTY LTP: ₹#{response[:data][DhanHQ::Constants::ExchangeSegment::IDX_I]["13"][:last_price]}"
     rescue StandardError => e
       puts "Error: #{e.class} - #{e.message}"
     end
@@ -41,7 +41,7 @@ module DhanHQ
       puts "Testing Orders..."
       orders = DhanHQ::Models::Order.all
       puts "Total Orders: #{orders.size}"
-      pending = orders.select { |o| o.order_status == "PENDING" }
+      pending = orders.select { |o| o.order_status == DhanHQ::Constants::OrderStatus::PENDING }
       puts "Pending Orders: #{pending.size}"
     rescue StandardError => e
       puts "Error: #{e.class} - #{e.message}"
@@ -78,7 +78,7 @@ module DhanHQ
     # Quick test for instrument find
     def self.test_instrument(symbol = "TCS")
       puts "Testing Instrument Find: #{symbol}..."
-      instrument = DhanHQ::Models::Instrument.find("NSE_EQ", symbol)
+      instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, symbol)
       if instrument
         puts "Found: #{instrument.symbol_name}"
         puts "Security ID: #{instrument.security_id}"
@@ -96,7 +96,7 @@ module DhanHQ
       client = DhanHQ::WS.connect(mode: mode) do |data|
         puts "Data: #{data}"
       end
-      client.subscribe_one(segment: "IDX_I", security_id: "13") # NIFTY
+      client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13") # NIFTY
       sleep(duration)
       client.stop
       puts "WebSocket test complete"
@@ -142,11 +142,11 @@ module DhanHQ
     def self.create_test_order_params
       {
         dhan_client_id: DhanHQ.configuration.client_id,
-        transaction_type: "BUY",
-        exchange_segment: "NSE_EQ",
-        product_type: "INTRADAY",
-        order_type: "LIMIT",
-        validity: "DAY",
+        transaction_type: DhanHQ::Constants::TransactionType::BUY,
+        exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+        product_type: DhanHQ::Constants::ProductType::INTRADAY,
+        order_type: DhanHQ::Constants::OrderType::LIMIT,
+        validity: DhanHQ::Constants::Validity::DAY,
         security_id: "11536", # TCS
         quantity: 1,
         price: 3500.0

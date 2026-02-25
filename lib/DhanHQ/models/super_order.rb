@@ -318,11 +318,11 @@ module DhanHQ
       #   order.cancel("TARGET_LEG")
       #
       # @raise [RuntimeError] If order ID is missing
-      def cancel(leg_name = "ENTRY_LEG")
+      def cancel(leg_name = DhanHQ::Constants::LegName::ENTRY_LEG)
         raise "Order ID is required to cancel a super order" unless id
 
         response = self.class.resource.cancel(id, leg_name)
-        response["orderStatus"] == "CANCELLED"
+        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
       end
     end
   end

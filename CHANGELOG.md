@@ -1,3 +1,15 @@
+## [2.6.0] - 2026-02-26
+
+### Added
+- **Global Constants Enforcement**: Replaced all hardcoded API strings with `DhanHQ::Constants` across the repository. Built a custom RuboCop cop (`RuboCop::Cop::DhanHQ::UseConstants`) that strictly enforces typed constants instead of loose strings for robust API payloads.
+- **Constants Documentation**: Added `docs/CONSTANTS_REFERENCE.md` detailing all SDK constants (e.g., `ExchangeSegment`, `ProductType`, `OrderType`, etc.).
+
+### Changed
+- Replaced 160+ hardcoded usages of strings like `"NSE_EQ"` and `"BUY"` with `DhanHQ::Constants::ExchangeSegment::NSE_EQ` and `DhanHQ::Constants::TransactionType::BUY`.
+- Added `NO_HOLDINGS` (value `"DH-1111"`) to `TradingErrorCode`.
+
+---
+
 ## [2.5.0] - 2026-02-21
 
 ### Added
@@ -92,9 +104,9 @@
 - **README.md**: Note under Dynamic access token for RenewToken via `DhanHQ::Auth.renew_token` and that API key/Partner flows are implemented in the app.
 - **GUIDE.md**: “Dynamic access token” section extended with RenewToken (`DhanHQ::Auth.renew_token`) and note that API key/Partner flows are in the app.
 - **docs/TESTING_GUIDE.md**: Optional config comment for RenewToken and pointer to AUTHENTICATION.md (API key/Partner in app).
-- **docs/rails_integration.md**: “Dynamic access token” section extended with RenewToken (web-generated tokens) and link to AUTHENTICATION.md.
-- **docs/websocket_integration.md**, **docs/live_order_updates.md**: Notes updated for dynamic token, RenewToken, and API key/Partner in app.
-- **docs/standalone_ruby_websocket_integration.md**, **docs/rails_websocket_integration.md**: Configuration section updated with RenewToken and AUTHENTICATION.md link.
+- **docs/RAILS_INTEGRATION.md**: “Dynamic access token” section extended with RenewToken (web-generated tokens) and link to AUTHENTICATION.md.
+- **docs/WEBSOCKET_INTEGRATION.md**, **docs/LIVE_ORDER_UPDATES.md**: Notes updated for dynamic token, RenewToken, and API key/Partner in app.
+- **docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md**, **docs/RAILS_WEBSOCKET_INTEGRATION.md**: Configuration section updated with RenewToken and AUTHENTICATION.md link.
 
 ### CI / Release
 
@@ -144,8 +156,8 @@
 - **GUIDE.md**: Short “Dynamic access token” note and link to docs/AUTHENTICATION.md.
 - **docs/AUTHENTICATION.md**: New doc for static vs dynamic token, retry-on-401, and auth-related errors.
 - **docs/TESTING_GUIDE.md**: Optional access_token_provider / on_token_expired in config examples.
-- **docs/rails_integration.md**: “Dynamic access token (optional)” with Rails initializer example.
-- **docs/websocket_integration.md**, **docs/live_order_updates.md**: Pointer to docs/AUTHENTICATION.md for dynamic token.
+- **docs/RAILS_INTEGRATION.md**: “Dynamic access token (optional)” with Rails initializer example.
+- **docs/WEBSOCKET_INTEGRATION.md**, **docs/LIVE_ORDER_UPDATES.md**: Pointer to docs/AUTHENTICATION.md for dynamic token.
 
 ### Backward compatibility
 

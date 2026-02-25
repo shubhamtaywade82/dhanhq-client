@@ -442,7 +442,7 @@ RSpec.describe DhanHQ::Models::Order do
         allow(order).to receive_messages(valid?: true, new_record?: true)
         expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
         expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
-        expect(DhanHQ.logger).to receive(:info).with(/Order placed successfully/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order placement successfully/)
 
         expect(order.save).to be(true)
       end
@@ -460,7 +460,7 @@ RSpec.describe DhanHQ::Models::Order do
         allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
         expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
         expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
-        expect(DhanHQ.logger).to receive(:info).with(/Order modified successfully/)
+        expect(DhanHQ.logger).to receive(:info).with(/Order modification successfully/)
 
         expect(order.save).to be(true)
       end

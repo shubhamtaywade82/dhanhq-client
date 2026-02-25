@@ -46,6 +46,8 @@ module DhanHQ
     #   puts "Pending orders: #{pending_orders.count}"
     #
     class Order < BaseModel
+      include Concerns::ApiResponseHandler
+
       # Attributes eligible for modification requests.
       MODIFIABLE_FIELDS = %i[
         dhan_client_id
@@ -168,9 +170,10 @@ module DhanHQ
         #
         def find(order_id)
           response = resource.find(order_id)
-          return nil unless response.is_a?(Hash) || (response.is_a?(Array) && response.any?)
+          is_array = response.is_a?(Array)
+          return nil unless response.is_a?(Hash) || (is_array && response.any?)
 
-          order_data = response.is_a?(Array) ? response.first : response
+          order_data = is_array ? response.first : response
           new(order_data, skip_validation: true)
         end
 
@@ -286,15 +289,19 @@ module DhanHQ
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def place(params)
           normalized_params = snake_case(params)
+          config = DhanHQ.configuration
           # Auto-inject dhan_client_id from configuration if not provided
-          normalized_params[:dhan_client_id] ||= DhanHQ.configuration.client_id if DhanHQ.configuration.client_id
+          normalized_params[:dhan_client_id] ||= config.client_id if config&.client_id
           validate_params!(normalized_params, DhanHQ::Contracts::PlaceOrderContract)
 
           response = resource.create(camelize_keys(normalized_params))
-          return nil unless response.is_a?(Hash) && response["orderId"]
+          return nil unless response.is_a?(Hash)
+
+          order_id = response["orderId"]
+          return nil unless order_id
 
           # Fetch the complete order details
-          find(response["orderId"])
+          find(order_id)
         end
 
         ##
@@ -366,23 +373,9 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
 
-        # Log warning for invalid states but still attempt API call (let API handle validation)
-        # This maintains backward compatibility - API will return appropriate error
-        if order_status && %w[TRADED CANCELLED EXPIRED CLOSED].include?(order_status)
-          DhanHQ.logger&.warn("[DhanHQ::Models::Order] Attempting to modify order #{id} in #{order_status} state - API will reject")
-        end
+        warn_invalid_state if order_status_invalid_for_modification?
 
-        base_payload = attributes.merge(new_params)
-        normalized_payload = snake_case(base_payload).merge(order_id: id)
-        filtered_payload = normalized_payload.each_with_object({}) do |(key, value), memo|
-          symbolized_key = key.respond_to?(:to_sym) ? key.to_sym : key
-          memo[symbolized_key] = value if MODIFIABLE_FIELDS.include?(symbolized_key)
-        end
-        filtered_payload[:order_id] ||= id
-        filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id] || DhanHQ.configuration&.client_id
-
-        cleaned_payload = filtered_payload.compact
-        formatted_payload = camelize_keys(cleaned_payload)
+        formatted_payload = prepare_modify_payload(new_params)
         validate_params!(formatted_payload, DhanHQ::Contracts::ModifyOrderContract)
 
         response = self.class.resource.update(id, formatted_payload)
@@ -416,7 +409,7 @@ module DhanHQ
         raise "Order ID is required to cancel an order" unless id
 
         response = self.class.resource.cancel(id)
-        response["orderStatus"] == "CANCELLED"
+        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
       end
 
       ##
@@ -451,6 +444,34 @@ module DhanHQ
       # @api private
       def new_record?
         order_id.nil? || order_id.to_s.empty?
+      end
+
+      def destroy
+        return false if new_record?
+
+        response = self.class.resource.delete(id)
+        if success_response?(response) && response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+          @attributes[:order_status] = DhanHQ::Constants::OrderStatus::CANCELLED
+          true
+        else
+          false
+        end
+      end
+      alias delete destroy
+
+      def slice_order(params)
+        raise "Order ID is required to slice an order" unless id
+
+        base_payload = params.merge(order_id: id)
+        formatted_payload = camelize_keys(base_payload)
+
+        validate_params!(formatted_payload, DhanHQ::Contracts::SliceOrderContract)
+
+        self.class.resource.slicing(formatted_payload)
+      end
+
+      def validation_contract
+        new_record? ? DhanHQ::Contracts::PlaceOrderContract.new : DhanHQ::Contracts::ModifyOrderContract.new
       end
 
       ##
@@ -495,38 +516,47 @@ module DhanHQ
         return false unless valid?
 
         if new_record?
-          # PLACE ORDER
-          DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type,
-                                                                                         :exchange_segment, :security_id, :quantity, :price).inspect}")
-          response = self.class.resource.create(to_request_params)
-          if success_response?(response) && response["orderId"]
-            @attributes.merge!(normalize_keys(response))
-            assign_attributes
-            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order placed successfully: #{response["orderId"]}")
-            true
-          else
-            error_msg = response.is_a?(Hash) ? response[:errorMessage] || response[:message] || "Unknown error" : "Invalid response format"
-            DhanHQ.logger&.error("[DhanHQ::Models::Order] Order placement failed: #{error_msg}")
-            @errors = response if response.is_a?(Hash)
-            false
-          end
+          save_new_order
         else
-          # MODIFY ORDER
-          DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity,
-                                                                                                 :order_type).inspect}")
-          response = self.class.resource.update(id, to_request_params)
-          if success_response?(response) && response["orderStatus"]
-            @attributes.merge!(normalize_keys(response))
-            assign_attributes
-            DhanHQ.logger&.info("[DhanHQ::Models::Order] Order modified successfully: #{id}")
-            true
-          else
-            error_msg = response.is_a?(Hash) ? response[:errorMessage] || response[:message] || "Unknown error" : "Invalid response format"
-            DhanHQ.logger&.error("[DhanHQ::Models::Order] Order modification failed for #{id}: #{error_msg}")
-            @errors = response if response.is_a?(Hash)
-            false
-          end
+          modify_existing_order
         end
+      end
+
+      private
+
+      def save_new_order
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price).inspect}")
+        response = self.class.resource.create(to_request_params)
+        handle_api_response(response, success_key: "orderId", context: "[DhanHQ::Models::Order] Order placement")
+      end
+
+      def modify_existing_order
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity, :order_type).inspect}")
+        response = self.class.resource.update(id, to_request_params)
+        handle_api_response(response, success_key: "orderStatus", context: "[DhanHQ::Models::Order] Order modification")
+      end
+
+      def order_status_invalid_for_modification?
+        order_status && %w[TRADED CANCELLED EXPIRED CLOSED].include?(order_status)
+      end
+
+      def warn_invalid_state
+        DhanHQ.logger&.warn("[DhanHQ::Models::Order] Attempting to modify order #{id} in #{order_status} state - API will reject")
+      end
+
+      def prepare_modify_payload(new_params)
+        base_payload = attributes.merge(new_params)
+        normalized_payload = snake_case(base_payload).merge(order_id: id)
+
+        filtered_payload = normalized_payload.each_with_object({}) do |(key, value), memo|
+          symbolized_key = key.respond_to?(:to_sym) ? key.to_sym : key
+          memo[symbolized_key] = value if MODIFIABLE_FIELDS.include?(symbolized_key)
+        end
+
+        filtered_payload[:order_id] ||= id
+        filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id] || DhanHQ.configuration&.client_id
+
+        camelize_keys(filtered_payload.compact)
       end
 
       ##
@@ -545,77 +575,6 @@ module DhanHQ
       #   end
       #
       # @note This method does nothing for new (unsaved) orders.
-      def destroy
-        return false if new_record?
-
-        response = self.class.resource.delete(id)
-        if success_response?(response) && response["orderStatus"] == "CANCELLED"
-          @attributes[:order_status] = "CANCELLED"
-          true
-        else
-          false
-        end
-      end
-      alias delete destroy
-
-      ##
-      # Slices an order into multiple legs to place orders over freeze limit quantity.
-      #
-      # This API helps you slice your order request into multiple orders to allow you
-      # to place over freeze limit quantity for F&O instruments. Returns an array of
-      # orders created from the slice operation.
-      #
-      # @param params [Hash{Symbol => String, Integer, Float, Boolean}] Order parameters for slicing.
-      #   Same parameters as {place}, but quantity can exceed freeze limits as it will be
-      #   automatically split into multiple orders.
-      #
-      # @return [Array<Hash>] Array of order objects created from the slice operation.
-      #   Each hash contains:
-      #   - **:order_id** [String] Order-specific identification generated by Dhan
-      #   - **:order_status** [String] Order status. Valid values: "TRANSIT", "PENDING",
-      #     "REJECTED", "CANCELLED", "TRADED", "EXPIRED", "CONFIRM"
-      #
-      # @example Slice a large order
-      #   order = DhanHQ::Models::Order.find("112111182045")
-      #   sliced_orders = order.slice_order(
-      #     dhan_client_id: "1000000003",
-      #     transaction_type: "BUY",
-      #     exchange_segment: "NSE_FNO",
-      #     product_type: "INTRADAY",
-      #     order_type: "MARKET",
-      #     validity: "DAY",
-      #     security_id: "49081",
-      #     quantity: 50000  # Will be split into multiple orders
-      #   )
-      #   puts "Created #{sliced_orders.count} orders"
-      #
-      # @raise [RuntimeError] If order ID is missing
-      # @raise [DhanHQ::ValidationError] If validation fails for any parameter
-      def slice_order(params)
-        raise "Order ID is required to slice an order" unless id
-
-        base_payload = params.merge(order_id: id)
-        formatted_payload = camelize_keys(base_payload)
-
-        validate_params!(formatted_payload, DhanHQ::Contracts::SliceOrderContract)
-
-        self.class.resource.slicing(formatted_payload)
-      end
-
-      ##
-      # Returns the appropriate validation contract based on order state.
-      #
-      # For new records, returns PlaceOrderContract. For existing records, returns
-      # ModifyOrderContract. This allows the same validation logic to be used for
-      # both creating and modifying orders.
-      #
-      # @return [DhanHQ::Contracts::PlaceOrderContract, DhanHQ::Contracts::ModifyOrderContract]
-      #   The appropriate validation contract based on whether this is a new or existing order
-      #
-      # @api private
-      def validation_contract
-        new_record? ? DhanHQ::Contracts::PlaceOrderContract.new : DhanHQ::Contracts::ModifyOrderContract.new
-      end
     end
   end
 end

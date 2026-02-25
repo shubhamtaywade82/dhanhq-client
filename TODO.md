@@ -106,7 +106,7 @@ def modify(new_params)
   response = self.class.api.put("#{self.class.resource_path}/#{id}", params: updated_params)
 
   # If the response indicates a transitional status (e.g., "TRANSIT"), re-fetch the order
-  if success_response?(response) && response[:orderStatus] == "TRANSIT"
+  if success_response?(response) && response[:orderStatus] == DhanHQ::Constants::OrderStatus::TRANSIT
     return self.class.find(id)
   end
 

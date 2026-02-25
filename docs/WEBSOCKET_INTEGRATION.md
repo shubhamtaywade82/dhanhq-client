@@ -45,10 +45,10 @@ market_client = DhanHQ::WS.connect(mode: :ticker) do |tick|
 end
 
 # Subscribe to specific indices
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
-market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX
 
 # Clean shutdown
 market_client.stop
@@ -136,20 +136,20 @@ end
 client = DhanHQ::WS.connect(mode: :ticker) { |tick| puts tick[:ltp] }
 
 # Subscribe to individual instruments
-client.subscribe_one(segment: "IDX_I", security_id: "13")   # NIFTY
-client.subscribe_one(segment: "IDX_I", security_id: "25")   # BANKNIFTY
-client.subscribe_one(segment: "NSE_EQ", security_id: "2885") # RELIANCE
+client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")   # NIFTY
+client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")   # BANKNIFTY
+client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885") # RELIANCE
 
 # Subscribe to multiple instruments
 instruments = [
-  { ExchangeSegment: "IDX_I", SecurityId: "13" },
-  { ExchangeSegment: "IDX_I", SecurityId: "25" },
-  { ExchangeSegment: "NSE_EQ", SecurityId: "2885" }
+  { ExchangeSegment: DhanHQ::Constants::ExchangeSegment::IDX_I, SecurityId: "13" },
+  { ExchangeSegment: DhanHQ::Constants::ExchangeSegment::IDX_I, SecurityId: "25" },
+  { ExchangeSegment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, SecurityId: "2885" }
 ]
 client.subscribe_many(instruments)
 
 # Unsubscribe
-client.unsubscribe_one(segment: "IDX_I", security_id: "13")
+client.unsubscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 ```
 
 #### Finding Correct Security IDs
@@ -297,8 +297,8 @@ end
 
 # Method 2: Direct specification (legacy)
 symbols_direct = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+  { symbol: "RELIANCE", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885" },
+  { symbol: "TCS", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "11536" }
 ]
 
 depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols_direct) do |depth_data|
@@ -333,8 +333,8 @@ client.start
 
 # Subscribe to symbols
 symbols = [
-  { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-  { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+  { symbol: "RELIANCE", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885" },
+  { symbol: "TCS", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "11536" }
 ]
 client.subscribe(symbols)
 ```
@@ -587,10 +587,10 @@ class MarketDataService
     end
 
     # Subscribe to indices
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX
   end
 
   def stop_market_feed

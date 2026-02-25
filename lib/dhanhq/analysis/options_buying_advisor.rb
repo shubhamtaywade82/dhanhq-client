@@ -91,7 +91,7 @@ module DhanHQ
 
         # Use OptionChain model: pick nearest/next expiry and fetch chain
         sid = @data.dig(:meta, :security_id)
-        seg = @data.dig(:meta, :exchange_segment) || "IDX_I"
+        seg = @data.dig(:meta, :exchange_segment) || DhanHQ::Constants::ExchangeSegment::IDX_I
         return unless sid && seg
 
         expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(underlying_scrip: sid.to_i, underlying_seg: seg)
@@ -128,7 +128,7 @@ module DhanHQ
       end
 
       def index_instrument?(meta)
-        meta[:instrument].to_s == "INDEX" || meta[:exchange_segment].to_s == "IDX_I"
+        meta[:instrument].to_s == DhanHQ::Constants::InstrumentType::INDEX || meta[:exchange_segment].to_s == DhanHQ::Constants::ExchangeSegment::IDX_I
       end
 
       def select_strike(side:, moneyness:)
