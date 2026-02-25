@@ -69,7 +69,7 @@ module DhanHQ
 
           instruments.find do |instrument|
             # For equity instruments, prefer underlying_symbol over symbol_name
-            instrument_symbol = if instrument.instrument == "EQUITY" && instrument.underlying_symbol
+            instrument_symbol = if instrument.instrument == DhanHQ::Constants::InstrumentType::EQUITY && instrument.underlying_symbol
                                   case_sensitive ? instrument.underlying_symbol : instrument.underlying_symbol.upcase
                                 else
                                   case_sensitive ? instrument.symbol_name : instrument.symbol_name.upcase

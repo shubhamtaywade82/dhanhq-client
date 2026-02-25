@@ -45,10 +45,10 @@ puts "- Security ID 25: BANKNIFTY (Nifty Bank)"
 puts "- Security ID 29: NIFTYIT (Nifty IT)"
 puts "- Security ID 51: SENSEX (Sensex)"
 
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
-market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX
 
 puts "\nMarket Feed WebSocket connected successfully!"
 puts "Waiting 10 seconds to receive market data..."
@@ -93,8 +93,8 @@ puts "=================================="
 puts "Creating Market Depth WebSocket connection..."
 
 # Find instruments using the new .find method (now uses underlying_symbol for equity)
-reliance_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
-tcs_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+reliance_instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
+tcs_instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
 
 # Define symbols with correct exchange segments and security IDs
 symbols = []

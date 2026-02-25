@@ -83,7 +83,7 @@ module DhanHQ
       #
       # @return [Boolean]
       def traded?
-        order_status == "TRADED"
+        order_status == DhanHQ::Constants::OrderStatus::TRADED
       end
 
       ##
@@ -91,7 +91,7 @@ module DhanHQ
       #
       # @return [Boolean]
       def rejected?
-        order_status == "REJECTED"
+        order_status == DhanHQ::Constants::OrderStatus::REJECTED
       end
 
       ##
@@ -99,7 +99,7 @@ module DhanHQ
       #
       # @return [Boolean]
       def pending?
-        order_status == "PENDING"
+        order_status == DhanHQ::Constants::OrderStatus::PENDING
       end
 
       ##
@@ -107,7 +107,7 @@ module DhanHQ
       #
       # @return [Boolean]
       def cancelled?
-        order_status == "CANCELLED"
+        order_status == DhanHQ::Constants::OrderStatus::CANCELLED
       end
 
       ##

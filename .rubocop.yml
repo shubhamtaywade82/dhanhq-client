@@ -6,6 +6,7 @@ plugins:
 
 require:
   - rubocop-rake
+  - ./lib/rubocop/cop/dhanhq/use_constants.rb
 
 AllCops:
   TargetRubyVersion: 3.2
@@ -26,3 +27,10 @@ RSpec/ExampleLength:
 
 RSpec/MultipleMemoizedHelpers:
   Max: 10
+
+DhanHQ/UseConstants:
+  Enabled: true
+  Exclude:
+    - 'lib/DhanHQ/constants.rb'
+    - 'lib/DhanHQ/ws/segments.rb'
+    - 'spec/**/*'

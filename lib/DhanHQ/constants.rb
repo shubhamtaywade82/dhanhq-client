@@ -306,6 +306,7 @@ module DhanHQ
       INTERNAL_SERVER_ERROR = "DH-908"
       NETWORK_ERROR = "DH-909"
       OTHERS = "DH-910"
+      NO_HOLDINGS = "DH-1111"
 
       ALL = [
         INVALID_AUTHENTICATION,
@@ -317,7 +318,8 @@ module DhanHQ
         DATA_ERROR,
         INTERNAL_SERVER_ERROR,
         NETWORK_ERROR,
-        OTHERS
+        OTHERS,
+        NO_HOLDINGS
       ].freeze
     end
 
@@ -437,7 +439,7 @@ module DhanHQ
       TradingErrorCode::ORDER_ERROR => DhanHQ::OrderError,
       TradingErrorCode::DATA_ERROR => DhanHQ::DataError,
       TradingErrorCode::INTERNAL_SERVER_ERROR => DhanHQ::InternalServerError,
-      "DH-1111" => DhanHQ::NoHoldingsError,
+      TradingErrorCode::NO_HOLDINGS => DhanHQ::NoHoldingsError,
       TradingErrorCode::NETWORK_ERROR => DhanHQ::NetworkError,
       TradingErrorCode::OTHERS => DhanHQ::OtherError,
       DataErrorCode::INTERNAL_SERVER_ERROR.to_s => DhanHQ::InternalServerError,

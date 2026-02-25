@@ -123,7 +123,7 @@ module DhanHQ
         test("Get all positions") do
           positions = DhanHQ::Models::Position.all
           puts "  ✓ Total positions: #{positions.size}"
-          nse_positions = positions.select { |p| p.exchange_segment == "NSE_EQ" }
+          nse_positions = positions.select { |p| p.exchange_segment == DhanHQ::Constants::ExchangeSegment::NSE_EQ }
           puts "  ✓ NSE positions: #{nse_positions.size}"
           long_positions = positions.select { |p| p.net_qty.positive? }
           puts "  ✓ Long positions: #{long_positions.size}"
@@ -135,9 +135,9 @@ module DhanHQ
         test("Get all orders") do
           orders = DhanHQ::Models::Order.all
           puts "  ✓ Total orders: #{orders.size}"
-          pending = orders.select { |o| o.order_status == "PENDING" }
+          pending = orders.select { |o| o.order_status == DhanHQ::Constants::OrderStatus::PENDING }
           puts "  ✓ Pending orders: #{pending.size}"
-          executed = orders.select { |o| o.order_status == "TRADED" }
+          executed = orders.select { |o| o.order_status == DhanHQ::Constants::OrderStatus::TRADED }
           puts "  ✓ Executed orders: #{executed.size}"
         end
 
@@ -176,7 +176,7 @@ module DhanHQ
       def test_instruments
         section("Instruments")
         test("Find instrument (TCS)") do
-          tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+          tcs = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
           if tcs
             puts "  ✓ Found: #{tcs.symbol_name}"
             puts "    Security ID: #{tcs.security_id}"
@@ -199,7 +199,7 @@ module DhanHQ
         end
 
         test("Instrument attributes") do
-          instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+          instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
           if instrument
             puts "  ✓ Symbol: #{instrument.symbol_name}"
             puts "  ✓ Security ID: #{instrument.security_id}"
@@ -230,7 +230,7 @@ module DhanHQ
         test("Get OHLC") do
           payload = { "NSE_EQ" => [11_536] }
           response = DhanHQ::Models::MarketFeed.ohlc(payload)
-          tcs_data = response[:data]["NSE_EQ"]["11536"]
+          tcs_data = response[:data][DhanHQ::Constants::ExchangeSegment::NSE_EQ]["11536"]
           puts "  ✓ OHLC Data:"
           puts "    Open: ₹#{tcs_data[:ohlc][:open]}"
           puts "    High: ₹#{tcs_data[:ohlc][:high]}"
@@ -241,7 +241,7 @@ module DhanHQ
         test("Get Quote") do
           payload = { "IDX_I" => [13] } # NIFTY
           response = DhanHQ::Models::MarketFeed.quote(payload)
-          quote_data = response[:data]["IDX_I"]["13"]
+          quote_data = response[:data][DhanHQ::Constants::ExchangeSegment::IDX_I]["13"]
           puts "  ✓ Quote Data:"
           puts "    LTP: ₹#{quote_data[:ltp]}"
           puts "    Volume: #{quote_data[:volume]}"
@@ -253,8 +253,8 @@ module DhanHQ
         test("Get daily historical data") do
           historical_data = DhanHQ::Models::HistoricalData.daily(
             security_id: "11536",
-            exchange_segment: "NSE_EQ",
-            instrument: "EQUITY",
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            instrument: DhanHQ::Constants::InstrumentType::EQUITY,
             from_date: (Date.today - 30).strftime("%Y-%m-%d"),
             to_date: Date.today.strftime("%Y-%m-%d")
           )
@@ -275,8 +275,8 @@ module DhanHQ
 
           historical_data = DhanHQ::Models::HistoricalData.intraday(
             security_id: "11536",
-            exchange_segment: "NSE_EQ",
-            instrument: "EQUITY",
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            instrument: DhanHQ::Constants::InstrumentType::EQUITY,
             interval: "5",
             from_date: test_date.strftime("%Y-%m-%d"),
             to_date: test_date.strftime("%Y-%m-%d")
@@ -294,7 +294,7 @@ module DhanHQ
         test("Get expiry list for NIFTY") do
           expiry_list = DhanHQ::Models::OptionChain.fetch_expiry_list(
             underlying_scrip: 13, # NIFTY security ID
-            underlying_seg: "IDX_I"
+            underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I
           )
           puts "  ✓ Available expiries: #{expiry_list.size}"
           expiry_list.first(3).each do |expiry|
@@ -305,13 +305,13 @@ module DhanHQ
         test("Get option chain") do
           expiry_list = DhanHQ::Models::OptionChain.fetch_expiry_list(
             underlying_scrip: 13, # NIFTY security ID
-            underlying_seg: "IDX_I"
+            underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I
           )
           if expiry_list.any?
             expiry_date = expiry_list.first
             option_chain = DhanHQ::Models::OptionChain.fetch(
               underlying_scrip: 13, # NIFTY security ID
-              underlying_seg: "IDX_I",
+              underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I,
               expiry: expiry_date
             )
             puts "  ✓ Option chain retrieved"
@@ -396,10 +396,10 @@ module DhanHQ
         test("Calculate margin") do
           margin = DhanHQ::Models::Margin.calculate(
             dhan_client_id: DhanHQ.configuration.client_id,
-            transaction_type: "BUY",
-            exchange_segment: "NSE_EQ",
-            product_type: "MARGIN",
-            order_type: "LIMIT",
+            transaction_type: DhanHQ::Constants::TransactionType::BUY,
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            product_type: DhanHQ::Constants::ProductType::MARGIN,
+            order_type: DhanHQ::Constants::OrderType::LIMIT,
             security_id: "11536",
             quantity: 1,
             price: 3500.0
@@ -432,11 +432,11 @@ module DhanHQ
         test("Place Order Contract - Valid") do
           valid_params = {
             dhan_client_id: DhanHQ.configuration.client_id,
-            transaction_type: "BUY",
-            exchange_segment: "NSE_EQ",
-            product_type: "INTRADAY",
-            order_type: "LIMIT",
-            validity: "DAY",
+            transaction_type: DhanHQ::Constants::TransactionType::BUY,
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            product_type: DhanHQ::Constants::ProductType::INTRADAY,
+            order_type: DhanHQ::Constants::OrderType::LIMIT,
+            validity: DhanHQ::Constants::Validity::DAY,
             security_id: "11536",
             quantity: 1,
             price: 3500.0
@@ -452,8 +452,8 @@ module DhanHQ
 
         test("Place Order Contract - Invalid (missing fields)") do
           invalid_params = {
-            transaction_type: "BUY",
-            exchange_segment: "NSE_EQ"
+            transaction_type: DhanHQ::Constants::TransactionType::BUY,
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ
           }
           contract = DhanHQ::Contracts::PlaceOrderContract.new
           result = contract.call(invalid_params)
@@ -467,11 +467,11 @@ module DhanHQ
         test("Place Order Contract - Invalid (NaN price)") do
           valid_params = {
             dhan_client_id: DhanHQ.configuration.client_id,
-            transaction_type: "BUY",
-            exchange_segment: "NSE_EQ",
-            product_type: "INTRADAY",
-            order_type: "LIMIT",
-            validity: "DAY",
+            transaction_type: DhanHQ::Constants::TransactionType::BUY,
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            product_type: DhanHQ::Constants::ProductType::INTRADAY,
+            order_type: DhanHQ::Constants::OrderType::LIMIT,
+            validity: DhanHQ::Constants::Validity::DAY,
             security_id: "11536",
             quantity: 1,
             price: Float::NAN
@@ -488,8 +488,8 @@ module DhanHQ
         test("Historical Data Contract - Valid") do
           valid_params = {
             security_id: "11536",
-            exchange_segment: "NSE_EQ",
-            instrument: "EQUITY",
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            instrument: DhanHQ::Constants::InstrumentType::EQUITY,
             from_date: (Date.today - 7).strftime("%Y-%m-%d"),
             to_date: Date.today.strftime("%Y-%m-%d"),
             interval: "5"
@@ -506,8 +506,8 @@ module DhanHQ
         test("Historical Data Contract - Invalid (date range > 31 days)") do
           invalid_params = {
             security_id: "11536",
-            exchange_segment: "NSE_EQ",
-            instrument: "EQUITY",
+            exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+            instrument: DhanHQ::Constants::InstrumentType::EQUITY,
             from_date: (Date.today - 35).strftime("%Y-%m-%d"),
             to_date: Date.today.strftime("%Y-%m-%d"),
             interval: "5"
@@ -564,7 +564,7 @@ module DhanHQ
             received_data = true
           end
           @websocket_clients << client
-          client.subscribe_one(segment: "IDX_I", security_id: "13") # NIFTY
+          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13") # NIFTY
           sleep(5)
           if received_data
             puts "  ✓ Received ticker mode data (LTP + LTT)"
@@ -582,7 +582,7 @@ module DhanHQ
             received_data = true
           end
           @websocket_clients << client
-          client.subscribe_one(segment: "IDX_I", security_id: "13")
+          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
           sleep(5)
           if received_data
             puts "  ✓ Received quote mode data (OHLCV + totals)"
@@ -600,7 +600,7 @@ module DhanHQ
             received_data = true
           end
           @websocket_clients << client
-          client.subscribe_one(segment: "IDX_I", security_id: "13")
+          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
           sleep(5)
           if received_data
             puts "  ✓ Received full mode data (Quote + OI + Market Depth)"
@@ -637,7 +637,7 @@ module DhanHQ
       def test_websocket_market_depth
         section("WebSocket - Market Depth")
         test("Market Depth WebSocket (5 seconds)") do
-          reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+          reliance = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
           if reliance
             symbols = [{
               symbol: "RELIANCE",

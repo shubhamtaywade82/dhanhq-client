@@ -1,6 +1,6 @@
 # WebSocket Protocol Reference
 
-Low-level protocol details for the DhanHQ WebSocket market feed. For high-level usage, see the [WebSocket Integration Guide](websocket_integration.md).
+Low-level protocol details for the DhanHQ WebSocket market feed. For high-level usage, see the [WebSocket Integration Guide](WEBSOCKET_INTEGRATION.md).
 
 ---
 

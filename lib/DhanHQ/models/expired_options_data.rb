@@ -238,9 +238,9 @@ module DhanHQ
       #   See {#call_data} or {#put_data} for structure details.
       def data_for_type(option_type)
         case option_type.upcase
-        when "CALL"
+        when DhanHQ::Constants::OptionType::CALL
           call_data
-        when "PUT"
+        when DhanHQ::Constants::OptionType::PUT
           put_data
         end
       end
@@ -466,7 +466,7 @@ module DhanHQ
       #
       # @return [Boolean] true if instrument type is "OPTIDX", false otherwise
       def index_options?
-        instrument == "OPTIDX"
+        instrument == DhanHQ::Constants::InstrumentType::OPTIDX
       end
 
       ##
@@ -474,7 +474,7 @@ module DhanHQ
       #
       # @return [Boolean] true if instrument type is "OPTSTK", false otherwise
       def stock_options?
-        instrument == "OPTSTK"
+        instrument == DhanHQ::Constants::InstrumentType::OPTSTK
       end
 
       ##
@@ -498,7 +498,7 @@ module DhanHQ
       #
       # @return [Boolean] true if drv_option_type is "CALL", false otherwise
       def call_option?
-        drv_option_type == "CALL"
+        drv_option_type == DhanHQ::Constants::OptionType::CALL
       end
 
       ##
@@ -506,7 +506,7 @@ module DhanHQ
       #
       # @return [Boolean] true if drv_option_type is "PUT", false otherwise
       def put_option?
-        drv_option_type == "PUT"
+        drv_option_type == DhanHQ::Constants::OptionType::PUT
       end
 
       ##

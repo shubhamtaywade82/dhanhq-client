@@ -6,13 +6,13 @@ module Live
     module_function
 
     SEGMENT_MAP = {
-      %w[NSE E] => "NSE_EQ",
-      %w[BSE E] => "BSE_EQ",
-      %w[NSE D] => "NSE_FNO",
-      %w[BSE D] => "BSE_FNO",
-      %w[NSE C] => "NSE_CURRENCY",
-      %w[BSE C] => "BSE_CURRENCY",
-      %w[MCX M] => "MCX_COMM"
+      %w[NSE E] => DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      %w[BSE E] => DhanHQ::Constants::ExchangeSegment::BSE_EQ,
+      %w[NSE D] => DhanHQ::Constants::ExchangeSegment::NSE_FNO,
+      %w[BSE D] => DhanHQ::Constants::ExchangeSegment::BSE_FNO,
+      %w[NSE C] => DhanHQ::Constants::ExchangeSegment::NSE_CURRENCY,
+      %w[BSE C] => DhanHQ::Constants::ExchangeSegment::BSE_CURRENCY,
+      %w[MCX M] => DhanHQ::Constants::ExchangeSegment::MCX_COMM
     }.freeze
 
     DEFAULT_SL_PCT    = 0.15
@@ -21,7 +21,7 @@ module Live
 
     def map_segment(exchange, segment)
       key = [exchange.to_s.upcase, segment.to_s.upcase]
-      SEGMENT_MAP.fetch(key, "NSE_EQ")
+      SEGMENT_MAP.fetch(key, DhanHQ::Constants::ExchangeSegment::NSE_EQ)
     end
 
     def position_guard_payload(segment, security_id, order_data)

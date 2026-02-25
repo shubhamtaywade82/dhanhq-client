@@ -48,7 +48,7 @@ module DhanHQ
 
       error_code = body[:errorCode] || response.status.to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
-      if error_code == "DH-1111"
+      if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
         error_message = "No holdings found for this account. Add holdings or wait for them to settle before retrying."
       end
 
@@ -71,7 +71,7 @@ module DhanHQ
       end
 
       error_text =
-        if error_code == "DH-1111"
+        if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
           "#{error_message} (error code: #{error_code})"
         else
           "#{error_code}: #{error_message}"

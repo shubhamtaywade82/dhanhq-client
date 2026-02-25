@@ -67,8 +67,8 @@ def load_watchlist(path)
   end
   if list.empty?
     list = [
-      { segment: "IDX_I", security_id: "13" },  # NIFTY index value
-      { segment: "IDX_I", security_id: "25" }   # BANKNIFTY index value
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13" },  # NIFTY index value
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25" }   # BANKNIFTY index value
     ]
   end
   list

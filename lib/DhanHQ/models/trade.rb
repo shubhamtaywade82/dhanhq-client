@@ -270,7 +270,7 @@ module DhanHQ
       #   end
       #
       def buy?
-        transaction_type == "BUY"
+        transaction_type == DhanHQ::Constants::TransactionType::BUY
       end
 
       ##
@@ -285,7 +285,7 @@ module DhanHQ
       #   end
       #
       def sell?
-        transaction_type == "SELL"
+        transaction_type == DhanHQ::Constants::TransactionType::SELL
       end
 
       ##
@@ -299,7 +299,7 @@ module DhanHQ
       #   puts "Equity trades: #{equity_trades.count}"
       #
       def equity?
-        instrument == "EQUITY"
+        instrument == DhanHQ::Constants::InstrumentType::EQUITY
       end
 
       ##
@@ -327,7 +327,7 @@ module DhanHQ
       #   puts "Option trades: #{option_trades.count}"
       #
       def option?
-        %w[CALL PUT].include?(drv_option_type)
+        [DhanHQ::Constants::OptionType::CALL, DhanHQ::Constants::OptionType::PUT].include?(drv_option_type)
       end
 
       ##
@@ -341,7 +341,7 @@ module DhanHQ
       #   puts "Call option trades: #{call_trades.count}"
       #
       def call_option?
-        drv_option_type == "CALL"
+        drv_option_type == DhanHQ::Constants::OptionType::CALL
       end
 
       ##
@@ -355,7 +355,7 @@ module DhanHQ
       #   puts "Put option trades: #{put_trades.count}"
       #
       def put_option?
-        drv_option_type == "PUT"
+        drv_option_type == DhanHQ::Constants::OptionType::PUT
       end
 
       ##

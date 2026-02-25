@@ -16,8 +16,8 @@ require "dhan_hq"
 require "ta"
 
 opts = {
-  exchange_segment: "IDX_I",
-  instrument: "INDEX",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
+  instrument: DhanHQ::Constants::InstrumentType::INDEX,
   security_id: nil,
   symbol: nil,
   spot: nil,
@@ -142,7 +142,7 @@ warn "[debug] analyzer summary: #{summary[:summary].inspect}" if opts[:debug]
 
 # 4) Build advisor payload
 payload = {
-  meta: indicator_data[:meta].merge(symbol: opts[:symbol] || "INDEX"),
+  meta: indicator_data[:meta].merge(symbol: opts[:symbol] || DhanHQ::Constants::InstrumentType::INDEX),
   spot: opts[:spot],
   indicators: indicator_data[:indicators]
 }

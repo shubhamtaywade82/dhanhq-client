@@ -161,14 +161,14 @@ module DhanHQ
         return seg if %w[IDX_I NSE_FNO BSE_FNO MCX_FO].include?(seg)
 
         # Index detection by instrument kind or segment
-        return "IDX_I" if ins == "INDEX" || seg == "IDX_I"
+        return DhanHQ::Constants::ExchangeSegment::IDX_I if ins == DhanHQ::Constants::InstrumentType::INDEX || seg == DhanHQ::Constants::ExchangeSegment::IDX_I
 
         # Map equities/stock-related segments to respective FNO
-        return "NSE_FNO" if seg.start_with?("NSE")
-        return "BSE_FNO" if seg.start_with?("BSE")
+        return DhanHQ::Constants::ExchangeSegment::NSE_FNO if seg.start_with?("NSE")
+        return DhanHQ::Constants::ExchangeSegment::BSE_FNO if seg.start_with?("BSE")
 
         # Fallback to IDX_I to avoid contract rejection
-        "IDX_I"
+        DhanHQ::Constants::ExchangeSegment::IDX_I
       end
     end
   end

@@ -277,7 +277,7 @@ sleep   # keep the script alive
 
 ## Rails Integration
 
-Need initializers, service objects, ActionCable wiring, and background workers? See the [Rails Integration Guide](docs/rails_integration.md).
+Need initializers, service objects, ActionCable wiring, and background workers? See the [Rails Integration Guide](docs/RAILS_INTEGRATION.md).
 
 ---
 
@@ -287,15 +287,16 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 | ----- | -------------- |
 | [Authentication](docs/AUTHENTICATION.md) | Token flows, TOTP, OAuth, auto-management |
 | [Configuration Reference](docs/CONFIGURATION.md) | Full ENV matrix, logging, timeouts, available resources |
-| [WebSocket Integration](docs/websocket_integration.md) | All WS types, architecture, best practices |
+| [WebSocket Integration](docs/WEBSOCKET_INTEGRATION.md) | All WS types, architecture, best practices |
 | [WebSocket Protocol](docs/WEBSOCKET_PROTOCOL.md) | Packet parsing, request codes, tick schema, exchange enums |
-| [Rails WebSocket Guide](docs/rails_websocket_integration.md) | Rails-specific patterns, ActionCable |
-| [Rails Integration](docs/rails_integration.md) | Initializers, service objects, workers |
-| [Standalone Ruby Guide](docs/standalone_ruby_websocket_integration.md) | Scripts, daemons, CLI tools |
+| [Rails WebSocket Guide](docs/RAILS_WEBSOCKET_INTEGRATION.md) | Rails-specific patterns, ActionCable |
+| [Rails Integration](docs/RAILS_INTEGRATION.md) | Initializers, service objects, workers |
+| [Standalone Ruby Guide](docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md) | Scripts, daemons, CLI tools |
 | [Super Orders API](docs/SUPER_ORDERS.md) | Full REST reference for super orders |
+| [API Constants Reference](docs/CONSTANTS_REFERENCE.md) | All valid enums, exchange segments, and order parameters |
 | [Data API Parameters](docs/DATA_API_PARAMETERS.md) | Historical data, option chain parameters |
 | [Testing Guide](docs/TESTING_GUIDE.md) | WebSocket testing, model testing, console helpers |
-| [Technical Analysis](docs/technical_analysis.md) | Indicators, multi-timeframe aggregation |
+| [Technical Analysis](docs/TECHNICAL_ANALYSIS.md) | Indicators, multi-timeframe aggregation |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | 429 errors, reconnect, auth issues, debug logging |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
 

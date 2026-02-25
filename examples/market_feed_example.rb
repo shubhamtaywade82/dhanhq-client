@@ -46,10 +46,10 @@ puts "- Security ID 25: BANKNIFTY (Nifty Bank)"
 puts "- Security ID 29: NIFTYIT (Nifty IT)"
 puts "- Security ID 51: SENSEX (Sensex)"
 
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY (Nifty 50)
-market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY (Nifty Bank)
-market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT (Nifty IT)
-market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX (Sensex)
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY (Nifty 50)
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY (Nifty Bank)
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT (Nifty IT)
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX (Sensex)
 
 puts "\nMarket Feed WebSocket connected successfully!"
 puts "Waiting 15 seconds to receive market data..."

@@ -39,8 +39,8 @@ puts "================================="
 puts "Creating Market Depth WebSocket connection..."
 
 # Find instruments using the new .find method (now uses underlying_symbol for equity)
-reliance_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
-tcs_instrument = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+reliance_instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
+tcs_instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
 
 # Define symbols with correct exchange segments and security IDs
 symbols = []

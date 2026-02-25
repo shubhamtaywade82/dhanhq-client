@@ -201,17 +201,17 @@ module DhanHQ
         # @param _previous_state [OrderUpdate, nil] Previous order state (unused parameter)
         def emit_status_specific_events(order_update, _previous_state)
           case order_update.status
-          when "TRANSIT"
+          when DhanHQ::Constants::OrderStatus::TRANSIT
             emit(:order_transit, order_update)
-          when "PENDING"
+          when DhanHQ::Constants::OrderStatus::PENDING
             emit(:order_pending, order_update)
-          when "REJECTED"
+          when DhanHQ::Constants::OrderStatus::REJECTED
             emit(:order_rejected, order_update)
-          when "CANCELLED"
+          when DhanHQ::Constants::OrderStatus::CANCELLED
             emit(:order_cancelled, order_update)
-          when "TRADED"
+          when DhanHQ::Constants::OrderStatus::TRADED
             emit(:order_traded, order_update)
-          when "EXPIRED"
+          when DhanHQ::Constants::OrderStatus::EXPIRED
             emit(:order_expired, order_update)
           end
         end

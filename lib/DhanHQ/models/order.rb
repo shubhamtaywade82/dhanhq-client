@@ -416,7 +416,7 @@ module DhanHQ
         raise "Order ID is required to cancel an order" unless id
 
         response = self.class.resource.cancel(id)
-        response["orderStatus"] == "CANCELLED"
+        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
       end
 
       ##
@@ -549,8 +549,8 @@ module DhanHQ
         return false if new_record?
 
         response = self.class.resource.delete(id)
-        if success_response?(response) && response["orderStatus"] == "CANCELLED"
-          @attributes[:order_status] = "CANCELLED"
+        if success_response?(response) && response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+          @attributes[:order_status] = DhanHQ::Constants::OrderStatus::CANCELLED
           true
         else
           false
