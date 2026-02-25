@@ -26,8 +26,8 @@ DhanHQ.configure_with_env
 
 ta = TA::TechnicalAnalysis.new(throttle_seconds: 2.5, max_retries: 3)
 indicators = ta.compute(
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  instrument: DhanHQ::Constants::InstrumentType::EQUITY,
   security_id: "1333",
   intervals: [1, 5, 15, 25, 60] # each fetched directly from API
 )
@@ -75,7 +75,7 @@ Example summary:
 
 ```ruby
 {
-  meta: { security_id: "1333", instrument: "EQUITY", exchange_segment: "NSE_EQ" },
+  meta: { security_id: "1333", instrument: DhanHQ::Constants::InstrumentType::EQUITY, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ },
   summary: {
     bias: :bullish,             # :bullish | :bearish | :neutral
     setup: :buy_on_dip,         # :buy_on_dip | :sell_on_rise | :range_trade

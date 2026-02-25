@@ -59,7 +59,7 @@ All ticks are delivered as a Ruby Hash with consistent keys:
 ```ruby
 {
   kind: :quote,               # :ticker | :quote | :full | :oi | :prev_close | :misc
-  segment: "NSE_FNO",         # string enum
+  segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,         # string enum
   security_id: "12345",
   ltp: 101.5,
   ts:  1723791300,            # LTT epoch (sec) if present

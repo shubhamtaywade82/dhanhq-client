@@ -150,11 +150,11 @@ Example:
 
 ```ruby
 payload = {
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "CNC",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::CNC,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "1333",
   quantity: 10,
   price: 150.0,
@@ -162,7 +162,7 @@ payload = {
 }
 
 order = DhanHQ::Models::Order.place(payload)
-puts order.order_status  # => "TRADED" / "PENDING" / ...
+puts order.order_status  # => DhanHQ::Constants::OrderStatus::TRADED / "PENDING" / ...
 ```
 
 ### Modification & Cancellation
@@ -193,10 +193,10 @@ Use the same fields as placement, but the contract allows additional validity op
 ```ruby
 slice_payload = {
   order_id: order.order_id,
-  transaction_type: "BUY",
-  exchange_segment: "NSE_EQ",
-  product_type: "STOP_LOSS",
-  order_type: "STOP_LOSS",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::OrderType::STOP_LOSS,
+  order_type: DhanHQ::Constants::OrderType::STOP_LOSS,
   validity: "GTC",
   security_id: "1333",
   quantity: 100,
@@ -381,11 +381,11 @@ The response returns one object per super order with nested `leg_details`. Key a
 
 ```ruby
 params = {
-  transaction_type: "SELL",
-  exchange_segment: "NSE_EQ",
-  product_type: "CNC",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::SELL,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::CNC,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "1333",
   price: 200.0,
   trigger_price: 198.0
@@ -416,10 +416,10 @@ Convert an intraday position to delivery (or vice versa):
 ```ruby
 convert_payload = {
   security_id: "1333",
-  from_product_type: "INTRADAY",
-  to_product_type: "CNC",
+  from_product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  to_product_type: DhanHQ::Constants::ProductType::CNC,
   convert_qty: 10,
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   position_type: "LONG"
 }
 
@@ -496,8 +496,8 @@ Both endpoints return arrays and skip validation because they represent historic
 ```ruby
 bars = DhanHQ::Models::HistoricalData.intraday(
   security_id: "13",
-  exchange_segment: "IDX_I",
-  instrument: "INDEX",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
+  instrument: DhanHQ::Constants::InstrumentType::INDEX,
   interval: "5",
   from_date: "2024-08-14",
   to_date: "2024-08-14"
@@ -509,13 +509,13 @@ bars = DhanHQ::Models::HistoricalData.intraday(
 ```ruby
 chain = DhanHQ::Models::OptionChain.fetch(
   underlying_scrip: 1333,
-  underlying_seg: "NSE_FNO",
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::NSE_FNO,
   expiry: "2024-12-26"
 )
 
 expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
   underlying_scrip: 1333,
-  underlying_seg: "NSE_FNO"
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::NSE_FNO
 )
 ```
 
@@ -527,10 +527,10 @@ The model filters strikes where both CE and PE have zero `last_price`, keeping t
 
 ```ruby
 params = {
-  exchange_segment: "NSE_EQ",
-  transaction_type: "BUY",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
   quantity: 10,
-  product_type: "INTRADAY",
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
   security_id: "1333",
   price: 150.0
 }
@@ -618,8 +618,8 @@ ws.on(:tick) do |tick|
   puts "[#{tick[:segment]} #{tick[:security_id]}] LTP=#{tick[:ltp]} kind=#{tick[:kind]}"
 end
 
-ws.subscribe_one(segment: "IDX_I", security_id: "13")
-ws.unsubscribe_one(segment: "IDX_I", security_id: "13")
+ws.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
+ws.unsubscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
 
 ws.disconnect!
 ```
@@ -648,11 +648,11 @@ If the credentials are invalid the helper raises `DhanHQ::InvalidAuthenticationE
 DhanHQ::Models::AlertOrder.all
 alert = DhanHQ::Models::AlertOrder.find("alert-id")
 alert = DhanHQ::Models::AlertOrder.create(
-  exchange_segment: "NSE_EQ",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   security_id: "11536",
   condition: "GTE",
   trigger_price: 100.0,
-  transaction_type: "BUY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
   quantity: 10
 )
 alert.save
