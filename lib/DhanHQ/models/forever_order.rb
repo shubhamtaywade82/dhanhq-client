@@ -64,6 +64,8 @@ module DhanHQ
     #   orders.each { |order| puts order.order_status }
     #
     class ForeverOrder < BaseModel
+      include Concerns::ApiResponseHandler
+
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_flag,
                  :order_type, :validity, :trading_symbol, :security_id, :quantity,
@@ -115,9 +117,7 @@ module DhanHQ
         #   end
         def all
           response = resource.all
-          return [] unless response.is_a?(Array)
-
-          response.map { |o| new(o, skip_validation: true) }
+          parse_collection_response(response)
         end
 
         ##

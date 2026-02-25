@@ -108,9 +108,7 @@ module DhanHQ
         #
         def today
           response = tradebook_resource.all
-          return [] unless response.is_a?(Array)
-
-          response.map { |trade_data| new(trade_data, skip_validation: true) }
+          parse_collection_response(response)
         end
 
         ##
