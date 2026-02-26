@@ -160,7 +160,7 @@ module DhanHQ
 
       # Custom validation for Bracket Order (BO) fields.
       rule(:bo_profit_value, :bo_stop_loss_value, :product_type) do
-        if values[:product_type] == "BO" && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
+        if values[:product_type] == DhanHQ::Constants::ProductType::BO && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
           key(:bo_profit_value).failure("is required for Bracket Orders")
           key(:bo_stop_loss_value).failure("is required for Bracket Orders")
         end

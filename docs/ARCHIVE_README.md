@@ -81,11 +81,11 @@ To override defaults (base URL, WebSocket settings, partner credentials), set
 
 ```ruby
 order = DhanHQ::Models::Order.new(
-  transaction_type: "BUY",
-  exchange_segment: "NSE_FNO",
-  product_type: "MARGIN",
-  order_type: "LIMIT",
-  validity: "DAY",
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,
+  product_type: DhanHQ::Constants::ProductType::MARGIN,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
   security_id: "43492",
   quantity: 125,
   price: 100.0
@@ -125,7 +125,7 @@ puts orders.count
 ✅ Querying Orders
 
 ```ruby
-pending_orders = DhanHQ::Models::Order.where(status: "PENDING")
+pending_orders = DhanHQ::Models::Order.where(status: DhanHQ::Constants::OrderStatus::PENDING)
 puts pending_orders.first.order_id
 ```
 
@@ -142,7 +142,7 @@ position.exit!
 #### Place
 
 ```ruby
-order = DhanHQ::Models::Order.new(transaction_type: "BUY", security_id: "123", quantity: 1)
+order = DhanHQ::Models::Order.new(transaction_type: DhanHQ::Constants::TransactionType::BUY, security_id: "123", quantity: 1)
 order.save
 ```
 
@@ -170,7 +170,7 @@ DhanHQ::Models::Trade.find_by_order_id("452501297117")
 ```ruby
 positions = DhanHQ::Models::Position.all
 active = DhanHQ::Models::Position.active
-DhanHQ::Models::Position.convert(position_id: "1", product_type: "CNC")
+DhanHQ::Models::Position.convert(position_id: "1", product_type: DhanHQ::Constants::ProductType::CNC)
 ```
 
 ### Holdings
@@ -196,8 +196,8 @@ DhanHQ::Models::OptionChain.fetch_expiry_list(security_id: "1333")
 ### Historical Data
 
 ```ruby
-DhanHQ::Models::HistoricalData.daily(security_id: "1333", exchange_segment: "NSE_EQ", instrument: "EQUITY", from_date: "2024-01-01", to_date: "2024-01-31")
-DhanHQ::Models::HistoricalData.intraday(security_id: "1333", exchange_segment: "NSE_EQ", instrument: "EQUITY", interval: "15", from_date: "2024-09-11", to_date: "2024-09-15")
+DhanHQ::Models::HistoricalData.daily(security_id: "1333", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, instrument: DhanHQ::Constants::InstrumentType::EQUITY, from_date: "2024-01-01", to_date: "2024-01-31")
+DhanHQ::Models::HistoricalData.intraday(security_id: "1333", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, instrument: DhanHQ::Constants::InstrumentType::EQUITY, interval: "15", from_date: "2024-09-11", to_date: "2024-09-15")
 ```
 
 ### Instrument Model with Convenience Methods
@@ -278,7 +278,7 @@ bundle exec rake release
   ```ruby
   {
     kind: :quote,                 # :ticker | :quote | :full | :oi | :prev_close | :misc
-    segment: "NSE_FNO",           # string enum
+    segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,           # string enum
     security_id: "12345",
     ltp: 101.5,
     ts:  1723791300,              # LTT epoch (sec) if present
@@ -303,11 +303,11 @@ ws.on(:tick) do |t|
 end
 
 # Subscribe instruments (≤100 per frame; send multiple frames if needed)
-ws.subscribe_one(segment: "IDX_I",   security_id: "13")     # NIFTY index value
-ws.subscribe_one(segment: "NSE_FNO", security_id: "12345")  # an option
+ws.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I,   security_id: "13")     # NIFTY index value
+ws.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO, security_id: "12345")  # an option
 
 # Unsubscribe
-ws.unsubscribe_one(segment: "NSE_FNO", security_id: "12345")
+ws.unsubscribe_one(segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO, security_id: "12345")
 
 # Graceful disconnect (sends broker disconnect code 12, no reconnect)
 ws.disconnect!
@@ -412,8 +412,8 @@ end
 
    ```ruby
    INDICES = [
-     { segment: "IDX_I", security_id: "13" },  # NIFTY index value
-     { segment: "IDX_I", security_id: "25" }   # BANKNIFTY index value
+     { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13" },  # NIFTY index value
+     { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25" }   # BANKNIFTY index value
    ]
 
    Rails.application.config.to_prepare do

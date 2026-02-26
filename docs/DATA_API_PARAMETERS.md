@@ -93,8 +93,8 @@ response = DhanHQ::Models::MarketFeed.quote(payload)
 ```ruby
 data = DhanHQ::Models::HistoricalData.daily(
   security_id: "1333",
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  instrument: DhanHQ::Constants::InstrumentType::EQUITY,
   from_date: "2022-01-08",
   to_date: "2022-02-08"
 )
@@ -126,8 +126,8 @@ data = DhanHQ::Models::HistoricalData.daily(
 ```ruby
 data = DhanHQ::Models::HistoricalData.intraday(
   security_id: "1333",
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  instrument: DhanHQ::Constants::InstrumentType::EQUITY,
   interval: "15",
   from_date: "2024-09-11",
   to_date: "2024-09-15"
@@ -155,7 +155,7 @@ data = DhanHQ::Models::HistoricalData.intraday(
 ```ruby
 chain = DhanHQ::Models::OptionChain.fetch(
   underlying_scrip: 13,
-  underlying_seg: "IDX_I",
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I,
   expiry: "2024-10-31"
 )
 ```
@@ -178,7 +178,7 @@ chain = DhanHQ::Models::OptionChain.fetch(
 ```ruby
 expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
   underlying_scrip: 13,
-  underlying_seg: "IDX_I"
+  underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I
 )
 ```
 
@@ -219,7 +219,7 @@ expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
 **Example:**
 ```ruby
 data = DhanHQ::Models::ExpiredOptionsData.fetch(
-  exchange_segment: "NSE_FNO",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_FNO,
   interval: "1",
   security_id: 13,
   instrument: "OPTIDX",

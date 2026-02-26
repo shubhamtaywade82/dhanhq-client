@@ -317,7 +317,7 @@ module DhanHQ
         raise "Order ID is required to cancel a forever order" unless order_id
 
         response = self.class.resource.cancel(order_id)
-        response["orderStatus"] == "CANCELLED"
+        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
       end
     end
   end

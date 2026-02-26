@@ -36,8 +36,8 @@ See [CHANGELOG.md](../CHANGELOG.md) — section **## [2.2.0] - 2026-01-31**.
 - **GUIDE.md**: Short “Dynamic access token” note and link to docs/AUTHENTICATION.md.
 - **docs/AUTHENTICATION.md**: New doc for static vs dynamic token, retry-on-401, and auth-related errors.
 - **docs/TESTING_GUIDE.md**: Optional access_token_provider / on_token_expired in config examples; verify “Token provider” in console.
-- **docs/rails_integration.md**: New “Dynamic access token (optional)” with Rails initializer example.
-- **docs/websocket_integration.md**, **docs/live_order_updates.md**: One-line pointer to docs/AUTHENTICATION.md for dynamic token.
+- **docs/RAILS_INTEGRATION.md**: New “Dynamic access token (optional)” with Rails initializer example.
+- **docs/WEBSOCKET_INTEGRATION.md**, **docs/LIVE_ORDER_UPDATES.md**: One-line pointer to docs/AUTHENTICATION.md for dynamic token.
 
 ## Checklist
 

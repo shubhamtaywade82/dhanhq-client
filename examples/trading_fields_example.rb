@@ -122,11 +122,11 @@ puts "1. Finding Instruments with Trading Fields"
 puts "=" * 50
 
 # Find popular trading instruments
-reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
-tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
-hdfc = DhanHQ::Models::Instrument.find("NSE_EQ", "HDFC")
-nifty = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
-banknifty = DhanHQ::Models::Instrument.find("IDX_I", "BANKNIFTY")
+reliance = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
+tcs = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
+hdfc = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "HDFC")
+nifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "NIFTY")
+banknifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "BANKNIFTY")
 
 # Display trading information
 display_trading_info(reliance, "RELIANCE")

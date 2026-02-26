@@ -94,33 +94,33 @@ module DhanHQ
       ##
       # Helper methods for order status
       def transit?
-        status == "TRANSIT"
+        status == DhanHQ::Constants::OrderStatus::TRANSIT
       end
 
       def pending?
-        status == "PENDING"
+        status == DhanHQ::Constants::OrderStatus::PENDING
       end
 
       def rejected?
-        status == "REJECTED"
+        status == DhanHQ::Constants::OrderStatus::REJECTED
       end
 
       def cancelled?
-        status == "CANCELLED"
+        status == DhanHQ::Constants::OrderStatus::CANCELLED
       end
 
       def traded?
-        status == "TRADED"
+        status == DhanHQ::Constants::OrderStatus::TRADED
       end
 
       def expired?
-        status == "EXPIRED"
+        status == DhanHQ::Constants::OrderStatus::EXPIRED
       end
 
       ##
       # Helper methods for instrument type
       def equity?
-        instrument == "EQUITY"
+        instrument == DhanHQ::Constants::InstrumentType::EQUITY
       end
 
       def derivative?

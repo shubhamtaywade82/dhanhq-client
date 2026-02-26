@@ -23,7 +23,7 @@ puts "1. Finding instruments in specific segments:"
 puts "-" * 40
 
 # Find RELIANCE in NSE_EQ (now uses underlying_symbol for equity)
-reliance = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+reliance = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
 if reliance
   puts "✅ RELIANCE:"
   puts "   Symbol Name: #{reliance.symbol_name}"
@@ -38,7 +38,7 @@ end
 puts
 
 # Find TCS in NSE_EQ (now uses underlying_symbol for equity)
-tcs = DhanHQ::Models::Instrument.find("NSE_EQ", "TCS")
+tcs = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "TCS")
 if tcs
   puts "✅ TCS:"
   puts "   Symbol Name: #{tcs.symbol_name}"
@@ -53,7 +53,7 @@ end
 puts
 
 # Find NIFTY in IDX_I
-nifty = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+nifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "NIFTY")
 if nifty
   puts "✅ NIFTY:"
   puts "   Security ID: #{nifty.security_id}"
@@ -66,7 +66,7 @@ end
 puts
 
 # Find BANKNIFTY in IDX_I
-banknifty = DhanHQ::Models::Instrument.find("IDX_I", "BANKNIFTY")
+banknifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "BANKNIFTY")
 if banknifty
   puts "✅ BANKNIFTY:"
   puts "   Security ID: #{banknifty.security_id}"
@@ -130,7 +130,7 @@ puts "3. Testing advanced search options:"
 puts "-" * 35
 
 # Test partial match
-reliance_partial = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+reliance_partial = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
 if reliance_partial
   puts "✅ RELIANCE (partial match):"
   puts "   Symbol: #{reliance_partial.symbol_name}"
@@ -142,7 +142,7 @@ end
 puts
 
 # Test case insensitive search
-reliance_case = DhanHQ::Models::Instrument.find("NSE_EQ", "reliance industries ltd", case_sensitive: false)
+reliance_case = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "reliance industries ltd", case_sensitive: false)
 if reliance_case
   puts "✅ RELIANCE (case insensitive):"
   puts "   Symbol: #{reliance_case.symbol_name}"
@@ -162,8 +162,8 @@ puts "Finding instruments for Market Depth WebSocket:"
 
 market_depth_symbols = []
 symbols_to_find = [
-  { segment: "NSE_EQ", symbol: "RELIANCE", name: "RELIANCE" },
-  { segment: "NSE_EQ", symbol: "TCS", name: "TCS" }
+  { segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, symbol: "RELIANCE", name: "RELIANCE" },
+  { segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, symbol: "TCS", name: "TCS" }
 ]
 
 symbols_to_find.each do |search|

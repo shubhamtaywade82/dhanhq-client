@@ -43,10 +43,10 @@ market_client = DhanHQ::WS.connect(mode: :ticker) do |tick|
 end
 
 # Subscribe to major indices
-market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
-market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
-market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT
+market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX
 
 # Wait for data
 sleep(30)
@@ -179,10 +179,10 @@ class MarketFeedScript
 
   def subscribe_to_indices
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -411,8 +411,8 @@ class MarketDepthScript
 
     # Define symbols with correct exchange segments and security IDs
     symbols = [
-      { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-      { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+      { symbol: "RELIANCE", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885" },
+      { symbol: "TCS", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "11536" }
     ]
 
     @depth_client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
@@ -664,10 +664,10 @@ class MarketFeedDaemon
 
   def subscribe_to_indices
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -906,10 +906,10 @@ class MarketDataCLI
 
   def subscribe_to_default_indices(client)
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -1128,10 +1128,10 @@ class RobustWebSocketClient
 
   def subscribe_to_indices
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -1311,10 +1311,10 @@ class ProductionWebSocketClient
 
   def subscribe_to_indices
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -1461,8 +1461,8 @@ class WebSocketMonitor
 
   def start_market_depth_client
     symbols = [
-      { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-      { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+      { symbol: "RELIANCE", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885" },
+      { symbol: "TCS", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "11536" }
     ]
 
     @clients[:market_depth] = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
@@ -1483,10 +1483,10 @@ class WebSocketMonitor
 
   def subscribe_to_indices(client)
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|

@@ -139,7 +139,7 @@ module DhanHQ
         #   puts "Total open position value: ₹#{total_value}"
         #
         def active
-          all.reject { |position| position.position_type == "CLOSED" }
+          all.reject { |position| position.position_type == DhanHQ::Constants::OrderStatus::CLOSED }
         end
 
         ##

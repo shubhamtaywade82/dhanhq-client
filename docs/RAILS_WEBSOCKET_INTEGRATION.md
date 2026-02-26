@@ -61,10 +61,10 @@ class MarketDataService
     end
 
     # Subscribe to major indices
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "13")  # NIFTY
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "25")  # BANKNIFTY
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "29")  # NIFTYIT
-    @market_client.subscribe_one(segment: "IDX_I", security_id: "51")  # SENSEX
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")  # NIFTY
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25")  # BANKNIFTY
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29")  # NIFTYIT
+    @market_client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51")  # SENSEX
   end
 
   def stop_market_feed
@@ -203,10 +203,10 @@ class MarketDataService
 
   def subscribe_to_indices
     indices = [
-      { segment: "IDX_I", security_id: "13", name: "NIFTY" },
-      { segment: "IDX_I", security_id: "25", name: "BANKNIFTY" },
-      { segment: "IDX_I", security_id: "29", name: "NIFTYIT" },
-      { segment: "IDX_I", security_id: "51", name: "SENSEX" }
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13", name: "NIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "25", name: "BANKNIFTY" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "29", name: "NIFTYIT" },
+      { segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "51", name: "SENSEX" }
     ]
 
     indices.each do |index|
@@ -402,8 +402,8 @@ class MarketDepthService
 
   def default_symbols
     [
-      { symbol: "RELIANCE", exchange_segment: "NSE_EQ", security_id: "2885" },
-      { symbol: "TCS", exchange_segment: "NSE_EQ", security_id: "11536" }
+      { symbol: "RELIANCE", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "2885" },
+      { symbol: "TCS", exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, security_id: "11536" }
     ]
   end
 

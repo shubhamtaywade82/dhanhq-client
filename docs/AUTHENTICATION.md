@@ -105,7 +105,7 @@ Rescue `AuthenticationError` for local config/token resolution failures; rescue 
 
 - [README.md](../README.md) — Configuration and “Dynamic access token”
 - [GUIDE.md](../GUIDE.md) — Dynamic access token and RenewToken
-- [rails_integration.md](rails_integration.md) — Rails initializer with optional `access_token_provider` and RenewToken
+- [RAILS_INTEGRATION.md](RAILS_INTEGRATION.md) — Rails initializer with optional `access_token_provider` and RenewToken
 - [TESTING_GUIDE.md](TESTING_GUIDE.md) — Config examples and RenewToken
 - [CHANGELOG.md](../CHANGELOG.md) — 2.2.0 and 2.2.1 auth and token changes
 

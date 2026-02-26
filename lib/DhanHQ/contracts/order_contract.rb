@@ -45,7 +45,7 @@ module DhanHQ
 
       # Conditional validation rules
       rule(:price) do
-        key.failure("must be present for LIMIT orders") if values[:order_type] == "LIMIT" && !value
+        key.failure("must be present for LIMIT orders") if values[:order_type] == DhanHQ::Constants::OrderType::LIMIT && !value
       end
 
       rule(:trigger_price) do
@@ -59,7 +59,7 @@ module DhanHQ
       end
 
       rule(:bo_profit_value, :bo_stop_loss_value) do
-        if values[:product_type] == "BO" && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
+        if values[:product_type] == DhanHQ::Constants::ProductType::BO && (!values[:bo_profit_value] || !values[:bo_stop_loss_value])
           key.failure("both profit and stop loss values required for BO orders")
         end
       end
@@ -70,7 +70,7 @@ module DhanHQ
 
       # Modification specific rules (when extending)
       rule(:leg_name) do
-        if values[:product_type] == "BO" && !%w[ENTRY_LEG TARGET_LEG STOP_LOSS_LEG].include?(value)
+        if values[:product_type] == DhanHQ::Constants::ProductType::BO && !%w[ENTRY_LEG TARGET_LEG STOP_LOSS_LEG].include?(value)
           key.failure("invalid leg name for BO order")
         end
       end

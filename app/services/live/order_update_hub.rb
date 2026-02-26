@@ -69,7 +69,7 @@ module Live
 
     def entry_leg_traded?(order_data)
       order_data[:LegNo].to_i == 1 &&
-        order_data[:Status].to_s.upcase == "TRADED" &&
+        order_data[:Status].to_s.upcase == DhanHQ::Constants::OrderStatus::TRADED &&
         order_data[:TradedQty].to_i.positive?
     end
   end

@@ -62,8 +62,8 @@ DEFAULT_TO_DATE = MarketCalendar.today_or_last_trading_day.strftime("%Y-%m-%d")
 DEFAULT_FROM_DATE = DEFAULT_TO_DATE
 
 DEFAULTS = {
-  exchange_segment: "NSE_EQ",
-  instrument: "EQUITY",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  instrument: DhanHQ::Constants::InstrumentType::EQUITY,
   security_id: "1333", # sample scrip
   from_date: DEFAULT_FROM_DATE,
   to_date: DEFAULT_TO_DATE,
