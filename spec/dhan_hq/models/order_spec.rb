@@ -36,6 +36,10 @@ RSpec.describe DhanHQ::Models::Order do
 
   before do
     DhanHQ.configure_with_env
+    # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(DhanHQ::Resources::Orders).to receive(:fetch_instrument!).and_return({ lot_size: 1, tick_size: 0.05, exchange_segment: "NSE_EQ" })
+    allow_any_instance_of(DhanHQ::Resources::Orders).to receive(:fetch_security_id_for_order!).and_return("539310")
+    # rubocop:enable RSpec/AnyInstance
   end
 
   describe ".all" do
@@ -128,30 +132,21 @@ RSpec.describe DhanHQ::Models::Order do
       # 3. Update the order's quantity (and optionally price)
       #
       updated_quantity = 10
-      updated_price    = "3400.0" # In case we switch to a 'LIMIT' for testing
+      updated_price    = 3400.0 # In case we switch to a 'LIMIT' for testing
       # If you keep 'MARKET' order_type, price may not matter. But let's assume it can be updated.
       update_attrs = {
         quantity: updated_quantity,
-        price: updated_price
+        price: updated_price,
+        security_id: found_order.security_id
       }
 
-      # updated_order = found_order.update(update_attrs)
-      # # The #update method might return an Order or an ErrorObject
-      # expect(updated_order).to be_a(described_class).or be_a(DhanHQ::ErrorObject)
-
-      # if updated_order.is_a?(described_class)
-      #   expect(updated_order.order_id).to eq(order_id)
-      #   # You can also check that quantity is updated,
-      #   # though the API might reflect partial changes or rejections
-      #   expect(updated_order.quantity).to eq(updated_quantity),
-      #                                     "Quantity expected to be #{updated_quantity}, but got #{updated_order.quantity}"
-      # else
-      #   warn "Order update failed: #{updated_order.message} / #{updated_order.errors}"
-      # end
-      found_order.attributes.merge!(update_attrs)
+      found_order.attributes[:trigger_price] = nil
+      found_order.attributes[:bo_profit_value] = nil
+      found_order.attributes[:bo_stop_loss_value] = nil
+      found_order.attributes[:amo_time] = nil
 
       expect do
-        found_order.save
+        found_order.modify(update_attrs)
       end.to raise_error(DhanHQ::OrderError)
     end
   end
