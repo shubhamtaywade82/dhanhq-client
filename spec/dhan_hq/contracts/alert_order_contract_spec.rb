@@ -5,49 +5,67 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
 
   let(:valid_params) do
     {
-      exchange_segment: "NSE_EQ",
-      security_id: "11536",
-      condition: "GTE",
-      trigger_price: 100.0,
-      transaction_type: "BUY",
-      quantity: 10
+      condition: {
+        security_id: "11536",
+        comparison_type: "PRICE_WITH_VALUE",
+        operator: "GREATER_THAN",
+        comparing_value: 100.0
+      },
+      orders: [
+        {
+          transaction_type: "BUY",
+          exchange_segment: "NSE_EQ",
+          product_type: "INTRADAY",
+          order_type: "LIMIT",
+          security_id: "11536",
+          quantity: 10,
+          validity: "DAY"
+        }
+      ]
     }
   end
 
   describe "valid params" do
-    it "accepts required fields only" do
+    it "accepts required fields with nested structure" do
       result = contract.call(valid_params)
       expect(result.success?).to be(true)
     end
 
-    it "accepts optional price and order_type" do
-      result = contract.call(valid_params.merge(price: 99.5, order_type: "LIMIT"))
-      expect(result.success?).to be(true)
-    end
-
-    it "accepts transaction_type SELL" do
-      result = contract.call(valid_params.merge(transaction_type: "SELL"))
+    it "accepts technical indicators when comparison_type is TECHNICAL_WITH_VALUE" do
+      params = valid_params.dup
+      params[:condition] = params[:condition].merge(
+        comparison_type: "TECHNICAL_WITH_VALUE",
+        indicator_name: "SMA_20",
+        time_frame: "DAY"
+      )
+      result = contract.call(params)
       expect(result.success?).to be(true)
     end
   end
 
   describe "invalid params" do
-    it "rejects missing required exchange_segment" do
-      result = contract.call(valid_params.except(:exchange_segment))
+    it "rejects missing indicator_name for TECHNICAL comparisons" do
+      params = valid_params.dup
+      params[:condition] = params[:condition].merge(comparison_type: "TECHNICAL_WITH_VALUE")
+      result = contract.call(params)
       expect(result.success?).to be(false)
-      expect(result.errors[:exchange_segment]).not_to be_empty
+      expect(result.errors.to_h[:condition][:indicator_name]).to include("is required for technical comparisons")
     end
 
-    it "rejects invalid transaction_type" do
-      result = contract.call(valid_params.merge(transaction_type: "INVALID"))
+    it "rejects invalid transaction_type inside orders array" do
+      params = valid_params.dup
+      params[:orders] = [valid_params[:orders].first.merge(transaction_type: "INVALID")]
+      result = contract.call(params)
       expect(result.success?).to be(false)
-      expect(result.errors[:transaction_type]).not_to be_empty
+      expect(result.errors.to_h[:orders][0][:transaction_type]).to include("must be one of: BUY, SELL")
     end
 
-    it "rejects quantity zero or negative" do
-      result = contract.call(valid_params.merge(quantity: 0))
+    it "rejects quantity zero or negative inside orders array" do
+      params = valid_params.dup
+      params[:orders] = [valid_params[:orders].first.merge(quantity: 0)]
+      result = contract.call(params)
       expect(result.success?).to be(false)
-      expect(result.errors[:quantity]).not_to be_empty
+      expect(result.errors.to_h[:orders][0][:quantity]).to include("must be greater than 0")
     end
   end
 end

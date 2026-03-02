@@ -1,0 +1,997 @@
+
+DhanHQ::Analysis::MultiTimeframeAnalyzer
+  validates input and returns a structured summary
+  raises on invalid input
+
+DhanHQ::Analysis::OptionsBuyingAdvisor
+  returns enter_long with CE recommendation in bullish regime
+  returns no_trade for unsupported instrument
+
+DhanHQ::BaseAPI
+  MarketFeed APIs
+    fetches LTP data
+    fetches OHLC data
+    fetches quote data
+  OptionChain APIs
+    fetches option chain data
+    fetches expiry list data
+  Margin Calculator API
+    calculates margin
+  Charts Historical API
+    fetches historical chart data
+
+DhanHQ::BaseModel
+  Real API Integration
+    fetches historical data successfully
+    returns proper OHLC data structure
+    works with MarketFeed LTP
+    validates input parameters
+    converts snake_case to camelCase for API requests
+    #delete and #destroy
+      delegates delete to destroy
+      logs errors when destroy fails
+    #parse_collection_response
+      logs warning for unexpected response formats
+      handles array responses
+      handles hash with data key
+    #id
+      converts id to string
+      handles order_id
+      returns nil when no id present
+
+DhanHQ::Client
+  #initialize
+    creates a Faraday connection
+    sets timeout configuration
+    raises an error if RateLimiter fails to initialize
+    when DHAN_CLIENT_ID is set but DHAN_ACCESS_TOKEN is missing
+      does not raise error during initialization (validation happens at request time)
+      raises error when making a request without access_token
+    when DHAN_ACCESS_TOKEN is set but DHAN_CLIENT_ID is missing
+      does not raise error (DHAN_CLIENT_ID not required for all APIs)
+  #request
+    when making a GET request
+      retrieves order details
+    when making a POST request
+      places a new order
+    when response is not valid JSON
+E, [2026-02-27T04:32:45.028641 #930997] ERROR -- : [DhanHQ] JSON parse error: unexpected character: 'invalid' at line 1 column 1
+      raises DataError for invalid JSON response
+    when an API error occurs
+      raises InputExceptionError for invalid request
+  #build_headers
+    includes client-id for data APIs
+    does not include client-id for non-data APIs
+    when access_token is missing
+      raises AuthenticationError
+    when client_id is missing for data API
+      raises InvalidAuthenticationError
+  #prepare_payload
+    raises an error if payload is not a hash
+    sets params for GET request
+    sets body for POST request
+  #handle_response
+    when response is successful
+      returns parsed JSON
+    when response has an error status
+      raises InputExceptionError for invalid request
+  auth failures (WebMock)
+    when API returns 401
+      raises InvalidAuthenticationError
+    when API returns 403
+      raises InvalidAccessError
+    when API returns 401 then 200 and access_token_provider is set
+W, [2026-02-27T04:32:45.038483 #930997]  WARN -- : [DhanHQ::Client] Auth failure (DhanHQ::InvalidAuthenticationError), retrying once with fresh token
+      retries once with fresh token and returns success
+W, [2026-02-27T04:32:45.040116 #930997]  WARN -- : [DhanHQ::Client] Auth failure (DhanHQ::InvalidAuthenticationError), retrying once with fresh token
+      calls access_token_provider twice (initial + retry)
+    when API returns 401 twice and access_token_provider is set
+W, [2026-02-27T04:32:45.041425 #930997]  WARN -- : [DhanHQ::Client] Auth failure (DhanHQ::InvalidAuthenticationError), retrying once with fresh token
+      retries once then raises InvalidAuthenticationError
+    when API returns 401 with errorCode 807 (token expired)
+      raises TokenExpiredError
+    when on_token_expired hook is set and 401 triggers retry
+W, [2026-02-27T04:32:45.043775 #930997]  WARN -- : [DhanHQ::Client] Auth failure (DhanHQ::InvalidAuthenticationError), retrying once with fresh token
+      invokes on_token_expired with the auth error before retry
+
+DhanHQ::Configuration
+  #initialize
+    sets default values
+    loads access_token and client_id from ENV if present
+  .configure_with_env
+    configures access_token and client_id from environment variables
+  .configure
+    allows manual configuration with a block
+    updates configuration multiple times without conflicts
+  #resolved_access_token
+    uses access_token_provider if present
+    falls back to static access_token when provider is not set
+    raises AuthenticationError if provider returns nil
+    raises AuthenticationError if provider returns empty string
+  Custom URLs
+    allows setting custom compact and detailed CSV URLs
+  .configure_from_token_endpoint
+    when endpoint returns 200 with access_token and client_id
+      sets configuration from the token endpoint response
+      optionally sets base_url when present in response
+    when base_url or bearer_token are missing
+      raises TokenEndpointError when base_url is empty
+      raises TokenEndpointError when bearer_token is empty
+    when endpoint returns non-2xx
+      raises TokenEndpointError with status and message
+    when response lacks access_token or client_id
+      raises TokenEndpointError
+    when using ENV (DHAN_TOKEN_ENDPOINT_BASE_URL and DHAN_TOKEN_ENDPOINT_BEARER)
+      uses ENV when called with no arguments
+
+DhanHQ::Constants
+  nested constant modules
+    defines ExchangeSegment values
+    defines FeedRequest codes
+    defines TradingErrorCode values
+    defines DataErrorCode values
+  backward compatibility
+    keeps legacy arrays aligned with nested modules
+    keeps legacy aliases
+  .valid?
+    returns true for valid entries in module name symbols
+    returns true for valid entries in direct module refs
+    returns false for invalid values or unknown modules
+  .all_for
+    returns values for known modules
+    returns empty array for unknown modules
+
+DhanHQ::Contracts::AlertOrderContract
+  valid params
+    accepts required fields with nested structure
+    accepts technical indicators when comparison_type is TECHNICAL_WITH_VALUE
+  invalid params
+    rejects missing indicator_name for TECHNICAL comparisons
+    rejects invalid transaction_type inside orders array
+    rejects quantity zero or negative inside orders array
+
+DhanHQ::Contracts::ExpiredOptionsDataContract
+  valid parameters
+    passes validation with valid parameters
+  exchange_segment validation
+    validates valid exchange segments
+    rejects invalid exchange segments
+  interval validation
+    validates valid intervals
+    rejects invalid intervals
+  instrument validation
+    validates valid instruments
+    rejects invalid instruments
+  expiry_flag validation
+    validates valid expiry flags
+    rejects invalid expiry flags
+  strike validation
+    validates valid strike formats
+    rejects invalid strike formats
+  drv_option_type validation
+    validates valid option types
+    rejects invalid option types
+  required_data validation
+    validates valid data types
+    validates partial data types
+    rejects invalid data types
+    rejects empty required_data array
+  date validation
+    validates correct date format and trading days
+    rejects invalid date format
+    validates date range order (from_date before to_date)
+    rejects when from_date is after to_date
+    rejects when from_date equals to_date
+    validates date range length (31 days max, non-inclusive)
+    rejects date range longer than 31 days
+    validates historical date limit (5 years max)
+    rejects dates older than 5 years
+  required fields validation
+    requires all mandatory fields
+  edge cases
+    handles nil values
+    handles empty strings
+    handles wrong data types
+
+Hardened Validations
+  Bracket Order (BO) Logic
+    accepts valid BO BUY params (Profit > Price > StopLoss)
+    rejects BO BUY if StopLoss >= Price (FAILED - 1)
+    rejects BO BUY if Profit <= Price (FAILED - 2)
+    accepts valid BO SELL params (Profit < Price < StopLoss)
+    rejects BO SELL if StopLoss <= Price (FAILED - 3)
+  STOP_LOSS Logical Relationship
+    rejects BUY STOP_LOSS if trigger_price < price (FAILED - 4)
+    accepts BUY STOP_LOSS if trigger_price >= price
+    rejects SELL STOP_LOSS if trigger_price > price (FAILED - 5)
+  Segment-Based Restrictions
+    rejects CNC for NSE_FNO (FAILED - 6)
+    rejects MARGIN for NSE_EQ (FAILED - 7)
+  Lot & Tick Size (Macro Verification)
+    rejects quantity not multiple of lot_size (FAILED - 8)
+    rejects price not multiple of tick_size (FAILED - 9)
+  Market Order Constraints
+    rejects MARKET order with a price (FAILED - 10)
+    rejects STOP_LOSS_MARKET order with a price (FAILED - 11)
+  Length Constraints
+    rejects security_id exceeding 20 characters
+  DhanHQ::Contracts::ModifyOrderContract
+    accepts valid modification
+    rejects modification if no update fields provided (FAILED - 12)
+    enforces logical rules during modification (e.g. SL relationship) (FAILED - 13)
+
+New Contracts
+  DhanHQ::Contracts::PnlBasedExitContract
+    requires at least one of profitValue or lossValue
+    accepts valid values
+  DhanHQ::Contracts::UserIpContract
+    validates required fields
+
+DhanHQ::Contracts::PlaceOrderContract
+  conditional validations
+    requires price for LIMIT orders (FAILED - 14)
+    validates disclosed_quantity is at least 30% of quantity (FAILED - 15)
+    accepts disclosed_quantity if at least 30% of quantity
+    accepts correlation_id up to 30 characters and valid pattern
+    rejects correlation_id exceeding 30 characters
+  price validation
+    rejects NaN values
+    rejects Infinity values (FAILED - 16)
+  basic validation
+    validates required fields
+    accepts valid order parameters
+
+DhanHQ::ErrorObject
+  exposes the raw response
+  returns false for success?
+  provides the error message
+  provides the error code
+
+DhanHQ::ResponseHelper
+  #parse_json
+    parses valid JSON strings
+    handles empty strings gracefully
+    handles whitespace-only strings gracefully
+E, [2026-02-27T04:32:45.136569 #930997] ERROR -- : [DhanHQ] JSON parse error: unexpected token 'not' at line 1 column 1
+    raises DataError for invalid JSON (non-empty, malformed)
+    logs error when JSON parsing fails
+    handles hash input
+    handles array input
+  #handle_response
+    with 200 status
+      returns parsed JSON
+    with 202 status (Accepted)
+      returns accepted status hash
+    with error status
+      calls handle_error
+  #handle_error
+    with mapped error code
+      raises appropriate error class
+    with error code 807 (token expired)
+      raises TokenExpiredError
+    with unmapped error code
+      logs warning for unmapped error code
+
+DhanHQ::Models::AlertOrder
+  .resource
+    memoizes the resource instance
+  with stubbed resource
+    .all
+      returns model instances when the response is an array
+W, [2026-02-27T04:32:45.142065 #930997]  WARN -- : [DhanHQ::BaseModel] Unexpected response format for collection: String. Expected Array or Hash with :data key.
+      returns an empty array when the response is not an array
+    .find
+      returns nil when the response is nil or not a hash/array
+      wraps the response in a model
+      unwraps array response to first element
+    .create
+      returns nil when the API does not return an alertId (FAILED - 17)
+      validates params and fetches the created alert when alertId is present (FAILED - 18)
+      raises when validation fails
+    #id
+      returns alert_id as string
+      returns nil when alert_id is nil
+    #save (new record)
+      returns false when invalid
+      returns false when create does not return alertId
+      returns true and updates attributes when create returns alertId (FAILED - 19)
+    #save (persisted)
+      returns false when update response is not successful
+      returns true and updates attributes when update is successful
+    #destroy
+      returns false for new records
+      returns true when delete succeeds
+      returns false when delete fails
+    #delete
+      is an alias of destroy
+    .modify
+      updates and re-fetches the alert order on success
+      returns nil when the update fails
+
+DhanHQ::Models::Edis
+  .resource
+    memoizes the resource instance
+  with stubbed resource
+    .generate_tpin
+      delegates to resource.tpin
+    .generate_form
+      delegates to resource.form with the correct params
+      defaults bulk to false
+    .generate_bulk_form
+      delegates to resource.bulk_form
+    .inquire
+      delegates to resource.inquire
+  #validation_contract
+    returns nil
+
+DhanHQ::Models::ExpiredOptionsData
+  .fetch
+    fetches expired options data with valid parameters
+    validates parameters before making API call
+    validates date range
+    validates date range length
+    validates required data fields
+  data access methods
+    #call_data
+      returns call option data
+    #put_data
+      returns put option data
+    #data_for_type
+      returns call data for CALL option type
+      returns put data for PUT option type
+      returns nil for invalid option type
+    #ohlc_data
+      returns OHLC data for call options
+      uses default option type when not specified
+    #volume_data
+      returns volume data
+    #open_interest_data
+      returns open interest data
+    #implied_volatility_data
+      returns implied volatility data
+    #strike_data
+      returns strike data
+    #spot_data
+      returns spot data
+    #timestamp_data
+      returns timestamp data
+  calculation methods
+    #data_points_count
+      returns number of data points
+    #average_volume
+      calculates average volume
+      returns 0 for empty volume data
+    #average_open_interest
+      calculates average open interest
+    #average_implied_volatility
+      calculates average implied volatility
+    #price_ranges
+      calculates price ranges
+    #summary_stats
+      provides comprehensive summary statistics
+  helper methods
+    #index_options?
+      returns true for index options
+      returns false for stock options
+    #stock_options?
+      returns true for stock options
+      returns false for index options
+    #weekly_expiry?
+      returns true for weekly expiry
+      returns false for monthly expiry
+    #monthly_expiry?
+      returns true for monthly expiry
+      returns false for weekly expiry
+    #call_option?
+      returns true for call options
+      returns false for put options
+    #put_option?
+      returns true for put options
+      returns false for call options
+    #at_the_money?
+      returns true for ATM strike
+      returns false for non-ATM strikes
+    #strike_offset
+      returns 0 for ATM strike
+      returns positive offset for ATM+X strikes
+      returns negative offset for ATM-X strikes
+  validation contract integration
+    validates exchange segment
+    validates interval
+    validates instrument
+    validates expiry flag
+    validates strike format
+    validates option type
+    validates date format
+    validates date range
+    validates date range length
+    validates historical date limit
+
+DhanHQ::Models::ForeverOrder
+  .all
+    returns model instances when the response is an array
+W, [2026-02-27T04:32:45.173512 #930997]  WARN -- : [DhanHQ::BaseModel] Unexpected response format for collection: String. Expected Array or Hash with :data key.
+    returns an empty array when the response is not an array
+  .find
+    returns nil when the response is blank
+    wraps the response in a model
+  .create
+    returns nil when the API does not return an orderId
+    fetches the created order when orderId is present
+  #modify
+    raises when order_id is missing
+    returns updated record when the response is successful
+    returns nil when the response is not successful
+  #cancel
+    raises when order_id missing
+    returns true when cancellation succeeds
+    returns false when cancellation fails
+
+DhanHQ::Models::Funds
+  .fetch
+    retrieves the fund details and returns a Funds object
+  .balance
+    returns only the available balance (float)
+  #assign_attributes
+    normalises the typo'd availabelBalance key
+
+DhanHQ::Models::HistoricalData
+  .daily
+    returns a hash with required keys
+    has consistent array lengths
+    has valid timestamp and volume data
+  .intraday
+    fetches intraday historical data
+  unit tests
+    passes through non-success responses
+    delegates intraday calls
+
+DhanHQ::Models::Holding
+  .all
+    fetches all holdings
+  unit tests
+    returns [] when API raises no holdings error
+    converts holdings into hashes
+
+DhanHQ::Models::Instrument
+  .by_segment
+    validates segment and parses CSV into models
+    returns [] on blank or non-string response
+
+DhanHQ::Models::KillSwitch
+  .resource
+    memoizes the resource instance
+  with stubbed resource
+    .update
+      delegates to the resource with snake_case params
+    .activate
+      sets the kill switch to ACTIVATE
+    .deactivate
+      sets the kill switch to DEACTIVATE
+    .status
+      delegates to resource.status
+
+DhanHQ::Models::LedgerEntry
+  .all
+    retrieves ledger entries for the given date range
+    returns valid ledger entry objects
+    has expected ledger entry attributes
+    has additional ledger entry fields
+  unit tests
+    returns [] when response not array
+    exposes a hash representation
+
+DhanHQ::Models::Margin
+  .calculate
+    fetches margin requirements for a sample order
+    returns valid margin data types
+    returns additional margin fields
+    provides to_h method with normalized attributes
+  validation
+    raises when required fields are missing
+  formatting
+    camelizes keys before posting
+  .calculate_multi
+    camelizes keys and delegates to resource.calculate_multi
+  #to_h
+    returns normalised attributes
+
+DhanHQ::Models::MarketFeed
+  .ltp
+    retrieves last traded prices for the specified instruments
+    returns data for expected exchange segments
+    returns valid price data structure
+  .ohlc
+    retrieves OHLC data for the specified instruments
+    returns data for expected exchange segments
+    returns valid OHLC data structure
+  .quote
+    retrieves market depth and quote data for the specified instruments
+  unit tests
+    delegates ltp
+    delegates ohlc
+    delegates quote
+
+DhanHQ::Models::OptionChain
+  fetches and filters option chain
+  with stubbed resource
+    exposes the validation contract helpers
+    returns filtered strikes when status is success
+    returns an empty hash when status is not success
+    returns expiry list when status success
+    returns empty array when expiry list status not success
+    validates required parameters for fetch
+    validates required parameters for fetch_expiry_list
+    validates expiry format for fetch
+    accepts valid parameters for fetch_expiry_list without expiry
+
+DhanHQ::Models::Order
+  .all
+    retrieves all orders for the day
+  .create
+I, [2026-02-27T04:32:47.072744 #930997]  INFO -- : [DhanHQ::Models::Order] Placing order: {"transaction_type"=>"BUY", "exchange_segment"=>"BSE_EQ", "security_id"=>"539310", "quantity"=>5, "price"=>""}
+I, [2026-02-27T04:32:47.074725 #930997]  INFO -- : [DhanHQ::Models::Order] Order placement successfully: 752502167405
+    places a new order and returns an order instance
+  .place
+    validates, formats payload and delegates to resource create
+  .find
+    retrieves an order by ID
+  #update
+W, [2026-02-27T04:32:47.079863 #930997]  WARN -- : [DhanHQ::Models::Order] Attempting to modify order 952502167319 in CANCELLED state - API will reject
+    modifies a pending order in the orderbook
+  #cancel
+    delegates to resource.cancel and returns true on success
+  #modify
+    validates payload, delegates to resource update and refreshes attributes
+    logs warning when trying to modify TRADED order but still attempts API call
+    logs warning when trying to modify CANCELLED order but still attempts API call
+    allows modification of PENDING order
+  #slice_order
+    camelizes, validates, and delegates to slicing
+    raises when trigger price missing for stop loss
+  with stubbed resource
+    .all
+      wraps array responses
+      returns [] for non array
+    .find
+      unwraps array payloads
+    .find_by_correlation
+      returns model when status success
+      returns nil for non-success
+    .place
+      camelizes payload and fetches final order
+    #modify
+      sends filtered camelized payload
+      returns error object when update unsuccessful
+    #cancel
+      delegates to resource
+    #refresh
+      raises when order id missing
+      delegates to find
+    #save
+      places a new order when valid
+      returns false when create fails and logs error
+      updates existing orders and logs
+      returns false when update fails and logs error
+    #destroy
+      returns false for new records
+      returns true when deletion succeeds
+      returns false when deletion fails
+
+DhanHQ::Models::OrderUpdate
+  .from_websocket_message
+    creates OrderUpdate from valid WebSocket message
+    returns nil for invalid message type
+    returns nil for message without data
+  transaction type helpers
+    identifies buy orders
+    identifies sell orders
+  order type helpers
+    identifies limit orders
+    identifies market orders
+  product type helpers
+    identifies CNC products
+    identifies intraday products
+  order status helpers
+    identifies pending orders
+    identifies traded orders
+  execution state helpers
+    identifies not executed orders
+    identifies partially executed orders
+    identifies fully executed orders
+  super order helpers
+    identifies super orders
+    identifies entry leg
+    identifies stop loss leg
+    identifies target leg
+  calculation methods
+    calculates execution percentage
+    calculates pending quantity
+    calculates total value
+  status summary
+    provides comprehensive status summary
+  to_hash
+    converts to hash with all attributes
+
+DhanHQ::Models::PnlExit
+  .resource
+    memoizes the resource instance
+  with stubbed resource
+    .configure
+      sends camelized params to resource.configure
+      defaults enable_kill_switch to false
+    .stop
+      delegates to resource.stop
+    .status
+      returns a PnlExit model instance
+      returns nil when response is not a hash
+  #validation_contract
+    returns nil
+
+DhanHQ::Models::Position
+  .all
+    wraps array responses
+    returns [] when response not array
+  .active
+    filters closed positions
+  .convert
+    returns the API response when successful
+    wraps failures in an error object
+  .exit_all!
+    delegates to resource.exit_all
+
+DhanHQ::Models::Postback
+  .parse
+    raises for unsupported types
+    with a JSON string
+      parses the payload into a Postback instance
+    with a Hash
+      normalizes camelCase keys
+    with snake_case keys
+      accepts snake_case hash
+  status predicates
+    #traded? returns true for TRADED status
+    #rejected? returns true for REJECTED status
+    #pending? returns true for PENDING status
+    #cancelled? returns true for CANCELLED status
+  #validation_contract
+    returns nil
+
+DhanHQ::Models::Profile
+  .fetch
+    returns a profile model
+  unit tests
+    returns nil when response is not a hash
+
+DhanHQ::Models::SuperOrder
+  .all
+    returns model instances when response is array
+    returns [] for non-array responses
+  .create
+    returns nil when orderId missing
+    returns model with id and status when orderId present
+  #modify
+    raises when order id missing
+    returns true when update echoes orderId
+    returns false otherwise
+  #cancel
+    raises when order id missing
+    returns true when cancellation state is CANCELLED
+    passes leg name and returns false otherwise
+
+DhanHQ::Models::Trade
+  .today
+    fetches trades for the current day
+  .find_by_order_id
+    retrieves trade details for the order
+    validates order_id parameter
+  .history
+    fetches trades in the given date range and page
+    returns valid trade objects when trades exist
+    validates date parameters
+  .all
+    is an alias for history method
+  instance methods
+    transaction type helpers
+      identifies buy trades
+      identifies sell trades
+    instrument type helpers
+      identifies equity trades
+      identifies derivative trades
+    option type helpers
+      identifies call options
+      identifies put options
+    calculation methods
+      calculates total trade value
+      calculates total charges
+      calculates net trade value
+  unit tests
+    .today
+      maps responses to models
+W, [2026-02-27T04:32:47.208913 #930997]  WARN -- : [DhanHQ::BaseModel] Unexpected response format for collection: String. Expected Array or Hash with :data key.
+      returns empty array for non-array responses
+    .find_by_order_id
+      returns nil when response empty
+      unwraps array payload
+      handles hash response
+    .history
+      returns models when response is array
+      returns [] for non arrays
+
+DhanHQ::RateLimiter
+  #initialize
+    initializes rate limit buckets
+    sets rate limits for the given API type
+    initializes request_times array for per-second limiting
+  #throttle!
+    does not wait if within the rate limit
+    waits and retries when request is not allowed
+    records the request after throttling
+  #allow_request?
+    returns true when under limit
+    returns false when exceeding the per_second limit
+    returns false when exceeding the per_minute limit
+  #record_request
+    increments all rate limit counters (except per_second which uses timestamps)
+  rate limit resets
+    handles per_second limit via timestamps (sliding window)
+    resets per_minute limit after 60 seconds
+    resets per_hour limit after 3600 seconds
+    resets per_day limit after 86,400 seconds (1 day)
+  configured limits
+    when api type is order_api
+      enforces documented thresholds
+    when api type is data_api
+      allows unlimited minute/hour traffic but caps per_second (via timestamps) and per_day
+    when api type is quote_api
+      enforces the 1 request per second window (via timestamps)
+    when api type is non_trading_api
+      allows 20 per second (via timestamps) with no other caps
+    when api type is option_chain
+      sleeps to respect the 3 second spacing
+  #shutdown
+    stops cleanup threads gracefully
+    can be called multiple times safely
+  thread safety
+    synchronizes cleanup thread bucket modifications
+
+DhanHQ::Resources::Edis
+  #form
+    posts to /edis/form with params
+  #bulk_form
+    posts to /edis/bulkform with params
+  #tpin
+    gets /edis/tpin
+  #inquire
+    gets /edis/inquire/{isin}
+
+DhanHQ::Resources::Positions
+  #all
+    fetches all open positions for the day
+  #convert
+    converts an existing position
+  model integration
+    converts a position via model
+
+DhanHQ::Resources::Profile
+  #fetch
+    returns profile metadata
+
+DhanHQ::Resources::Statements
+  #ledger
+    fetches ledger entries for a given date range
+    returns valid ledger entries when data exists
+  #trade_history
+    fetches trade history for the given date range and page
+    returns valid trade entries when data exists
+
+DhanHQ::TestResource
+  .initialize
+    creates a new resource with valid attributes
+    validates required attributes
+  attribute accessors
+    allows access using snake_case keys
+    allows access using camelCase keys
+  .find
+    fetches a resource by ID
+  .create
+    creates a new resource with snake_case and camelCase attributes
+  #update
+    updates a resource with new attributes
+  #delete
+    deletes the resource successfully
+  #to_request_params
+    converts snake_case keys to camelCase for API requests
+    includes all required fields in camelCase format
+    handles optional fields correctly
+
+DhanHQ::WS::Orders::Client
+  #initialize
+    initializes order tracker and timestamps
+  #handle_order_update
+    tracks order updates with timestamp
+    triggers cleanup when tracker exceeds max size
+  #cleanup_old_orders
+    removes orders older than MAX_ORDER_AGE
+    removes orders when tracker exceeds max size
+  #start and #stop
+    starts cleanup thread on start
+    stops cleanup thread on stop
+  #emit
+    creates frozen snapshot of callbacks
+    handles errors in callbacks gracefully
+
+DhanHQ::WS::SingletonLock
+  acquires and releases the lock
+
+DhanHQ
+  has a version number
+  .configure
+    allows setting the configuration with a block
+    creates a new configuration instance if none exists
+
+Failures:
+
+  1) Hardened Validations Bracket Order (BO) Logic rejects BO BUY if StopLoss >= Price
+     Failure/Error: expect(result.errors.to_h[:bo_stop_loss_value]).to include("must be less than entry price for BUY orders")
+       expected ["must be less than entry price for BUY BO"] to include "must be less than entry price for BUY orders"
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:37:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  2) Hardened Validations Bracket Order (BO) Logic rejects BO BUY if Profit <= Price
+     Failure/Error: expect(result.errors.to_h[:bo_profit_value]).to include("must be greater than entry price for BUY orders")
+       expected ["must be greater than entry price for BUY BO"] to include "must be greater than entry price for BUY orders"
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:43:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  3) Hardened Validations Bracket Order (BO) Logic rejects BO SELL if StopLoss <= Price
+     Failure/Error: expect(result.errors.to_h[:bo_stop_loss_value]).to include("must be greater than entry price for SELL orders")
+       expected ["must be greater than entry price for SELL BO"] to include "must be greater than entry price for SELL orders"
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:64:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  4) Hardened Validations STOP_LOSS Logical Relationship rejects BUY STOP_LOSS if trigger_price < price
+     Failure/Error: expect(result.errors.to_h[:trigger_price]).to include("must be greater than or equal to price for BUY STOP_LOSS orders")
+       expected ["must be >= price for BUY stop-loss"] to include "must be greater than or equal to price for BUY STOP_LOSS orders"
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:73:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  5) Hardened Validations STOP_LOSS Logical Relationship rejects SELL STOP_LOSS if trigger_price > price
+     Failure/Error: expect(result.errors.to_h[:trigger_price]).to include("must be less than or equal to price for SELL STOP_LOSS orders")
+       expected ["must be <= price for SELL stop-loss"] to include "must be less than or equal to price for SELL STOP_LOSS orders"
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:86:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  6) Hardened Validations Segment-Based Restrictions rejects CNC for NSE_FNO
+     Failure/Error: expect(result.success?).to be false
+
+       expected false
+            got true
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:93:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  7) Hardened Validations Segment-Based Restrictions rejects MARGIN for NSE_EQ
+     Failure/Error: expect(result.success?).to be false
+
+       expected false
+            got true
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:99:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  8) Hardened Validations Lot & Tick Size (Macro Verification) rejects quantity not multiple of lot_size
+     Failure/Error: expect(result.success?).to be false
+
+       expected false
+            got true
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:108:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  9) Hardened Validations Lot & Tick Size (Macro Verification) rejects price not multiple of tick_size
+     Failure/Error: expect(result.success?).to be false
+
+       expected false
+            got true
+     # ./spec/dhan_hq/contracts/hardening_spec.rb:115:in `block (3 levels) in <top (required)>'
+     # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  10) Hardened Validations Market Order Constraints rejects MARKET order with a price
+      Failure/Error: expect(result.errors.to_h[:price]).to include("must be empty for MARKET orders")
+        expected ["must not be provided for MARKET orders"] to include "must be empty for MARKET orders"
+      # ./spec/dhan_hq/contracts/hardening_spec.rb:124:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  11) Hardened Validations Market Order Constraints rejects STOP_LOSS_MARKET order with a price
+      Failure/Error: expect(result.success?).to be false
+
+        expected false
+             got true
+      # ./spec/dhan_hq/contracts/hardening_spec.rb:129:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  12) Hardened Validations DhanHQ::Contracts::ModifyOrderContract rejects modification if no update fields provided
+      Failure/Error: expect(result.errors.to_h[:base]).to include(/at least one of price, quantity, trigger_price or disclosed_quantity must be provided/)
+        expected nil to include /at least one of price, quantity, trigger_price or disclosed_quantity must be provided/, but it does not respond to `include?`
+      # ./spec/dhan_hq/contracts/hardening_spec.rb:170:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  13) Hardened Validations DhanHQ::Contracts::ModifyOrderContract enforces logical rules during modification (e.g. SL relationship)
+      Failure/Error: expect(result.errors.to_h[:trigger_price]).to include("must be greater than or equal to price for BUY STOP_LOSS orders")
+        expected ["must be >= price for BUY stop-loss", "must be >= price for BUY stop-loss"] to include "must be greater than or equal to price for BUY STOP_LOSS orders"
+      # ./spec/dhan_hq/contracts/hardening_spec.rb:177:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  14) DhanHQ::Contracts::PlaceOrderContract conditional validations requires price for LIMIT orders
+      Failure/Error: expect(result.errors.to_h[:price]).to include("is required for LIMIT and STOP_LOSS orders")
+        expected ["must be present for LIMIT orders"] to include "is required for LIMIT and STOP_LOSS orders"
+      # ./spec/dhan_hq/contracts/place_order_contract_spec.rb:26:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  15) DhanHQ::Contracts::PlaceOrderContract conditional validations validates disclosed_quantity is at least 30% of quantity
+      Failure/Error: expect(result.success?).to be false
+
+        expected false
+             got true
+      # ./spec/dhan_hq/contracts/place_order_contract_spec.rb:32:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  16) DhanHQ::Contracts::PlaceOrderContract price validation rejects Infinity values
+      Failure/Error: expect(result.success?).to be false
+
+        expected false
+             got true
+      # ./spec/dhan_hq/contracts/place_order_contract_spec.rb:66:in `block (3 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  17) DhanHQ::Models::AlertOrder with stubbed resource .create returns nil when the API does not return an alertId
+      Failure/Error: raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
+
+      DhanHQ::Error:
+        Validation Error: {:condition=>["must be a hash"], :orders=>["is missing"]}
+      # ./lib/DhanHQ/helpers/validation_helper.rb:14:in `validate_params!'
+      # ./lib/DhanHQ/models/alert_order.rb:45:in `create'
+      # ./spec/dhan_hq/models/alert_order_spec.rb:79:in `block (4 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  18) DhanHQ::Models::AlertOrder with stubbed resource .create validates params and fetches the created alert when alertId is present
+      Failure/Error: raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
+
+      DhanHQ::Error:
+        Validation Error: {:condition=>["must be a hash"], :orders=>["is missing"]}
+      # ./lib/DhanHQ/helpers/validation_helper.rb:14:in `validate_params!'
+      # ./lib/DhanHQ/models/alert_order.rb:45:in `create'
+      # ./spec/dhan_hq/models/alert_order_spec.rb:87:in `block (4 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+  19) DhanHQ::Models::AlertOrder with stubbed resource #save (new record) returns true and updates attributes when create returns alertId
+      Failure/Error: expect(record.save).to be(true)
+
+        expected true
+             got false
+      # ./spec/dhan_hq/models/alert_order_spec.rb:141:in `block (4 levels) in <top (required)>'
+      # /home/nemesis/.rvm/gems/ruby-3.3.4/gems/webmock-3.26.1/lib/webmock/rspec.rb:39:in `block (2 levels) in <top (required)>'
+
+Finished in 4.88 seconds (files took 1.28 seconds to load)
+474 examples, 19 failures
+
+Failed examples:
+
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:34 # Hardened Validations Bracket Order (BO) Logic rejects BO BUY if StopLoss >= Price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:40 # Hardened Validations Bracket Order (BO) Logic rejects BO BUY if Profit <= Price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:56 # Hardened Validations Bracket Order (BO) Logic rejects BO SELL if StopLoss <= Price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:69 # Hardened Validations STOP_LOSS Logical Relationship rejects BUY STOP_LOSS if trigger_price < price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:82 # Hardened Validations STOP_LOSS Logical Relationship rejects SELL STOP_LOSS if trigger_price > price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:91 # Hardened Validations Segment-Based Restrictions rejects CNC for NSE_FNO
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:97 # Hardened Validations Segment-Based Restrictions rejects MARGIN for NSE_EQ
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:105 # Hardened Validations Lot & Tick Size (Macro Verification) rejects quantity not multiple of lot_size
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:112 # Hardened Validations Lot & Tick Size (Macro Verification) rejects price not multiple of tick_size
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:121 # Hardened Validations Market Order Constraints rejects MARKET order with a price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:127 # Hardened Validations Market Order Constraints rejects STOP_LOSS_MARKET order with a price
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:162 # Hardened Validations DhanHQ::Contracts::ModifyOrderContract rejects modification if no update fields provided
+rspec ./spec/dhan_hq/contracts/hardening_spec.rb:173 # Hardened Validations DhanHQ::Contracts::ModifyOrderContract enforces logical rules during modification (e.g. SL relationship)
+rspec ./spec/dhan_hq/contracts/place_order_contract_spec.rb:21 # DhanHQ::Contracts::PlaceOrderContract conditional validations requires price for LIMIT orders
+rspec ./spec/dhan_hq/contracts/place_order_contract_spec.rb:29 # DhanHQ::Contracts::PlaceOrderContract conditional validations validates disclosed_quantity is at least 30% of quantity
+rspec ./spec/dhan_hq/contracts/place_order_contract_spec.rb:63 # DhanHQ::Contracts::PlaceOrderContract price validation rejects Infinity values
+rspec ./spec/dhan_hq/models/alert_order_spec.rb:76 # DhanHQ::Models::AlertOrder with stubbed resource .create returns nil when the API does not return an alertId
+rspec ./spec/dhan_hq/models/alert_order_spec.rb:82 # DhanHQ::Models::AlertOrder with stubbed resource .create validates params and fetches the created alert when alertId is present
+rspec ./spec/dhan_hq/models/alert_order_spec.rb:138 # DhanHQ::Models::AlertOrder with stubbed resource #save (new record) returns true and updates attributes when create returns alertId
+

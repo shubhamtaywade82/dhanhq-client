@@ -375,9 +375,10 @@ module DhanHQ
 
         warn_invalid_state if order_status_invalid_for_modification?
 
-        formatted_payload = prepare_modify_payload(new_params)
-        validate_params!(formatted_payload, DhanHQ::Contracts::ModifyOrderContract)
+        filtered_payload = prepare_modify_payload(new_params)
+        validate_params!(filtered_payload, DhanHQ::Contracts::ModifyOrderContract)
 
+        formatted_payload = camelize_keys(filtered_payload)
         response = self.class.resource.update(id, formatted_payload)
         response = response.with_indifferent_access if response.respond_to?(:with_indifferent_access)
 
@@ -556,7 +557,7 @@ module DhanHQ
         filtered_payload[:order_id] ||= id
         filtered_payload[:dhan_client_id] ||= attributes[:dhan_client_id] || DhanHQ.configuration&.client_id
 
-        camelize_keys(filtered_payload.compact)
+        filtered_payload.compact
       end
 
       ##

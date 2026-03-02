@@ -64,12 +64,24 @@ RSpec.describe DhanHQ::Models::AlertOrder do
     describe ".create" do
       let(:valid_params) do
         {
-          exchange_segment: "NSE_EQ",
-          security_id: "11536",
-          condition: "GTE",
-          trigger_price: 100.0,
-          transaction_type: "BUY",
-          quantity: 10
+          condition: {
+            security_id: "11536",
+            comparison_type: "PRICE_WITH_VALUE",
+            operator: "GREATER_THAN_EQUAL",
+            comparing_value: 100.0
+          },
+          orders: [
+            {
+              transaction_type: "BUY",
+              exchange_segment: "NSE_EQ",
+              product_type: "CNC",
+              order_type: "LIMIT",
+              security_id: "11536",
+              quantity: 10,
+              validity: "DAY",
+              price: 150.0
+            }
+          ]
         }
       end
 
@@ -90,7 +102,8 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       end
 
       it "raises when validation fails" do
-        invalid_params = valid_params.merge(quantity: -1)
+        invalid_params = Marshal.load(Marshal.dump(valid_params))
+        invalid_params[:orders][0][:quantity] = -1
 
         expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)
       end
@@ -112,12 +125,24 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       let(:record) do
         described_class.new(
           {
-            exchange_segment: "NSE_EQ",
-            security_id: "11536",
-            condition: "GTE",
-            trigger_price: 100.0,
-            transaction_type: "BUY",
-            quantity: 10
+            condition: {
+              security_id: "11536",
+              comparison_type: "PRICE_WITH_VALUE",
+              operator: "GREATER_THAN_EQUAL",
+              comparing_value: 100.0
+            },
+            orders: [
+              {
+                transaction_type: "BUY",
+                exchange_segment: "NSE_EQ",
+                product_type: "CNC",
+                order_type: "LIMIT",
+                security_id: "11536",
+                quantity: 10,
+                validity: "DAY",
+                price: 150.0
+              }
+            ]
           },
           skip_validation: true
         )
