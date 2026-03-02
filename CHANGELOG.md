@@ -1,12 +1,69 @@
 ## [2.6.0] - 2026-02-26
 
 ### Added
+
+#### Order Model — New Public Methods
+- **`Order#destroy` / `#delete`**: Cancels an order via `DELETE /v2/orders/{id}`. Returns `true` if the API confirms `CANCELLED` status, `false` otherwise. `#delete` is an alias.
+- **`Order#slice_order(params)`**: Splits a large order into multiple legs to exceed freeze-limit quantities on F&O instruments via `POST /v2/slicing`. Delegates to `Resources::Orders#slicing`.
+- **`Order#save`**: ActiveRecord-style save — places a new order for new records, modifies existing records. Returns `true`/`false`.
+- **`Order.place` — `dhan_client_id` auto-injection**: If `dhan_client_id` is not passed in params, it is automatically read from `DhanHQ.configuration.client_id`. Existing code that passes `dhan_client_id` explicitly continues to work unchanged.
+
+#### Contract Hardening
+- **`OrderContract`** (base for `PlaceOrderContract` and `ModifyOrderContract`) now enforces:
+  - `LIMIT` orders require `price`; `MARKET` orders reject `price`
+  - `STOP_LOSS` / `STOP_LOSS_MARKET` require `trigger_price`
+  - Stop-loss price relationships: BUY requires `trigger_price >= price`; SELL requires `trigger_price <= price`
+  - Bracket Order (BO): both `bo_profit_value` and `bo_stop_loss_value` required; directional profit/loss relationship validated
+  - `disclosed_quantity` cannot exceed 30% of `quantity`
+  - `amo_time` required when `after_market_order: true`
+  - Lot-size and tick-size enforcement when `instrument_meta` is provided
+  - Segment-based product restrictions (CNC equity-only, BO/CO currency restrictions)
+- **`ModifyOrderContract`**: Requires at least one modifiable field; inherits all `OrderContract` business rules.
+- **New contracts**: `EdisContract`, `UserIpContract`, `PnlBasedExitContract`, `MultiScripMarginCalcContract`, `SliceOrderContract`.
+
+#### Infrastructure
+- **`ApiResponseHandler` concern** (`lib/DhanHQ/models/concerns/api_response_handler.rb`): Shared module for uniform API response handling, attribute merging, and structured logging. Included in `Order` and `ForeverOrder`.
 - **Global Constants Enforcement**: Replaced all hardcoded API strings with `DhanHQ::Constants` across the repository. Built a custom RuboCop cop (`RuboCop::Cop::DhanHQ::UseConstants`) that strictly enforces typed constants instead of loose strings for robust API payloads.
 - **Constants Documentation**: Added `docs/CONSTANTS_REFERENCE.md` detailing all SDK constants (e.g., `ExchangeSegment`, `ProductType`, `OrderType`, etc.).
 
 ### Changed
 - Replaced 160+ hardcoded usages of strings like `"NSE_EQ"` and `"BUY"` with `DhanHQ::Constants::ExchangeSegment::NSE_EQ` and `DhanHQ::Constants::TransactionType::BUY`.
 - Added `NO_HOLDINGS` (value `"DH-1111"`) to `TradingErrorCode`.
+- `PlaceOrderContract` refactored to inherit from `OrderContract`, eliminating duplicated validation logic. Derivative-specific fields (`drv_expiry_date`, `drv_option_type`, `drv_strike_price`) remain on `PlaceOrderContract`.
+- `Resources::Orders` now fetches optional instrument metadata (lot size, tick size) to pass into contract validation.
+
+### Breaking Changes
+
+#### `AlertOrderContract` — payload structure changed
+The contract previously accepted flat params (`exchange_segment`, `security_id`, `condition`, `transaction_type`, `quantity`). It now expects a nested structure matching the DhanHQ API schema:
+
+```ruby
+# Old (no longer valid)
+AlertOrderContract.new.call(
+  exchange_segment: "NSE_EQ",
+  security_id:      "11536",
+  condition:        "PRICE_WITH_VALUE",
+  transaction_type: "BUY",
+  quantity:         5
+)
+
+# New
+AlertOrderContract.new.call(
+  dhan_client_id: "1000000003",
+  condition: {
+    exchange_segment:  "NSE_EQ",
+    security_id:       "11536",
+    comparison_type:   "PRICE_WITH_VALUE",
+    trigger_price:     1500.0,
+    operator:          "GREATER_THAN"
+  },
+  orders: [
+    { transaction_type: "BUY", quantity: 5, order_type: "MARKET", product_type: "INTRADAY" }
+  ]
+)
+```
+
+Any code calling `AlertOrderContract` directly or relying on `AlertOrder.create` with the old flat params must be updated.
 
 ---
 

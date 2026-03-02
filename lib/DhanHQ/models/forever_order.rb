@@ -290,8 +290,11 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify a forever order" unless order_id
 
+        DhanHQ.logger&.info("[DhanHQ::Models::ForeverOrder] Modifying order #{order_id}")
         response = self.class.resource.update(order_id, new_params)
-        return self.class.find(order_id) if self.class.send(:success_response?, response)
+        ctx = "[DhanHQ::Models::ForeverOrder] Modification"
+        success = handle_api_response(response, success_key: "orderId", context: ctx)
+        return self.class.find(order_id) if success
 
         nil
       end

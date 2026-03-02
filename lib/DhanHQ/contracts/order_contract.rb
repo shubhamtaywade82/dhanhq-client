@@ -7,12 +7,12 @@ module DhanHQ
   module Contracts
     # Base contract for validating order placements and rules
     class OrderContract < BaseContract
-      TRANSACTION_TYPES = %w[BUY SELL].freeze
-      EXCHANGE_SEGMENTS = %w[NSE_EQ NSE_FNO NSE_CURRENCY BSE_EQ MCX_COMM BSE_CURRENCY BSE_FNO].freeze
-      PRODUCT_TYPES = %w[CNC INTRADAY MARGIN CO BO].freeze
-      ORDER_TYPES = %w[LIMIT MARKET STOP_LOSS STOP_LOSS_MARKET].freeze
-      VALIDITY_TYPES = %w[DAY IOC].freeze
-      AMO_TIMES = %w[PRE_OPEN OPEN OPEN_30 OPEN_60].freeze
+      TRANSACTION_TYPES = DhanHQ::Constants::TransactionType::ALL
+      EXCHANGE_SEGMENTS = DhanHQ::Constants::ExchangeSegment::ALL
+      PRODUCT_TYPES     = DhanHQ::Constants::ProductType::ALL
+      ORDER_TYPES       = DhanHQ::Constants::OrderType::ALL
+      VALIDITY_TYPES    = DhanHQ::Constants::Validity::ALL
+      AMO_TIMES         = DhanHQ::Constants::AmoTime::ALL
 
       params do
         required(:transaction_type).filled(:string, included_in?: TRANSACTION_TYPES)

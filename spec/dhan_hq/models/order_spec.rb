@@ -490,6 +490,13 @@ RSpec.describe DhanHQ::Models::Order do
 
         expect(record.destroy).to be(false)
       end
+
+      it "#delete is an alias for #destroy" do
+        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
+        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success",
+                                                                              "orderStatus" => "CANCELLED" })
+        expect(record.delete).to be(true)
+      end
     end
   end
 end

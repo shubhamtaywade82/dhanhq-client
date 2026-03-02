@@ -8,8 +8,10 @@ Gem::Specification.new do |spec|
   spec.authors = ["Shubham Taywade"]
   spec.email = ["shubhamtaywade82@gmail.com"]
 
-  spec.summary = "DhanHQ is a simple CLI for DhanHQ API."
-  spec.description = "DhanHQ is a simple CLI for DhanHQ API."
+  spec.summary = "Ruby client for the DhanHQ v2 REST and WebSocket API (NSE/BSE)."
+  spec.description = "A pure-Ruby client wrapping the DhanHQ v2 REST and WebSocket API. " \
+                     "Provides typed model classes, dry-validation contracts, a token-bucket " \
+                     "rate limiter, and WebSocket streaming for live market data and order updates."
   spec.homepage = "https://github.com/shubhamtaywade82/dhanhq-client"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
@@ -26,7 +28,8 @@ Gem::Specification.new do |spec|
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
-        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile])
+        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile
+                          app/ examples/ AUDIT_GAP_ANALYSIS CLAUDE TODO docs/PR_])
     end
   end
   spec.bindir = "exe"

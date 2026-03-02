@@ -409,8 +409,15 @@ module DhanHQ
       def cancel
         raise "Order ID is required to cancel an order" unless id
 
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Cancelling order #{id}")
         response = self.class.resource.cancel(id)
-        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+        if response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Order #{id} cancelled successfully")
+          true
+        else
+          DhanHQ.logger&.error("[DhanHQ::Models::Order] Cancel failed for order #{id}: #{response.inspect}")
+          false
+        end
       end
 
       ##
@@ -450,11 +457,14 @@ module DhanHQ
       def destroy
         return false if new_record?
 
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Destroying order #{id}")
         response = self.class.resource.delete(id)
         if success_response?(response) && response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
           @attributes[:order_status] = DhanHQ::Constants::OrderStatus::CANCELLED
+          DhanHQ.logger&.info("[DhanHQ::Models::Order] Order #{id} destroyed successfully")
           true
         else
+          DhanHQ.logger&.error("[DhanHQ::Models::Order] Destroy failed for order #{id}")
           false
         end
       end
@@ -463,7 +473,9 @@ module DhanHQ
       def slice_order(params)
         raise "Order ID is required to slice an order" unless id
 
-        base_payload = params.merge(order_id: id)
+        normalized = snake_case(params)
+        normalized[:dhan_client_id] ||= DhanHQ.configuration&.client_id
+        base_payload = normalized.merge(order_id: id)
         formatted_payload = camelize_keys(base_payload)
 
         validate_params!(formatted_payload, DhanHQ::Contracts::SliceOrderContract)
