@@ -32,12 +32,6 @@ module DhanHQ
       end
 
       ##
-      # OrderUpdate objects are read-only, so no validation contract needed
-      def validation_contract
-        nil
-      end
-
-      ##
       # Helper methods for transaction type
       def buy?
         txn_type == "B"

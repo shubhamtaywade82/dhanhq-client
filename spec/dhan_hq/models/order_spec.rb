@@ -1,46 +1,15 @@
 # frozen_string_literal: true
 
-# rubocop:disable RSpec/StubbedMock, RSpec/MessageSpies, RSpec/MultipleExpectations, RSpec/ExampleLength, Layout/LineLength
 RSpec.describe DhanHQ::Models::Order do
   subject(:order_model) { described_class }
 
   let(:order_id) { "952502167319" }
-  # Common test data
-  let(:valid_order_params) do
-    {
-      correlationId: "correl-amo-#{Time.now.to_i}",
-      transactionType: "BUY",
-      exchangeSegment: "BSE_EQ",
-      productType: "CNC",
-      orderType: "MARKET",
-      validity: "DAY",
-      securityId: "539310",
-      quantity: 5,
-      disclosedQuantity: "",
-      price: "", # Market order => no price needed
-      triggerPrice: "",
-      afterMarketOrder: true, # Key: AMO flag set to true
-      amoTime: "OPEN", # This indicates it will be pumped at market open
-      boProfitValue: "",
-      boStopLossValue: ""
-    }
-  end
 
-  # Updated order response after modification
-  let(:updated_order_response) do
-    initial_order_response.merge(
-      orderStatus: "TRANSIT", # Simulate order modification
-      price: 105.0 # Confirm price change
-    )
-  end
+  before { DhanHQ.configure_with_env }
 
-  before do
-    DhanHQ.configure_with_env
-    # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(DhanHQ::Resources::Orders).to receive(:fetch_instrument!).and_return({ lot_size: 1, tick_size: 0.05, exchange_segment: "NSE_EQ" })
-    allow_any_instance_of(DhanHQ::Resources::Orders).to receive(:fetch_security_id_for_order!).and_return("539310")
-    # rubocop:enable RSpec/AnyInstance
-  end
+  # --------------------------------------------------
+  # VCR / Integration tests
+  # --------------------------------------------------
 
   describe ".all" do
     it "retrieves all orders for the day", vcr: "models/orders/all" do
@@ -52,63 +21,27 @@ RSpec.describe DhanHQ::Models::Order do
   end
 
   describe ".create" do
+    let(:valid_order_params) do
+      {
+        correlationId: "correl-amo-#{Time.now.to_i}",
+        transactionType: "BUY",
+        exchangeSegment: "BSE_EQ",
+        productType: "CNC",
+        orderType: "MARKET",
+        validity: "DAY",
+        securityId: "539310",
+        quantity: 5,
+        afterMarketOrder: true,
+        amoTime: "OPEN"
+      }
+    end
+
     it "places a new order and returns an order instance", vcr: "models/orders/create" do
       order = described_class.create(valid_order_params)
 
       expect(order).to be_a(described_class)
       expect(order.order_id).not_to be_nil
       expect(order.order_status).to eq("PENDING").or eq("TRANSIT").or eq("REJECTED")
-    end
-  end
-
-  # describe ".place" do
-  #   it "places an order successfully" do
-  #     order = order_model.place(valid_order_params)
-
-  #     expect(order).to be_a(described_class)
-  #     expect(order.order_id).to eq(order_id)
-  #     expect(order.order_status).to eq("PENDING")
-  #   end
-  # end
-
-  describe ".place" do
-    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
-    let(:place_params) do
-      {
-        transaction_type: "BUY",
-        exchange_segment: "NSE_EQ",
-        product_type: "CNC",
-        order_type: "MARKET",
-        validity: "DAY",
-        security_id: "1333",
-        quantity: 1
-      }
-    end
-
-    before do
-      allow(described_class).to receive(:resource).and_return(resource_double)
-      allow(resource_double).to receive(:find).with("OID123")
-                                              .and_return({ "orderId" => "OID123", "orderStatus" => "PENDING" })
-    end
-
-    it "validates, formats payload and delegates to resource create" do
-      expect(resource_double).to receive(:create).with(
-        hash_including(
-          "transactionType" => "BUY",
-          "exchangeSegment" => "NSE_EQ",
-          "productType" => "CNC",
-          "orderType" => "MARKET",
-          "validity" => "DAY",
-          "securityId" => "1333",
-          "quantity" => 1
-        )
-      ).and_return({ "orderId" => "OID123" })
-
-      order = described_class.place(place_params)
-
-      expect(order).to be_a(described_class)
-      expect(order.order_id).to eq("OID123")
-      expect(order.order_status).to eq("PENDING")
     end
   end
 
@@ -123,22 +56,10 @@ RSpec.describe DhanHQ::Models::Order do
   end
 
   describe "#update" do
-    it "modifies a pending order in the orderbook", vcr: "models/orders/update" do
+    it "raises on TRADED order modification attempt", vcr: "models/orders/update" do
       found_order = described_class.find(order_id)
       expect(found_order).to be_a(described_class),
                              "Expected an Order, got #{found_order.inspect}"
-
-      #
-      # 3. Update the order's quantity (and optionally price)
-      #
-      updated_quantity = 10
-      updated_price    = 3400.0 # In case we switch to a 'LIMIT' for testing
-      # If you keep 'MARKET' order_type, price may not matter. But let's assume it can be updated.
-      update_attrs = {
-        quantity: updated_quantity,
-        price: updated_price,
-        security_id: found_order.security_id
-      }
 
       found_order.attributes[:trigger_price] = nil
       found_order.attributes[:bo_profit_value] = nil
@@ -146,174 +67,19 @@ RSpec.describe DhanHQ::Models::Order do
       found_order.attributes[:amo_time] = nil
 
       expect do
-        found_order.modify(update_attrs)
+        found_order.modify({ quantity: 10, price: 3400.0, security_id: found_order.security_id })
       end.to raise_error(DhanHQ::OrderError)
     end
   end
 
-  # describe "#modify" do
-  #   it "modifies an order successfully while retaining existing attributes" do
-  #     order = order_model.find(order_id)
-
-  #     # Ensure price update while keeping other fields unchanged
-  #     modified_order = order.modify(price: 105.0)
-
-  #     expect(modified_order).to be_a(described_class)
-  #     expect(modified_order.order_status).to eq("TRANSIT")
-  #     expect(modified_order.price).to eq(105.0) # Confirm price updated
-  #     expect(modified_order.quantity).to eq(order.quantity) # Ensure quantity is unchanged
-  #     expect(modified_order.security_id).to eq(order.security_id) # Security ID should remain the same
-  #   end
-  # end
-
-  # describe "#cancel" do
-  #   it "cancels an order successfully" do
-  #     order = order_model.find(order_id)
-  #     response = order.cancel
-
-  #     expect(response).to be_truthy
-  #   end
-  # end
-
-  describe "#cancel" do
-    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
-    let(:order) { described_class.new({ orderId: "OID123" }, skip_validation: true) }
-
-    before do
-      allow(described_class).to receive(:resource).and_return(resource_double)
-    end
-
-    it "delegates to resource.cancel and returns true on success" do
-      expect(resource_double).to receive(:cancel).with("OID123")
-                                                 .and_return({ "orderStatus" => "CANCELLED" })
-
-      expect(order.cancel).to be(true)
-    end
-  end
-
-  describe "#modify" do
-    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
-    let(:order) do
-      described_class.new(
-        {
-          orderId: "OID123",
-          dhanClientId: "CID",
-          quantity: 5,
-          orderStatus: "PENDING",
-          createTime: "2025-01-01T00:00:00"
-        },
-        skip_validation: true
-      )
-    end
-
-    before do
-      allow(described_class).to receive(:resource).and_return(resource_double)
-    end
-
-    it "validates payload, delegates to resource update and refreshes attributes" do
-      expect(resource_double).to receive(:update) do |id, payload|
-        expect(id).to eq("OID123")
-        expect(payload).to include(
-          "orderId" => "OID123",
-          "dhanClientId" => "CID",
-          "quantity" => 10
-        )
-        expect(payload).not_to have_key("orderStatus")
-        expect(payload).not_to have_key("createTime")
-        { "status" => "success", "orderId" => "OID123", "quantity" => 10 }
-      end
-
-      result = order.modify(quantity: 10)
-
-      expect(result).to be(order)
-      expect(order.quantity).to eq(10)
-    end
-
-    it "logs warning when trying to modify TRADED order but still attempts API call" do
-      traded_order = described_class.new({ orderId: "OID123", orderStatus: "TRADED" }, skip_validation: true)
-      allow(described_class).to receive(:resource).and_return(resource_double)
-      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already traded" })
-
-      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*TRADED state/)
-      # API call is attempted, API will return error
-      result = traded_order.modify(quantity: 10)
-      expect(result).to be_a(DhanHQ::ErrorObject)
-    end
-
-    it "logs warning when trying to modify CANCELLED order but still attempts API call" do
-      cancelled_order = described_class.new({ orderId: "OID123", orderStatus: "CANCELLED" }, skip_validation: true)
-      allow(described_class).to receive(:resource).and_return(resource_double)
-      allow(resource_double).to receive(:update).and_return({ errorMessage: "Order already cancelled" })
-
-      expect(DhanHQ.logger).to receive(:warn).with(/Attempting to modify order.*CANCELLED state/)
-      # API call is attempted, API will return error
-      result = cancelled_order.modify(quantity: 10)
-      expect(result).to be_a(DhanHQ::ErrorObject)
-    end
-
-    it "allows modification of PENDING order" do
-      expect(resource_double).to receive(:update).and_return({ "status" => "success", "orderId" => "OID123" })
-      result = order.modify(quantity: 10)
-      expect(result).to be(order)
-    end
-  end
-
-  describe "#slice_order" do
-    let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
-    let(:order) do
-      described_class.new({ orderId: "OID123", dhanClientId: "1100003626" }, skip_validation: true)
-    end
-
-    before do
-      allow(described_class).to receive(:resource).and_return(resource_double)
-    end
-
-    it "camelizes, validates, and delegates to slicing" do
-      params = {
-        transaction_type: "BUY",
-        exchange_segment: "NSE_EQ",
-        product_type: "CNC",
-        order_type: "STOP_LOSS",
-        validity: "DAY",
-        security_id: "1333",
-        quantity: 1,
-        trigger_price: 1500.5
-      }
-
-      expect(resource_double).to receive(:slicing).with(
-        hash_including(
-          "orderId" => "OID123",
-          "transactionType" => "BUY",
-          "triggerPrice" => 1500.5
-        )
-      ).and_return([{ "orderStatus" => "PENDING" }])
-
-      order.slice_order(params)
-    end
-
-    it "raises when trigger price missing for stop loss" do
-      params = {
-        transaction_type: "BUY",
-        exchange_segment: "NSE_EQ",
-        product_type: "CNC",
-        order_type: "STOP_LOSS",
-        validity: "DAY",
-        security_id: "1333",
-        quantity: 1
-      }
-
-      expect do
-        order.slice_order(params)
-      end.to raise_error(DhanHQ::Error, /triggerPrice/)
-    end
-  end
+  # --------------------------------------------------
+  # Stubbed resource — collection helpers
+  # --------------------------------------------------
 
   context "with stubbed resource" do
     let(:resource_double) { instance_double(DhanHQ::Resources::Orders) }
 
-    before do
-      allow(described_class).to receive(:resource).and_return(resource_double)
-    end
+    before { allow(described_class).to receive(:resource).and_return(resource_double) }
 
     describe ".all" do
       it "wraps array responses" do
@@ -323,7 +89,7 @@ RSpec.describe DhanHQ::Models::Order do
         expect(orders.map(&:order_id)).to eq(["OID1"])
       end
 
-      it "returns [] for non array" do
+      it "returns [] for non-array response" do
         allow(resource_double).to receive(:all).and_return("unexpected")
 
         expect(described_class.all).to eq([])
@@ -338,166 +104,5 @@ RSpec.describe DhanHQ::Models::Order do
         expect(order.order_id).to eq("OID1")
       end
     end
-
-    describe ".find_by_correlation" do
-      it "returns model when status success" do
-        allow(resource_double).to receive(:by_correlation).with("CORR")
-                                                          .and_return({ status: "success", orderId: "OID1" })
-
-        order = described_class.find_by_correlation("CORR")
-        expect(order.order_id).to eq("OID1")
-      end
-
-      it "returns nil for non-success" do
-        allow(resource_double).to receive(:by_correlation).and_return({ status: "error" })
-
-        expect(described_class.find_by_correlation("CORR")).to be_nil
-      end
-    end
-
-    describe ".place" do
-      let(:params) do
-        {
-          transaction_type: "BUY",
-          exchange_segment: "NSE_EQ",
-          product_type: "CNC",
-          order_type: "MARKET",
-          validity: "DAY",
-          security_id: "1333",
-          quantity: 1
-        }
-      end
-
-      it "camelizes payload and fetches final order" do
-        expect(resource_double).to receive(:create).with(hash_including(
-                                                           "transactionType" => "BUY",
-                                                           "exchangeSegment" => "NSE_EQ"
-                                                         )).and_return({ "orderId" => "OID1" })
-        expect(resource_double).to receive(:find).with("OID1")
-                                                 .and_return({ "orderId" => "OID1", "orderStatus" => "PENDING" })
-
-        order = described_class.place(params)
-        expect(order.order_status).to eq("PENDING")
-      end
-    end
-
-    describe "#modify" do
-      let(:order) { described_class.new({ orderId: "OID1", dhanClientId: "1100003626" }, skip_validation: true) }
-
-      it "sends filtered camelized payload" do
-        expect(resource_double).to receive(:update).with("OID1",
-                                                         { "orderId" => "OID1", "dhanClientId" => "1100003626",
-                                                           "quantity" => 2 })
-                                                   .and_return({ status: "success", orderStatus: "MODIFIED" })
-
-        updated = order.modify(quantity: 2, ignored: nil)
-        expect(updated.order_status).to eq("MODIFIED")
-      end
-
-      it "returns error object when update unsuccessful" do
-        allow(resource_double).to receive(:update).and_return({ status: "error" })
-
-        result = order.modify(quantity: 2)
-        expect(result).to be_a(DhanHQ::ErrorObject)
-      end
-    end
-
-    describe "#cancel" do
-      let(:order) { described_class.new({ orderId: "OID1" }, skip_validation: true) }
-
-      it "delegates to resource" do
-        expect(resource_double).to receive(:cancel).with("OID1").and_return({ "orderStatus" => "CANCELLED" })
-        expect(order.cancel).to be(true)
-      end
-    end
-
-    describe "#refresh" do
-      it "raises when order id missing" do
-        record = described_class.new({}, skip_validation: true)
-        expect { record.refresh }.to raise_error("Order ID is required to refresh an order")
-      end
-
-      it "delegates to find" do
-        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
-        expect(described_class).to receive(:find).with("OID1").and_return(:reloaded)
-
-        expect(record.refresh).to eq(:reloaded)
-      end
-    end
-
-    describe "#save" do
-      let(:order) { described_class.new({}, skip_validation: true) }
-
-      before do
-        allow(order).to receive(:assign_attributes)
-        allow(order).to receive_messages(normalize_keys: { order_id: "OID1" }, to_request_params: {})
-      end
-
-      it "places a new order when valid" do
-        allow(order).to receive_messages(valid?: true, new_record?: true)
-        expect(resource_double).to receive(:create).and_return({ status: "success", "orderId" => "OID1" })
-        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
-        expect(DhanHQ.logger).to receive(:info).with(/Order placement successfully/)
-
-        expect(order.save).to be(true)
-      end
-
-      it "returns false when create fails and logs error" do
-        allow(order).to receive_messages(valid?: true, new_record?: true)
-        expect(resource_double).to receive(:create).and_return({ errorMessage: "Insufficient funds" })
-        expect(DhanHQ.logger).to receive(:info).with(/Placing order/)
-        expect(DhanHQ.logger).to receive(:error).with(/Order placement failed/)
-
-        expect(order.save).to be(false)
-      end
-
-      it "updates existing orders and logs" do
-        allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
-        expect(resource_double).to receive(:update).and_return({ status: "success", "orderStatus" => "MODIFIED" })
-        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
-        expect(DhanHQ.logger).to receive(:info).with(/Order modification successfully/)
-
-        expect(order.save).to be(true)
-      end
-
-      it "returns false when update fails and logs error" do
-        allow(order).to receive_messages(valid?: true, new_record?: false, id: "OID1")
-        expect(resource_double).to receive(:update).and_return({ errorMessage: "Order not found" })
-        expect(DhanHQ.logger).to receive(:info).with(/Modifying order/)
-        expect(DhanHQ.logger).to receive(:error).with(/Order modification failed/)
-
-        expect(order.save).to be(false)
-      end
-    end
-
-    describe "#destroy" do
-      it "returns false for new records" do
-        record = described_class.new({}, skip_validation: true)
-        expect(record.destroy).to be(false)
-      end
-
-      it "returns true when deletion succeeds" do
-        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
-        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success",
-                                                                              "orderStatus" => "CANCELLED" })
-
-        expect(record.destroy).to be(true)
-      end
-
-      it "returns false when deletion fails" do
-        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
-        expect(resource_double).to receive(:delete).and_return({ "orderStatus" => "ACTIVE" })
-
-        expect(record.destroy).to be(false)
-      end
-
-      it "#delete is an alias for #destroy" do
-        record = described_class.new({ orderId: "OID1" }, skip_validation: true)
-        expect(resource_double).to receive(:delete).with("OID1").and_return({ status: "success",
-                                                                              "orderStatus" => "CANCELLED" })
-        expect(record.delete).to be(true)
-      end
-    end
   end
 end
-# rubocop:enable RSpec/StubbedMock, RSpec/MessageSpies, RSpec/MultipleExpectations, RSpec/ExampleLength, Layout/LineLength

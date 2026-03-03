@@ -158,16 +158,6 @@ module DhanHQ
 
       ##
       # No explicit validation contract is required for kill switch updates.
-      #
-      # Kill switch operations are simple status updates that don't require complex validation.
-      # The API handles validation server-side.
-      #
-      # @return [nil] Always returns nil as no validation contract is needed
-      #
-      # @api private
-      def validation_contract
-        nil
-      end
     end
   end
 end

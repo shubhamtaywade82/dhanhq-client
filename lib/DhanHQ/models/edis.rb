@@ -96,15 +96,6 @@ module DhanHQ
           resource.inquire(isin)
         end
       end
-
-      ##
-      # No validation contract needed — EDIS operations are simple API calls.
-      #
-      # @return [nil]
-      # @api private
-      def validation_contract
-        nil
-      end
     end
   end
 end

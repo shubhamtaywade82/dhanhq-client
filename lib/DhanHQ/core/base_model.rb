@@ -80,11 +80,12 @@ module DhanHQ
         self::HTTP_PATH
       end
 
-      # Every model must either override this or set a Dry::Validation contract if they need validation
+      # Default class-level validation contract — returns nil (no validation).
+      # Override in subclasses to provide a contract for class-level validation.
       #
-      # @return [Dry::Validation::Contract] The validation contract
+      # @return [nil]
       def validation_contract
-        raise NotImplementedError, "#{name} must implement `validation_contract`"
+        nil
       end
 
       # Validate attributes before creating a new instance
@@ -154,6 +155,14 @@ module DhanHQ
     end
 
     # Instance Methods
+
+    # Default validation contract — returns nil (no validation).
+    # Models that require instance-level validation must override this method.
+    #
+    # @return [nil]
+    def validation_contract
+      nil
+    end
 
     # Update an existing resource
     #
@@ -264,7 +273,7 @@ module DhanHQ
 
     # Validate attributes using contract
     def valid?
-      contract_class = respond_to?(:validation_contract) ? validation_contract : self.class.validation_contract
+      contract_class = validation_contract || self.class.validation_contract
       return true unless contract_class
 
       contract = contract_class.is_a?(Class) ? contract_class.new : contract_class

@@ -125,16 +125,6 @@ module DhanHQ
 
       ##
       # Profile responses are informational and not validated locally.
-      #
-      # Since profile data is read-only account metadata, no validation contract
-      # is needed. The API response is trusted as-is.
-      #
-      # @return [nil] Always returns nil as profiles are read-only and informational
-      #
-      # @api private
-      def validation_contract
-        nil
-      end
     end
   end
 end

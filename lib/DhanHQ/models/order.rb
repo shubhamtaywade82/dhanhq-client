@@ -61,8 +61,6 @@ module DhanHQ
         leg_name
       ].freeze
 
-      attr_reader :order_id, :order_status
-
       # Define attributes that are part of an order
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_type,
@@ -484,7 +482,12 @@ module DhanHQ
       end
 
       def validation_contract
-        new_record? ? DhanHQ::Contracts::PlaceOrderContract.new : DhanHQ::Contracts::ModifyOrderContract.new
+        order_id_val = @attributes[:order_id] || @attributes[:orderId]
+        if order_id_val.nil? || order_id_val.to_s.empty?
+          DhanHQ::Contracts::PlaceOrderContract.new
+        else
+          DhanHQ::Contracts::ModifyOrderContract.new
+        end
       end
 
       ##

@@ -130,8 +130,6 @@ module DhanHQ
         end
       end
 
-      option :instrument_meta, optional: true
-
       # --------------------------------------------------
       # LOT SIZE ENFORCEMENT
       # --------------------------------------------------
