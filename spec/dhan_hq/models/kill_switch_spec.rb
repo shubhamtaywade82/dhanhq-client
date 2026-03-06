@@ -19,13 +19,13 @@ RSpec.describe DhanHQ::Models::KillSwitch do
     end
 
     describe ".update" do
-      it "delegates to the resource with snake_case params" do
-        allow(resource_double).to receive(:update).with(kill_switch_status: "ACTIVATE")
+      it "delegates to the resource with status string" do
+        allow(resource_double).to receive(:update).with("ACTIVATE")
                                                   .and_return({ "killSwitchStatus" => "ACTIVATE" })
 
         response = described_class.update("ACTIVATE")
         expect(response).to eq({ "killSwitchStatus" => "ACTIVATE" })
-        expect(resource_double).to have_received(:update).with(kill_switch_status: "ACTIVATE")
+        expect(resource_double).to have_received(:update).with("ACTIVATE")
       end
     end
 

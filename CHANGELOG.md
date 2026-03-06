@@ -1,4 +1,15 @@
-## [2.6.0] - 2026-02-26
+## [2.6.0] - 2026-03-06
+
+### Fixed (API docs alignment)
+
+- **Kill Switch**: Manage API now uses query parameter per [dhanhq.co/docs/v2/traders-control](https://dhanhq.co/docs/v2/traders-control/). `Resources::KillSwitch#update(status)` sends `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `Models::KillSwitch.update("ACTIVATE")` / `.activate` / `.deactivate` unchanged.
+- **IP Setup**: Set/Modify now send required API fields. `Resources::IPSetup#set` and `#update` accept `ip:`, `ip_flag: "PRIMARY"` (or `"SECONDARY"`), and optional `dhan_client_id:` (defaults from `DhanHQ.configuration.client_id`). See [dhanhq.co/docs/v2/authentication/#setup-static-ip](https://dhanhq.co/docs/v2/authentication/#setup-static-ip).
+- **Alert Orders (Conditional Trigger)**: Condition now requires `exchange_segment`, `exp_date`, and `frequency` per [dhanhq.co/docs/v2/conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/). `time_frame` is required when `comparison_type` starts with `TECHNICAL`. `AlertOrderContract` and all examples updated.
+
+### Breaking changes
+
+- **AlertOrder.create / AlertOrderContract**: Contract expects nested structure (see 2.5.0). Condition hash must include `exchange_segment`, `exp_date`, and `frequency`; for `comparison_type` starting with `TECHNICAL`, `time_frame` is required. See GUIDE.md and [conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/).
+- **Resources::KillSwitch#update**: Signature is now `update(status)` (string). Use `update("ACTIVATE")` or `Models::KillSwitch.activate` / `.deactivate`, unchanged.
 
 ### Added
 
@@ -32,38 +43,24 @@
 - `PlaceOrderContract` refactored to inherit from `OrderContract`, eliminating duplicated validation logic. Derivative-specific fields (`drv_expiry_date`, `drv_option_type`, `drv_strike_price`) remain on `PlaceOrderContract`.
 - `Resources::Orders` now fetches optional instrument metadata (lot size, tick size) to pass into contract validation.
 
-### Breaking Changes
-
-#### `AlertOrderContract` — payload structure changed
-The contract previously accepted flat params (`exchange_segment`, `security_id`, `condition`, `transaction_type`, `quantity`). It now expects a nested structure matching the DhanHQ API schema:
+#### `AlertOrderContract` — payload structure
+The contract expects a nested structure matching the DhanHQ API schema:
 
 ```ruby
-# Old (no longer valid)
 AlertOrderContract.new.call(
-  exchange_segment: "NSE_EQ",
-  security_id:      "11536",
-  condition:        "PRICE_WITH_VALUE",
-  transaction_type: "BUY",
-  quantity:         5
-)
-
-# New
-AlertOrderContract.new.call(
-  dhan_client_id: "1000000003",
   condition: {
     exchange_segment:  "NSE_EQ",
     security_id:       "11536",
     comparison_type:   "PRICE_WITH_VALUE",
-    trigger_price:     1500.0,
-    operator:          "GREATER_THAN"
+    operator:          "GREATER_THAN",
+    exp_date:          "2026-12-31",
+    frequency:         "ONCE"
   },
   orders: [
-    { transaction_type: "BUY", quantity: 5, order_type: "MARKET", product_type: "INTRADAY" }
+    { transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY", order_type: "MARKET", security_id: "11536", quantity: 5, validity: "DAY" }
   ]
 )
 ```
-
-Any code calling `AlertOrderContract` directly or relying on `AlertOrder.create` with the old flat params must be updated.
 
 ---
 
@@ -124,7 +121,7 @@ Any code calling `AlertOrderContract` directly or relying on `AlertOrder.create`
 
 ### Added
 - **Alert Orders**: `DhanHQ::Resources::AlertOrders` (BaseResource) and `DhanHQ::Models::AlertOrder` with full CRUD. Endpoints: GET/POST `/alerts/orders`, GET/PUT/DELETE `/alerts/orders/{id}` (per API docs). Validation via `DhanHQ::Contracts::AlertOrderContract`.
-- **IP Setup**: `DhanHQ::Resources::IPSetup` (resource-only). Methods: `current` (GET `/ip/getIP`), `set(ip:)` (POST `/ip/setIP`), `update(ip:)` (PUT `/ip/modifyIP`) per API docs.
+- **IP Setup**: `DhanHQ::Resources::IPSetup` (resource-only). Methods: `current` (GET `/ip/getIP`), `set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` (POST `/ip/setIP`), `update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` (PUT `/ip/modifyIP`). Body includes `dhanClientId` (default from config) and `ipFlag` per API docs.
 - **Trader Control (Kill Switch)**: `DhanHQ::Resources::TraderControl` (resource-only). Methods: `status` (GET `/trader-control`), `enable` (POST action ENABLE), `disable` (POST action DISABLE). `DhanHQ::Resources::KillSwitch` and `DhanHQ::Models::KillSwitch` remain for backward compatibility.
 - **docs/API_VERIFICATION.md**: Documents alignment with [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/) and [api.dhan.co/v2](https://api.dhan.co/v2/#/) for EDIS, Alert Orders, IP Setup.
 

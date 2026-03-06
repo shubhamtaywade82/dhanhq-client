@@ -28,7 +28,7 @@ This document records how the gem’s implementation aligns with the official Dh
 
 ## Alert Orders
 
-**Doc ref:** `CODE_REVIEW_ISSUES.md` (§31) – Alert Orders endpoints.
+**Doc ref:** [dhanhq.co/docs/v2/conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/).
 
 | Doc path                  | Gem resource              | Path used        |
 |---------------------------|---------------------------|------------------|
@@ -36,27 +36,26 @@ This document records how the gem’s implementation aligns with the official Dh
 | GET/POST `/alerts/orders` | `#all`, `#create`         | BaseResource     |
 | GET/PUT/DELETE `/alerts/orders/{trigger-id}` | `#find`, `#update`, `#delete` | `/{id}` |
 
-Model: `Models::AlertOrder`; ID attribute `alert_id` (response field name may be `alertId` or `triggerId` depending on API; adjust if production returns `triggerId`).
+Model: `Models::AlertOrder`. Condition must include `exchange_segment`, `exp_date`, `frequency`; `time_frame` required when `comparison_type` starts with `TECHNICAL`. Validated by `AlertOrderContract`.
 
 ---
 
 ## IP Setup
 
-**Doc ref:** `CODE_REVIEW_ISSUES.md` (§32) – IP Setup endpoints.
+**Doc ref:** [dhanhq.co/docs/v2/authentication/#setup-static-ip](https://dhanhq.co/docs/v2/authentication/#setup-static-ip).
 
-| Doc path        | Gem method     | Path used     |
-|-----------------|----------------|---------------|
-| GET /ip/getIP   | `#current`     | `get("/getIP")`   |
-| POST /ip/setIP  | `#set(ip:)`    | `post("/setIP", params: { ip: ip })` |
-| PUT /ip/modifyIP| `#update(ip:)` | `put("/modifyIP", params: { ip: ip })` |
+| Doc path        | Gem method     | Path / body |
+|-----------------|----------------|-------------|
+| GET /ip/getIP   | `#current`     | `get("/getIP")` |
+| POST /ip/setIP  | `#set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `post("/setIP", params: { ip:, ip_flag:, dhan_client_id: })`; `dhan_client_id` defaults from config |
+| PUT /ip/modifyIP| `#update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `put("/modifyIP", params: { ip:, ip_flag:, dhan_client_id: })` |
 
 ---
 
 ## Trader Control / Kill Switch
 
-- **Existing:** `Resources::KillSwitch`, `Models::KillSwitch` – path `/v2/killswitch`.
-- **Added:** `Resources::TraderControl` – path `/trader-control`; `#status`, `#enable`, `#disable`.  
-  Not found on the public docs pages checked; kept for compatibility with design that referenced trader-control.
+- **Kill Switch:** `Resources::KillSwitch`, `Models::KillSwitch` – path `/v2/killswitch`. Manage (activate/deactivate) uses **query parameter** per [traders-control](https://dhanhq.co/docs/v2/traders-control/): `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `#status` is GET.
+- **Trader Control:** `Resources::TraderControl` – path `/trader-control`; `#status`, `#enable`, `#disable`. Not found on the public docs; kept for compatibility.
 
 ---
 

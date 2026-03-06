@@ -7,9 +7,12 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
     {
       condition: {
         security_id: "11536",
+        exchange_segment: "NSE_EQ",
         comparison_type: "PRICE_WITH_VALUE",
         operator: "GREATER_THAN",
-        comparing_value: 100.0
+        comparing_value: 100.0,
+        exp_date: "2026-12-31",
+        frequency: "ONCE"
       },
       orders: [
         {
@@ -46,10 +49,20 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
   describe "invalid params" do
     it "rejects missing indicator_name for TECHNICAL comparisons" do
       params = valid_params.dup
-      params[:condition] = params[:condition].merge(comparison_type: "TECHNICAL_WITH_VALUE")
+      params[:condition] = params[:condition].merge(comparison_type: "TECHNICAL_WITH_VALUE", time_frame: "DAY")
+      params[:condition].delete(:indicator_name)
       result = contract.call(params)
       expect(result.success?).to be(false)
       expect(result.errors.to_h[:condition][:indicator_name]).to include("is required for technical comparisons")
+    end
+
+    it "rejects missing time_frame for TECHNICAL comparisons" do
+      params = valid_params.dup
+      params[:condition] = params[:condition].merge(comparison_type: "TECHNICAL_WITH_VALUE", indicator_name: "SMA_20")
+      params[:condition].delete(:time_frame)
+      result = contract.call(params)
+      expect(result.success?).to be(false)
+      expect(result.errors.to_h[:condition][:time_frame]).to include("is required for technical comparisons")
     end
 
     it "rejects invalid transaction_type inside orders array" do

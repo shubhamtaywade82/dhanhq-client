@@ -66,9 +66,12 @@ RSpec.describe DhanHQ::Models::AlertOrder do
         {
           condition: {
             security_id: "11536",
+            exchange_segment: "NSE_EQ",
             comparison_type: "PRICE_WITH_VALUE",
             operator: "GREATER_THAN_EQUAL",
-            comparing_value: 100.0
+            comparing_value: 100.0,
+            exp_date: "2026-12-31",
+            frequency: "ONCE"
           },
           orders: [
             {
@@ -127,9 +130,12 @@ RSpec.describe DhanHQ::Models::AlertOrder do
           {
             condition: {
               security_id: "11536",
+              exchange_segment: "NSE_EQ",
               comparison_type: "PRICE_WITH_VALUE",
               operator: "GREATER_THAN_EQUAL",
-              comparing_value: 100.0
+              comparing_value: 100.0,
+              exp_date: "2026-12-31",
+              frequency: "ONCE"
             },
             orders: [
               {
@@ -223,12 +229,12 @@ RSpec.describe DhanHQ::Models::AlertOrder do
     describe ".modify" do
       it "updates and re-fetches the alert order on success" do
         allow(resource_double).to receive(:update)
-          .with("AID-1", hash_including("comparingValue" => 300))
+          .with("AID-1", hash_including("condition" => hash_including(comparing_value: 300), "orders" => []))
           .and_return({ status: "success" })
         allow(resource_double).to receive(:find).with("AID-1")
                                                 .and_return({ "alertId" => "AID-1", "triggerPrice" => 300.0 })
 
-        result = described_class.modify("AID-1", comparing_value: 300)
+        result = described_class.modify("AID-1", condition: { comparing_value: 300, exchange_segment: "NSE_EQ", exp_date: "2026-12-31", frequency: "ONCE" }, orders: [])
         expect(result).to be_a(described_class)
         expect(result.alert_id).to eq("AID-1")
       end
@@ -236,7 +242,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       it "returns nil when the update fails" do
         allow(resource_double).to receive(:update).and_return({ "status" => "fail" })
 
-        expect(described_class.modify("AID-1", comparing_value: 300)).to be_nil
+        expect(described_class.modify("AID-1", condition: { comparing_value: 300, exchange_segment: "NSE_EQ", exp_date: "2026-12-31", frequency: "ONCE" }, orders: [])).to be_nil
       end
     end
   end

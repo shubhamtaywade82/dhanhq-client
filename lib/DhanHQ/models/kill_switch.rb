@@ -68,7 +68,7 @@ module DhanHQ
         #   end
         #
         def update(status)
-          resource.update(kill_switch_status: status)
+          resource.update(status)
         end
 
         ##
