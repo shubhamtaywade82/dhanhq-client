@@ -49,8 +49,8 @@ module DhanHQ
         # Provides a shared instance of the Trades resource for current day tradebook APIs.
         #
         # @return [DhanHQ::Resources::Trades] The Trades resource client instance
-        def tradebook_resource
-          @tradebook_resource ||= DhanHQ::Resources::Trades.new
+        def resource
+          @resource ||= DhanHQ::Resources::Trades.new
         end
 
         ##
@@ -107,10 +107,8 @@ module DhanHQ
         #   puts "P&L: ₹#{pnl}"
         #
         def today
-          response = tradebook_resource.all
-          return [] unless response.is_a?(Array)
-
-          response.map { |trade_data| new(trade_data, skip_validation: true) }
+          response = resource.all
+          parse_collection_response(response)
         end
 
         ##
@@ -145,7 +143,7 @@ module DhanHQ
             raise DhanHQ::ValidationError, "Invalid order_id: #{validation_result.errors.to_h}"
           end
 
-          response = tradebook_resource.find(order_id)
+          response = resource.find(order_id)
           return nil unless response.is_a?(Hash) || (response.is_a?(Array) && response.any?)
 
           data = response.is_a?(Array) ? response.first : response
@@ -246,16 +244,6 @@ module DhanHQ
         # Alias for backward compatibility with historical trades
         # @api private
         alias all history
-      end
-
-      ##
-      # Trade objects are read-only, so no validation contract needed.
-      #
-      # @return [nil] Always returns nil as trades are read-only
-      #
-      # @api private
-      def validation_contract
-        nil
       end
 
       ##

@@ -48,6 +48,8 @@ module DhanHQ
     #   order.cancel("STOP_LOSS_LEG")
     #
     class SuperOrder < BaseModel
+      include Concerns::ApiResponseHandler
+
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_type,
                  :validity, :trading_symbol, :security_id, :quantity,
@@ -284,8 +286,12 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify a super order" unless id
 
+        DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Modifying super order #{id}")
         response = self.class.resource.update(id, new_params)
-        response["orderId"] == id
+        return false unless response.is_a?(Hash) && response["orderId"] == id
+
+        DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Super order #{id} modified successfully")
+        true
       end
 
       ##
@@ -321,8 +327,12 @@ module DhanHQ
       def cancel(leg_name = DhanHQ::Constants::LegName::ENTRY_LEG)
         raise "Order ID is required to cancel a super order" unless id
 
+        DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Cancelling super order #{id} leg #{leg_name}")
         response = self.class.resource.cancel(id, leg_name)
-        response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+        return false unless response.is_a?(Hash) && response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
+
+        DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Super order #{id} leg #{leg_name} cancelled successfully")
+        true
       end
     end
   end

@@ -362,13 +362,34 @@ DhanHQ.place_order(
 
 ### Conditional Trigger
 
+Condition must include `exchange_segment`, `exp_date`, and `frequency`. For technical comparisons, `indicator_name` and `time_frame` are required. See [Conditional Triggers API](https://dhanhq.co/docs/v2/conditional-trigger/).
+
 ```ruby
-# Create a conditional trigger when RSI crosses above 30
-DhanHQ.create_trigger(
-  comparison_type: DhanHQ::Constants::ComparisonType::TECHNICAL_WITH_VALUE,
-  indicator_name: DhanHQ::Constants::IndicatorName::RSI_14,
-  operator: DhanHQ::Constants::Operator::CROSSING_UP,
-  comparing_value: 30
+# Create a conditional trigger when RSI crosses above 30 (technical comparison)
+DhanHQ::Models::AlertOrder.create(
+  condition: {
+    security_id: "1333",
+    exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+    comparison_type: DhanHQ::Constants::ComparisonType::TECHNICAL_WITH_VALUE,
+    indicator_name: DhanHQ::Constants::IndicatorName::RSI_14,
+    time_frame: "DAY",
+    operator: DhanHQ::Constants::Operator::CROSSING_UP,
+    comparing_value: 30,
+    exp_date: (Date.today + 365).strftime("%Y-%m-%d"),
+    frequency: "ONCE"
+  },
+  orders: [
+    {
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      product_type: DhanHQ::Constants::ProductType::CNC,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      security_id: "1333",
+      quantity: 10,
+      validity: DhanHQ::Constants::Validity::DAY,
+      price: 250.0
+    }
+  ]
 )
 ```
 

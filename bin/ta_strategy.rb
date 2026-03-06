@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# Standalone script: MarketCalendar and TAAdapters are intentionally in one file.
+# rubocop:disable Style/OneClassPerFile
+
 require "bundler/setup"
 require "optparse"
 require "json"
@@ -483,3 +486,4 @@ out = {
 }
 
 puts JSON.pretty_generate(out)
+# rubocop:enable Style/OneClassPerFile

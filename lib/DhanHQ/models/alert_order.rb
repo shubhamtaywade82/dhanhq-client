@@ -6,6 +6,8 @@ module DhanHQ
   module Models
     # Model for alert/conditional orders. CRUD via AlertOrders resource; validated by AlertOrderContract.
     class AlertOrder < BaseModel
+      include Concerns::ApiResponseHandler
+
       HTTP_PATH = "/alerts/orders"
 
       attributes :alert_id, :exchange_segment, :security_id, :condition,
@@ -27,9 +29,7 @@ module DhanHQ
 
         def all
           response = resource.all
-          return [] unless response.is_a?(Array)
-
-          response.map { |attrs| new(attrs, skip_validation: true) }
+          parse_collection_response(response)
         end
 
         def find(alert_id)
@@ -76,21 +76,17 @@ module DhanHQ
         alert_id&.to_s
       end
 
-      def save # rubocop:disable Naming/PredicateMethod
+      def save
         return false unless valid?
 
         payload = to_request_params
         response = if new_record?
-                     self.class.resource.create(camelize_keys(payload))
+                     self.class.resource.create(payload)
                    else
-                     self.class.resource.update(id, camelize_keys(payload))
+                     self.class.resource.update(id, payload)
                    end
-        return false if new_record? && !(response.is_a?(Hash) && response["alertId"])
-        return false if !new_record? && !success_response?(response)
 
-        @attributes.merge!(normalize_keys(response))
-        assign_attributes
-        true
+        handle_api_response(response, success_key: new_record? ? "alertId" : nil)
       end
 
       def destroy # rubocop:disable Naming/PredicateMethod

@@ -181,14 +181,6 @@ module DhanHQ
           resource.intraday(params)
         end
       end
-
-      ##
-      # HistoricalData objects are read-only, so no validation contract is applied.
-      #
-      # @return [nil] No validation contract needed for read-only data
-      def validation_contract
-        nil
-      end
     end
   end
 end

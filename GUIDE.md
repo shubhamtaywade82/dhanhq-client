@@ -643,17 +643,34 @@ If the credentials are invalid the helper raises `DhanHQ::InvalidAuthenticationE
 
 ### Alert Orders
 
+Condition must include `exchange_segment`, `exp_date`, and `frequency` per [conditional-trigger API](https://dhanhq.co/docs/v2/conditional-trigger/). For technical indicators, `time_frame` is also required.
+
 ```ruby
 # Model (CRUD)
 DhanHQ::Models::AlertOrder.all
 alert = DhanHQ::Models::AlertOrder.find("alert-id")
 alert = DhanHQ::Models::AlertOrder.create(
-  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
-  security_id: "11536",
-  condition: "GTE",
-  trigger_price: 100.0,
-  transaction_type: DhanHQ::Constants::TransactionType::BUY,
-  quantity: 10
+  condition: {
+    security_id: "11536",
+    exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+    comparison_type: DhanHQ::Constants::ComparisonType::PRICE_WITH_VALUE,
+    operator: DhanHQ::Constants::Operator::GREATER_THAN,
+    comparing_value: 100.0,
+    exp_date: (Date.today + 365).strftime("%Y-%m-%d"),
+    frequency: "ONCE"
+  },
+  orders: [
+    {
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      product_type: DhanHQ::Constants::ProductType::CNC,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      security_id: "11536",
+      quantity: 10,
+      validity: DhanHQ::Constants::Validity::DAY,
+      price: 150.0
+    }
+  ]
 )
 alert.save
 alert.destroy
@@ -687,13 +704,14 @@ Params use snake_case; the client camelizes them before calling `/edis/...`.
 
 ### IP Setup
 
-Resource-only (account configuration) per API docs: GET /ip/getIP, POST /ip/setIP, PUT /ip/modifyIP.
+Resource-only (account configuration) per [API docs](https://dhanhq.co/docs/v2/authentication/#setup-static-ip): GET /ip/getIP, POST /ip/setIP, PUT /ip/modifyIP. Set/Modify require `dhanClientId`, `ip`, and `ipFlag` (PRIMARY or SECONDARY).
 
 ```ruby
 ip = DhanHQ::Resources::IPSetup.new
-ip.current              # GET /ip/getIP
-ip.set(ip: "103.21.58.121")
-ip.update(ip: "103.21.58.121")
+ip.current                                    # GET /ip/getIP
+ip.set(ip: "103.21.58.121")                   # ip_flag defaults to "PRIMARY", dhan_client_id from config
+ip.set(ip: "103.21.58.121", ip_flag: "SECONDARY")
+ip.update(ip: "103.21.58.121", ip_flag: "PRIMARY")
 ```
 
 ### Trader Control (Kill Switch)
@@ -709,7 +727,7 @@ tc.enable              # Trading resumed
 
 ### Kill Switch (model)
 
-Existing model API for backward compatibility:
+Uses query parameter per API doc: `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or DEACTIVATE), no body.
 
 ```ruby
 activate_payload   = DhanHQ::Models::KillSwitch.activate
@@ -725,7 +743,7 @@ DhanHQ::Models::KillSwitch.snake_case(deactivate_payload)
 DhanHQ::Models::KillSwitch.update("ACTIVATE")
 ```
 
-Only `"ACTIVATE"` and `"DEACTIVATE"` are accepted—any other value raises `DhanHQ::Error`. Use the `snake_case` helper to normalise API responses when you prefer underscore keys.
+Only `"ACTIVATE"` and `"DEACTIVATE"` are accepted. Use the `snake_case` helper to normalise API responses when you prefer underscore keys.
 
 ---
 

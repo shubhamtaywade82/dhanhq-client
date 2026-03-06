@@ -11,12 +11,13 @@ module DhanHQ
       NSE_EQ = "NSE_EQ"
       NSE_FNO = "NSE_FNO"
       NSE_CURRENCY = "NSE_CURRENCY"
+      NSE_COMM = "NSE_COMM"
       BSE_EQ = "BSE_EQ"
       MCX_COMM = "MCX_COMM"
       BSE_CURRENCY = "BSE_CURRENCY"
       BSE_FNO = "BSE_FNO"
 
-      ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO].freeze
+      ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, NSE_COMM, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO].freeze
     end
 
     # Product types for order placement.
@@ -373,6 +374,8 @@ module DhanHQ
     VALIDITY_TYPES = Validity::ALL
     AMO_TIMINGS = AmoTime::ALL
     ORDER_STATUSES = OrderStatus::ALL
+    COMPARISON_TYPES = ComparisonType::ALL
+    OPERATORS = Operator::ALL
 
     # Exchange aliases used when building subscription payloads.
     NSE = ExchangeSegment::NSE_EQ

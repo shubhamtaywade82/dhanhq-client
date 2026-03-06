@@ -93,6 +93,11 @@ module DhanHQ
         optional(:drvStrikePrice).maybe(:float, gt?: 0)
       end
 
+      # Institutional macros
+      rule(:quantity).validate(:lot_size_multiple)
+      rule(:price).validate(:tick_size_multiple)
+      rule(:triggerPrice).validate(:tick_size_multiple)
+
       # Custom validation for trigger price when the order type is STOP_LOSS or STOP_LOSS_MARKET.
       rule(:triggerPrice, :orderType) do
         if values[:orderType].start_with?(DhanHQ::Constants::OrderType::STOP_LOSS) && !values[:triggerPrice]
@@ -106,6 +111,10 @@ module DhanHQ
           key(:amoTime).failure("is required when afterMarketOrder is true")
         end
       end
+
+      # Validation to ensure slice amounts don't sum to more than something?
+      # For SliceOrder, total quantity might be split by exchange limits if it exceeds. Since the API handles splitting,
+      # we just need to make sure quantity matches lot sizes.
     end
   end
 end

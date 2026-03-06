@@ -64,6 +64,8 @@ module DhanHQ
     #   orders.each { |order| puts order.order_status }
     #
     class ForeverOrder < BaseModel
+      include Concerns::ApiResponseHandler
+
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_flag,
                  :order_type, :validity, :trading_symbol, :security_id, :quantity,
@@ -115,9 +117,7 @@ module DhanHQ
         #   end
         def all
           response = resource.all
-          return [] unless response.is_a?(Array)
-
-          response.map { |o| new(o, skip_validation: true) }
+          parse_collection_response(response)
         end
 
         ##
@@ -290,8 +290,11 @@ module DhanHQ
       def modify(new_params)
         raise "Order ID is required to modify a forever order" unless order_id
 
+        DhanHQ.logger&.info("[DhanHQ::Models::ForeverOrder] Modifying order #{order_id}")
         response = self.class.resource.update(order_id, new_params)
-        return self.class.find(order_id) if self.class.send(:success_response?, response)
+        ctx = "[DhanHQ::Models::ForeverOrder] Modification"
+        success = handle_api_response(response, success_key: "orderId", context: ctx)
+        return self.class.find(order_id) if success
 
         nil
       end

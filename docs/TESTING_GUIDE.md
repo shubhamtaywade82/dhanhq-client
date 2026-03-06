@@ -971,6 +971,8 @@ tc.status
 
 #### Kill Switch (model, backward compatible)
 
+Uses query param per API doc: `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (no body).
+
 ```ruby
 # Activate kill switch
 result = DhanHQ::Models::KillSwitch.update("ACTIVATE")

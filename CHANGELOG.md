@@ -1,12 +1,64 @@
-## [2.6.0] - 2026-02-26
+## [2.6.0] - 2026-03-06
+
+### Fixed (API docs alignment)
+
+- **Kill Switch**: Manage API now uses query parameter per [dhanhq.co/docs/v2/traders-control](https://dhanhq.co/docs/v2/traders-control/). `Resources::KillSwitch#update(status)` sends `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `Models::KillSwitch.update("ACTIVATE")` / `.activate` / `.deactivate` unchanged.
+- **IP Setup**: Set/Modify now send required API fields. `Resources::IPSetup#set` and `#update` accept `ip:`, `ip_flag: "PRIMARY"` (or `"SECONDARY"`), and optional `dhan_client_id:` (defaults from `DhanHQ.configuration.client_id`). See [dhanhq.co/docs/v2/authentication/#setup-static-ip](https://dhanhq.co/docs/v2/authentication/#setup-static-ip).
+- **Alert Orders (Conditional Trigger)**: Condition now requires `exchange_segment`, `exp_date`, and `frequency` per [dhanhq.co/docs/v2/conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/). `time_frame` is required when `comparison_type` starts with `TECHNICAL`. `AlertOrderContract` and all examples updated.
+
+### Breaking changes
+
+- **AlertOrder.create / AlertOrderContract**: Contract expects nested structure (see 2.5.0). Condition hash must include `exchange_segment`, `exp_date`, and `frequency`; for `comparison_type` starting with `TECHNICAL`, `time_frame` is required. See GUIDE.md and [conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/).
+- **Resources::KillSwitch#update**: Signature is now `update(status)` (string). Use `update("ACTIVATE")` or `Models::KillSwitch.activate` / `.deactivate`, unchanged.
+- **AlertOrderContract** — expected payload shape:
+
+```ruby
+AlertOrderContract.new.call(
+  condition: {
+    exchange_segment:  "NSE_EQ",
+    security_id:       "11536",
+    comparison_type:   "PRICE_WITH_VALUE",
+    operator:          "GREATER_THAN",
+    exp_date:          "2026-12-31",
+    frequency:         "ONCE"
+  },
+  orders: [
+    { transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY", order_type: "MARKET", security_id: "11536", quantity: 5, validity: "DAY" }
+  ]
+)
+```
 
 ### Added
+
+#### Order Model — New Public Methods
+- **`Order#destroy` / `#delete`**: Cancels an order via `DELETE /v2/orders/{id}`. Returns `true` if the API confirms `CANCELLED` status, `false` otherwise. `#delete` is an alias.
+- **`Order#slice_order(params)`**: Splits a large order into multiple legs to exceed freeze-limit quantities on F&O instruments via `POST /v2/slicing`. Delegates to `Resources::Orders#slicing`.
+- **`Order#save`**: ActiveRecord-style save — places a new order for new records, modifies existing records. Returns `true`/`false`.
+- **`Order.place` — `dhan_client_id` auto-injection**: If `dhan_client_id` is not passed in params, it is automatically read from `DhanHQ.configuration.client_id`. Existing code that passes `dhan_client_id` explicitly continues to work unchanged.
+
+#### Contract Hardening
+- **`OrderContract`** (base for `PlaceOrderContract` and `ModifyOrderContract`) now enforces:
+  - `LIMIT` orders require `price`; `MARKET` orders reject `price`
+  - `STOP_LOSS` / `STOP_LOSS_MARKET` require `trigger_price`
+  - Stop-loss price relationships: BUY requires `trigger_price >= price`; SELL requires `trigger_price <= price`
+  - Bracket Order (BO): both `bo_profit_value` and `bo_stop_loss_value` required; directional profit/loss relationship validated
+  - `disclosed_quantity` cannot exceed 30% of `quantity`
+  - `amo_time` required when `after_market_order: true`
+  - Lot-size and tick-size enforcement when `instrument_meta` is provided
+  - Segment-based product restrictions (CNC equity-only, BO/CO currency restrictions)
+- **`ModifyOrderContract`**: Requires at least one modifiable field; inherits all `OrderContract` business rules.
+- **New contracts**: `EdisContract`, `UserIpContract`, `PnlBasedExitContract`, `MultiScripMarginCalcContract`, `SliceOrderContract`.
+
+#### Infrastructure
+- **`ApiResponseHandler` concern** (`lib/DhanHQ/models/concerns/api_response_handler.rb`): Shared module for uniform API response handling, attribute merging, and structured logging. Included in `Order` and `ForeverOrder`.
 - **Global Constants Enforcement**: Replaced all hardcoded API strings with `DhanHQ::Constants` across the repository. Built a custom RuboCop cop (`RuboCop::Cop::DhanHQ::UseConstants`) that strictly enforces typed constants instead of loose strings for robust API payloads.
 - **Constants Documentation**: Added `docs/CONSTANTS_REFERENCE.md` detailing all SDK constants (e.g., `ExchangeSegment`, `ProductType`, `OrderType`, etc.).
 
 ### Changed
 - Replaced 160+ hardcoded usages of strings like `"NSE_EQ"` and `"BUY"` with `DhanHQ::Constants::ExchangeSegment::NSE_EQ` and `DhanHQ::Constants::TransactionType::BUY`.
 - Added `NO_HOLDINGS` (value `"DH-1111"`) to `TradingErrorCode`.
+- `PlaceOrderContract` refactored to inherit from `OrderContract`, eliminating duplicated validation logic. Derivative-specific fields (`drv_expiry_date`, `drv_option_type`, `drv_strike_price`) remain on `PlaceOrderContract`.
+- `Resources::Orders` now fetches optional instrument metadata (lot size, tick size) to pass into contract validation.
 
 ---
 
@@ -67,7 +119,7 @@
 
 ### Added
 - **Alert Orders**: `DhanHQ::Resources::AlertOrders` (BaseResource) and `DhanHQ::Models::AlertOrder` with full CRUD. Endpoints: GET/POST `/alerts/orders`, GET/PUT/DELETE `/alerts/orders/{id}` (per API docs). Validation via `DhanHQ::Contracts::AlertOrderContract`.
-- **IP Setup**: `DhanHQ::Resources::IPSetup` (resource-only). Methods: `current` (GET `/ip/getIP`), `set(ip:)` (POST `/ip/setIP`), `update(ip:)` (PUT `/ip/modifyIP`) per API docs.
+- **IP Setup**: `DhanHQ::Resources::IPSetup` (resource-only). Methods: `current` (GET `/ip/getIP`), `set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` (POST `/ip/setIP`), `update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` (PUT `/ip/modifyIP`). Body includes `dhanClientId` (default from config) and `ipFlag` per API docs.
 - **Trader Control (Kill Switch)**: `DhanHQ::Resources::TraderControl` (resource-only). Methods: `status` (GET `/trader-control`), `enable` (POST action ENABLE), `disable` (POST action DISABLE). `DhanHQ::Resources::KillSwitch` and `DhanHQ::Models::KillSwitch` remain for backward compatibility.
 - **docs/API_VERIFICATION.md**: Documents alignment with [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/) and [api.dhan.co/v2](https://api.dhan.co/v2/#/) for EDIS, Alert Orders, IP Setup.
 

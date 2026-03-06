@@ -1,69 +1,69 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  # REST API wrappers grouped by resource type.
   module Resources
-    # Resource client for managing equity and F&O orders.
+    # Handles order placement, modification, and cancellation
     class Orders < BaseAPI
-      # Orders are routed through the trading API tier.
       API_TYPE = :order_api
-      # Base path for order endpoints.
       HTTP_PATH = "/v2/orders"
 
-      # Retrieve all orders for the current trading day.
-      #
-      # @return [Array<Hash>]
-      def all
-        get("")
-      end
+      # --------------------------------------------------
+      # PUBLIC API
+      # --------------------------------------------------
 
-      # Places a new order using the provided payload.
-      #
-      # @param params [Hash]
-      # @return [Hash]
       def create(params)
+        validate_place_order!(params)
         post("", params: params)
       end
 
-      # Fetches a single order by broker order id.
-      #
-      # @param order_id [String]
-      # @return [Hash]
-      def find(order_id)
-        get("/#{order_id}")
-      end
-
-      # Modifies an existing order.
-      #
-      # @param order_id [String]
-      # @param params [Hash]
-      # @return [Hash]
       def update(order_id, params)
+        validate_modify_order!(params.merge(order_id: order_id))
         put("/#{order_id}", params: params)
       end
 
-      # Cancels an existing order.
-      #
-      # @param order_id [String]
-      # @return [Hash]
+      def slicing(params)
+        validate_place_order!(params)
+        post("/slicing", params: params)
+      end
+
       def cancel(order_id)
         delete("/#{order_id}")
       end
 
-      # Places a slicing order request.
-      #
-      # @param params [Hash]
-      # @return [Hash]
-      def slicing(params)
-        post("/slicing", params: params)
+      def all
+        get("")
       end
 
-      # Retrieve an order by client-supplied correlation id.
-      #
-      # @param correlation_id [String]
-      # @return [Hash]
+      def find(order_id)
+        get("/#{order_id}")
+      end
+
       def by_correlation(correlation_id)
         get("/external/#{correlation_id}")
+      end
+
+      # --------------------------------------------------
+      # VALIDATION LAYER
+      # --------------------------------------------------
+
+      private
+
+      def validate_place_order!(params)
+        result = Contracts::PlaceOrderContract.new.call(normalize_keys_for_validation(params))
+        raise_validation_error!(result) unless result.success?
+      end
+
+      def validate_modify_order!(params)
+        result = Contracts::ModifyOrderContract.new.call(normalize_keys_for_validation(params))
+        raise_validation_error!(result) unless result.success?
+      end
+
+      def normalize_keys_for_validation(params)
+        snake_case(params)
+      end
+
+      def raise_validation_error!(result)
+        raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}"
       end
     end
   end

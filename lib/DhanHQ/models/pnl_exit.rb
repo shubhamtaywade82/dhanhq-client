@@ -75,6 +75,7 @@ module DhanHQ
             productType: product_type,
             enableKillSwitch: enable_kill_switch
           }
+          params[:dhanClientId] = DhanHQ.configuration.client_id if DhanHQ.configuration&.client_id.to_s != ""
           resource.configure(params)
         end
 
@@ -115,15 +116,6 @@ module DhanHQ
 
           new(response, skip_validation: true)
         end
-      end
-
-      ##
-      # No validation contract needed — server-side validation handles it.
-      #
-      # @return [nil]
-      # @api private
-      def validation_contract
-        nil
       end
     end
   end

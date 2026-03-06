@@ -1,22 +1,75 @@
 # frozen_string_literal: true
 
+require_relative "order_contract"
+
 module DhanHQ
   module Contracts
-    # Validation contract for order modification requests
-    class ModifyOrderContract < Dry::Validation::Contract
+    # Contract for validating order modification requests
+    class ModifyOrderContract < OrderContract
       params do
-        required(:dhanClientId).filled(:string)
-        required(:orderId).filled(:string)
-        optional(:orderType).maybe(:string, included_in?: %w[LIMIT MARKET STOP_LOSS STOP_LOSS_MARKET])
-        optional(:quantity).maybe(:integer)
-        optional(:price).maybe(:float)
-        optional(:triggerPrice).maybe(:float)
-        optional(:disclosedQuantity).maybe(:integer)
-        optional(:validity).maybe(:string, included_in?: %w[DAY IOC])
+        required(:order_id).filled(:string)
+
+        optional(:transaction_type).maybe(:string, included_in?: TRANSACTION_TYPES)
+        optional(:exchange_segment).maybe(:string, included_in?: EXCHANGE_SEGMENTS)
+        optional(:product_type).maybe(:string, included_in?: PRODUCT_TYPES)
+        optional(:order_type).maybe(:string, included_in?: ORDER_TYPES)
+        optional(:validity).maybe(:string, included_in?: VALIDITY_TYPES)
+        optional(:security_id).maybe(:string, max_size?: 20)
+        optional(:quantity).maybe(:integer, gt?: 0)
+
+        optional(:price).maybe(:float, gt?: 0)
+        # Allow 0 for non–stop-loss orders (API often returns triggerPrice: 0); rule below enforces > 0 for SL types.
+        optional(:trigger_price).maybe(:float, gteq?: 0)
+        optional(:disclosed_quantity).maybe(:integer, gteq?: 0)
+
+        optional(:bo_profit_value).maybe(:float, gt?: 0)
+        optional(:bo_stop_loss_value).maybe(:float, gt?: 0)
+        optional(:leg_name).maybe(:string)
       end
 
-      rule(:quantity) do
-        key.failure("must be provided if modifying quantity") if value.nil? && values[:price].nil?
+      # --------------------------------------------------
+      # MUST MODIFY AT LEAST ONE EXECUTION FIELD
+      # --------------------------------------------------
+
+      rule do
+        modifiable_fields = %i[
+          quantity price trigger_price disclosed_quantity
+          bo_profit_value bo_stop_loss_value
+          validity order_type
+        ]
+
+        changed = modifiable_fields.any? { |field| values.key?(field) && !values[field].nil? }
+
+        base.failure("at least one modifiable field must be provided") unless changed
+      end
+
+      # --------------------------------------------------
+      # MARKET ORDER RESTRICTION
+      # --------------------------------------------------
+
+      rule(:order_type, :price) do
+        key(:price).failure("cannot modify price for MARKET orders") if values[:order_type] == DhanHQ::Constants::OrderType::MARKET && values[:price]
+      end
+
+      # --------------------------------------------------
+      # TRIGGER PRICE FOR STOP-LOSS ONLY
+      # --------------------------------------------------
+
+      rule(:order_type, :trigger_price) do
+        if %w[STOP_LOSS STOP_LOSS_MARKET].include?(values[:order_type]) && (values[:trigger_price].nil? || values[:trigger_price].to_f <= 0)
+          key(:trigger_price).failure("must be present and greater than zero for STOP_LOSS orders")
+        end
+      end
+
+      # --------------------------------------------------
+      # BO LEG VALIDATION
+      # --------------------------------------------------
+
+      rule(:leg_name, :product_type) do
+        if values[:product_type] == DhanHQ::Constants::ProductType::BO
+          allowed = %w[ENTRY_LEG TARGET_LEG STOP_LOSS_LEG]
+          key(:leg_name).failure("invalid leg_name for BO order") unless values[:leg_name] && allowed.include?(values[:leg_name])
+        end
       end
     end
   end

@@ -109,15 +109,6 @@ module DhanHQ
       def cancelled?
         order_status == DhanHQ::Constants::OrderStatus::CANCELLED
       end
-
-      ##
-      # No validation contract — postback payloads are parsed as-is.
-      #
-      # @return [nil]
-      # @api private
-      def validation_contract
-        nil
-      end
     end
   end
 end

@@ -181,12 +181,6 @@ module DhanHQ
       end
 
       ##
-      # ExpiredOptionsData objects are read-only, so no validation contract needed
-      def validation_contract
-        nil
-      end
-
-      ##
       # Gets call option data from the response.
       #
       # @return [Hash{Symbol => Array<Float, Integer>}, nil] Call option data hash containing arrays
