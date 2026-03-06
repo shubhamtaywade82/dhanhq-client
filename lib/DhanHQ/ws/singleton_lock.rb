@@ -14,7 +14,8 @@ module DhanHQ
         key = Digest::SHA256.hexdigest("#{client_id}:#{token}")[0, 12]
         @path = File.expand_path("tmp/dhanhq_ws_#{key}.lock", Dir.pwd)
         FileUtils.mkdir_p(File.dirname(@path))
-        @fh = File.open(@path, File::RDWR | File::CREAT, 0o644)
+        # Lock file must stay open until release!; block form would close it and release the lock.
+        @fh = File.open(@path, File::RDWR | File::CREAT, 0o644) # rubocop:disable Style/FileOpen
       end
 
       # Attempts to acquire the lock for the current process.

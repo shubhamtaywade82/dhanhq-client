@@ -10,6 +10,23 @@
 
 - **AlertOrder.create / AlertOrderContract**: Contract expects nested structure (see 2.5.0). Condition hash must include `exchange_segment`, `exp_date`, and `frequency`; for `comparison_type` starting with `TECHNICAL`, `time_frame` is required. See GUIDE.md and [conditional-trigger](https://dhanhq.co/docs/v2/conditional-trigger/).
 - **Resources::KillSwitch#update**: Signature is now `update(status)` (string). Use `update("ACTIVATE")` or `Models::KillSwitch.activate` / `.deactivate`, unchanged.
+- **AlertOrderContract** — expected payload shape:
+
+```ruby
+AlertOrderContract.new.call(
+  condition: {
+    exchange_segment:  "NSE_EQ",
+    security_id:       "11536",
+    comparison_type:   "PRICE_WITH_VALUE",
+    operator:          "GREATER_THAN",
+    exp_date:          "2026-12-31",
+    frequency:         "ONCE"
+  },
+  orders: [
+    { transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY", order_type: "MARKET", security_id: "11536", quantity: 5, validity: "DAY" }
+  ]
+)
+```
 
 ### Added
 
@@ -42,25 +59,6 @@
 - Added `NO_HOLDINGS` (value `"DH-1111"`) to `TradingErrorCode`.
 - `PlaceOrderContract` refactored to inherit from `OrderContract`, eliminating duplicated validation logic. Derivative-specific fields (`drv_expiry_date`, `drv_option_type`, `drv_strike_price`) remain on `PlaceOrderContract`.
 - `Resources::Orders` now fetches optional instrument metadata (lot size, tick size) to pass into contract validation.
-
-#### `AlertOrderContract` — payload structure
-The contract expects a nested structure matching the DhanHQ API schema:
-
-```ruby
-AlertOrderContract.new.call(
-  condition: {
-    exchange_segment:  "NSE_EQ",
-    security_id:       "11536",
-    comparison_type:   "PRICE_WITH_VALUE",
-    operator:          "GREATER_THAN",
-    exp_date:          "2026-12-31",
-    frequency:         "ONCE"
-  },
-  orders: [
-    { transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY", order_type: "MARKET", security_id: "11536", quantity: 5, validity: "DAY" }
-  ]
-)
-```
 
 ---
 

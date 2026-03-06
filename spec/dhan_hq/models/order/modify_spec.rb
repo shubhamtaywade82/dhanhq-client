@@ -61,6 +61,43 @@ RSpec.describe DhanHQ::Models::Order do
       allow(resource_double).to receive(:update).and_return({ "status" => "success", "orderId" => "OID1" })
       expect(order.modify(quantity: 10)).to be(order)
     end
+
+    it "omits trigger_price when 0 for non–stop-loss order (quantity-only modify passes validation and API gets clean payload)" do
+      limit_order = described_class.new(
+        {
+          orderId: "OID1", dhanClientId: "1100003626", orderType: "LIMIT", orderStatus: "PENDING",
+          transactionType: "BUY", exchangeSegment: "NSE_EQ", productType: "CNC", validity: "DAY",
+          securityId: "1333", quantity: 10, price: 155.0, triggerPrice: 0.0
+        },
+        skip_validation: true
+      )
+      allow(resource_double).to receive(:update).and_return({ "status" => "success", "orderStatus" => "MODIFIED" })
+
+      limit_order.modify(quantity: 20)
+
+      expect(resource_double).to have_received(:update).with("OID1", hash_excluding("triggerPrice"))
+      expect(resource_double).to have_received(:update).with("OID1", hash_including("quantity" => 20))
+    end
+
+    it "sends bo_profit_value and bo_stop_loss_value when modifying BO order" do
+      bo_order = described_class.new(
+        {
+          orderId: "OID1", dhanClientId: "1100003626", orderType: "LIMIT", orderStatus: "PENDING",
+          transactionType: "BUY", exchangeSegment: "NSE_EQ", productType: "BO", validity: "DAY",
+          securityId: "1333", quantity: 10, price: 155.0,
+          boProfitValue: 170.0, boStopLossValue: 140.0, legName: "ENTRY_LEG"
+        },
+        skip_validation: true
+      )
+      allow(resource_double).to receive(:update).and_return({ "status" => "success", "orderStatus" => "MODIFIED" })
+
+      bo_order.modify(bo_profit_value: 172.0, bo_stop_loss_value: 138.0)
+
+      expect(resource_double).to have_received(:update).with(
+        "OID1",
+        hash_including("boProfitValue" => 172.0, "boStopLossValue" => 138.0)
+      )
+    end
   end
 
   describe "#save" do

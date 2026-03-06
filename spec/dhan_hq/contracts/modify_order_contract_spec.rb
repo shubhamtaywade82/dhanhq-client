@@ -22,6 +22,11 @@ RSpec.describe DhanHQ::Contracts::ModifyOrderContract do
     expect(contract.call(valid_modify_params).success?).to be true
   end
 
+  it "accepts trigger_price 0 for non–stop-loss order (e.g. quantity-only modify with existing API payload)" do
+    params = valid_modify_params.merge(quantity: 25, trigger_price: 0.0)
+    expect(contract.call(params).success?).to be true
+  end
+
   it "rejects modification when no modifiable fields are provided" do
     result = contract.call(order_id: "12345")
     expect(result.success?).to be false
@@ -33,6 +38,13 @@ RSpec.describe DhanHQ::Contracts::ModifyOrderContract do
     result = contract.call(params)
     expect(result.success?).to be false
     expect(result.errors.to_h[:trigger_price]).to include("must be >= price for BUY stop-loss")
+  end
+
+  it "rejects STOP_LOSS modify when trigger_price is 0 or absent" do
+    params = valid_modify_params.merge(order_type: "STOP_LOSS", quantity: 30, trigger_price: 0.0, price: 150.0)
+    result = contract.call(params)
+    expect(result.success?).to be false
+    expect(result.errors.to_h[:trigger_price]).to include("must be present and greater than zero for STOP_LOSS orders")
   end
 
   it "rejects price modification for MARKET orders" do

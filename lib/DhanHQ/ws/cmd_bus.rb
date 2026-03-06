@@ -6,7 +6,7 @@ module DhanHQ
     # connection is ready to send them.
     class CmdBus
       # Represents a subscription command queued for execution.
-      Command = Struct.new(:op, :payload, keyword_init: true)
+      Command = Struct.new(:op, :payload)
 
       def initialize
         @q = Queue.new

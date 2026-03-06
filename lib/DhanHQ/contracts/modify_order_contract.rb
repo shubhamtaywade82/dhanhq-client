@@ -18,7 +18,8 @@ module DhanHQ
         optional(:quantity).maybe(:integer, gt?: 0)
 
         optional(:price).maybe(:float, gt?: 0)
-        optional(:trigger_price).maybe(:float, gt?: 0)
+        # Allow 0 for non–stop-loss orders (API often returns triggerPrice: 0); rule below enforces > 0 for SL types.
+        optional(:trigger_price).maybe(:float, gteq?: 0)
         optional(:disclosed_quantity).maybe(:integer, gteq?: 0)
 
         optional(:bo_profit_value).maybe(:float, gt?: 0)
@@ -48,6 +49,16 @@ module DhanHQ
 
       rule(:order_type, :price) do
         key(:price).failure("cannot modify price for MARKET orders") if values[:order_type] == DhanHQ::Constants::OrderType::MARKET && values[:price]
+      end
+
+      # --------------------------------------------------
+      # TRIGGER PRICE FOR STOP-LOSS ONLY
+      # --------------------------------------------------
+
+      rule(:order_type, :trigger_price) do
+        if %w[STOP_LOSS STOP_LOSS_MARKET].include?(values[:order_type]) && (values[:trigger_price].nil? || values[:trigger_price].to_f <= 0)
+          key(:trigger_price).failure("must be present and greater than zero for STOP_LOSS orders")
+        end
       end
 
       # --------------------------------------------------
