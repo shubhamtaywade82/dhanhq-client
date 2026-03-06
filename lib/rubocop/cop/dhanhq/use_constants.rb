@@ -18,6 +18,7 @@ module RuboCop
 
         MSG = "Use `%<constant>s` instead of hardcoded string `%<string>s`."
 
+        # Unambiguous constants — flagged in any non-key string context.
         CONSTANTS_MAP = {
           "SELL" => "DhanHQ::Constants::TransactionType::SELL",
           "BUY" => "DhanHQ::Constants::TransactionType::BUY",
@@ -36,11 +37,10 @@ module RuboCop
           "PART_TRADED" => "DhanHQ::Constants::OrderStatus::PART_TRADED",
           "TRADED" => "DhanHQ::Constants::OrderStatus::TRADED",
           "EXPIRED" => "DhanHQ::Constants::OrderStatus::EXPIRED",
+          "MODIFIED" => "DhanHQ::Constants::OrderStatus::MODIFIED",
           "PRE_OPEN" => "DhanHQ::Constants::AmoTime::PRE_OPEN",
-          "OPEN" => "DhanHQ::Constants::AmoTime::OPEN",
           "OPEN_30" => "DhanHQ::Constants::AmoTime::OPEN_30",
           "OPEN_60" => "DhanHQ::Constants::AmoTime::OPEN_60",
-          "INDEX" => "DhanHQ::Constants::InstrumentType::INDEX",
           "FUTIDX" => "DhanHQ::Constants::InstrumentType::FUTIDX",
           "OPTIDX" => "DhanHQ::Constants::InstrumentType::OPTIDX",
           "EQUITY" => "DhanHQ::Constants::InstrumentType::EQUITY",
@@ -98,6 +98,7 @@ module RuboCop
           "NSE_EQ" => "DhanHQ::Constants::ExchangeSegment::NSE_EQ",
           "NSE_FNO" => "DhanHQ::Constants::ExchangeSegment::NSE_FNO",
           "NSE_CURRENCY" => "DhanHQ::Constants::ExchangeSegment::NSE_CURRENCY",
+          "NSE_COMM" => "DhanHQ::Constants::ExchangeSegment::NSE_COMM",
           "BSE_EQ" => "DhanHQ::Constants::ExchangeSegment::BSE_EQ",
           "MCX_COMM" => "DhanHQ::Constants::ExchangeSegment::MCX_COMM",
           "BSE_CURRENCY" => "DhanHQ::Constants::ExchangeSegment::BSE_CURRENCY",
@@ -120,9 +121,17 @@ module RuboCop
           "BO" => "DhanHQ::Constants::ProductType::BO"
         }.freeze
 
+        # Ambiguous constants — only flagged when the string is the VALUE side of a hash pair.
+        # These strings also appear in natural language contexts (error messages, log output).
+        AMBIGUOUS_CONSTANTS = {
+          "OPEN" => "DhanHQ::Constants::AmoTime::OPEN",
+          "INDEX" => "DhanHQ::Constants::InstrumentType::INDEX"
+        }.freeze
+
         def on_str(node)
           value = node.value
-          return unless CONSTANTS_MAP.key?(value)
+          return unless value.length >= 2
+          return if value.include?(" ")
 
           parent = node.parent
           return unless parent
@@ -131,16 +140,27 @@ module RuboCop
           return if parent.pair_type? && parent.key == node
 
           # Skip typical ignored methods
-          return if parent.send_type? && %i[require require_relative puts print warn raise fail class_eval instance_eval].include?(parent.method_name)
+          return if parent.send_type? && %i[require require_relative puts print warn raise fail
+                                            class_eval instance_eval].include?(parent.method_name)
 
-          # Skip error messages or descriptions
-          return if value.include?(" ") || value.length < 2
-
+          # Skip %w[] / %i[] array literals
           in_percent_array = parent.array_type? && parent.loc.begin&.source&.start_with?("%w", "%W", "%i", "%I")
           return if in_percent_array
 
-          constant_path = CONSTANTS_MAP[value]
+          # Check unambiguous constants first
+          if CONSTANTS_MAP.key?(value)
+            constant_path = CONSTANTS_MAP[value]
+            add_offense(node, message: format(MSG, constant: constant_path, string: value)) do |corrector|
+              corrector.replace(node, constant_path)
+            end
+            return
+          end
 
+          # Ambiguous constants — only flag when the node is the value side of a hash pair
+          return unless AMBIGUOUS_CONSTANTS.key?(value)
+          return unless parent.pair_type? && parent.value == node
+
+          constant_path = AMBIGUOUS_CONSTANTS[value]
           add_offense(node, message: format(MSG, constant: constant_path, string: value)) do |corrector|
             corrector.replace(node, constant_path)
           end

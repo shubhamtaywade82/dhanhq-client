@@ -204,10 +204,10 @@ RSpec.describe DhanHQ::Models::Trade do
     let(:statements_resource) { instance_double(DhanHQ::Resources::Statements) }
 
     before do
-      described_class.instance_variable_set(:@tradebook_resource, nil)
+      described_class.instance_variable_set(:@resource, nil)
       described_class.instance_variable_set(:@statements_resource, nil)
       allow(described_class).to receive_messages(
-        tradebook_resource: tradebook_resource,
+        resource: tradebook_resource,
         statements_resource: statements_resource
       )
     end

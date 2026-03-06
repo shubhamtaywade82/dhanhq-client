@@ -116,15 +116,6 @@ module DhanHQ
           new(response, skip_validation: true)
         end
       end
-
-      ##
-      # No validation contract needed — server-side validation handles it.
-      #
-      # @return [nil]
-      # @api private
-      def validation_contract
-        nil
-      end
     end
   end
 end

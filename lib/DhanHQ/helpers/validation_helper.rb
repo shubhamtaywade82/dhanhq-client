@@ -16,7 +16,7 @@ module DhanHQ
 
     # Validate instance attributes using the defined validation contract
     def validate!
-      contract_class = respond_to?(:validation_contract) ? validation_contract : self.class.validation_contract
+      contract_class = validation_contract || self.class.validation_contract
       return unless contract_class
 
       contract = contract_class.is_a?(Class) ? contract_class.new : contract_class

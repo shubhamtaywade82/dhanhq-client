@@ -47,8 +47,8 @@ module DhanHQ
       # Base path used to invoke the calculator.
       HTTP_PATH = "/v2/margincalculator"
 
-      attr_reader :total_margin, :span_margin, :exposure_margin, :available_balance,
-                  :variable_margin, :insufficient_balance, :brokerage, :leverage
+      attributes :total_margin, :span_margin, :exposure_margin, :available_balance,
+                 :variable_margin, :insufficient_balance, :brokerage, :leverage
 
       class << self
         ##

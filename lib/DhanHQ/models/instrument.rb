@@ -155,12 +155,6 @@ module DhanHQ
           }
         end
       end
-
-      private
-
-      def validation_contract
-        nil
-      end
     end
   end
 end
