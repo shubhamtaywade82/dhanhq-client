@@ -75,6 +75,7 @@ module DhanHQ
             productType: product_type,
             enableKillSwitch: enable_kill_switch
           }
+          params[:dhanClientId] = DhanHQ.configuration.client_id if DhanHQ.configuration&.client_id.to_s != ""
           resource.configure(params)
         end
 
