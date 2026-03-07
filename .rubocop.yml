@@ -28,9 +28,21 @@ RSpec/ExampleLength:
 RSpec/MultipleMemoizedHelpers:
   Max: 10
 
+Lint/ScriptPermission:
+  Exclude:
+    - "bin/**/*"
+
+Metrics/AbcSize:
+  Exclude:
+    - "bin/call_all_endpoints.rb"
+
+Layout/LineLength:
+  Exclude:
+    - "bin/call_all_endpoints.rb"
+
 DhanHQ/UseConstants:
   Enabled: true
   Exclude:
-    - 'lib/DhanHQ/constants.rb'
-    - 'lib/DhanHQ/ws/segments.rb'
-    - 'spec/**/*'
+    - "lib/DhanHQ/constants.rb"
+    - "lib/DhanHQ/ws/segments.rb"
+    - "spec/**/*"

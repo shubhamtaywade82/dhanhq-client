@@ -104,10 +104,11 @@ RSpec.describe DhanHQ::Models::HistoricalData do
     end
 
     it "delegates intraday calls" do
-      allow(resource_double).to receive(:intraday).with(params).and_return({})
+      intraday_params = params.merge(interval: "5")
+      allow(resource_double).to receive(:intraday).with(intraday_params).and_return({})
 
-      expect(described_class.intraday(params)).to eq({})
-      expect(resource_double).to have_received(:intraday).with(params)
+      expect(described_class.intraday(intraday_params)).to eq({})
+      expect(resource_double).to have_received(:intraday).with(intraday_params)
     end
   end
 end

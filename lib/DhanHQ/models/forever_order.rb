@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../contracts/forever_order_contract"
+
 module DhanHQ
   module Models
     ##
@@ -154,9 +156,9 @@ module DhanHQ
         #   @option params [String] :transaction_type (required) The trading side of transaction.
         #     Valid values: "BUY", "SELL"
         #   @option params [String] :exchange_segment (required) Exchange and segment identifier.
-        #     Valid values: "NSE_EQ", "NSE_FNO", "BSE_EQ", "BSE_FNO"
+        #     Valid values: See {DhanHQ::Constants::FOREVER_ORDER_SEGMENTS} (NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM)
         #   @option params [String] :product_type (required) Product type.
-        #     Valid values: "CNC", "MTF"
+        #     Valid values: See {DhanHQ::Constants::FOREVER_ORDER_PRODUCT_TYPES} (CNC, MTF)
         #   @option params [String] :order_type (required) Order type.
         #     Valid values: "LIMIT", "MARKET"
         #   @option params [String] :validity (required) Validity of order for execution.
@@ -216,11 +218,12 @@ module DhanHQ
         #
         # @note Order placement APIs require Static IP whitelisting
         def create(params)
-          # Normalize params and auto-inject dhan_client_id from configuration if not provided
-          normalized_params = snake_case(params)
+          normalized = snake_case(params)
           config = DhanHQ.configuration
-          normalized_params[:dhan_client_id] ||= config.client_id if config&.client_id
-          response = resource.create(normalized_params)
+          normalized[:dhan_client_id] ||= config.client_id if config&.client_id
+          validate_params!(normalized, DhanHQ::Contracts::ForeverOrderCreateContract)
+          formatted = camelize_keys(normalized)
+          response = resource.create(formatted)
           return nil unless response.is_a?(Hash) && response["orderId"]
 
           find(response["orderId"])
@@ -292,7 +295,13 @@ module DhanHQ
         raise "Order ID is required to modify a forever order" unless order_id
 
         DhanHQ.logger&.info("[DhanHQ::Models::ForeverOrder] Modifying order #{order_id}")
-        response = self.class.resource.update(order_id, new_params)
+        full_params = snake_case(new_params)
+        config = DhanHQ.configuration
+        full_params[:dhan_client_id] ||= config.client_id if config&.client_id
+        full_params[:order_id] = order_id
+        validate_params!(full_params, DhanHQ::Contracts::ForeverOrderModifyContract)
+        formatted = camelize_keys(full_params)
+        response = self.class.resource.update(order_id, formatted)
         ctx = "[DhanHQ::Models::ForeverOrder] Modification"
         success = handle_api_response(response, success_key: "orderId", context: ctx)
         return self.class.find(order_id) if success

@@ -18,6 +18,14 @@ module DhanHQ
       BSE_FNO = "BSE_FNO"
 
       ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, NSE_COMM, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO].freeze
+      # Segments allowed by POST /v2/margincalculator (single and multi).
+      MARGIN_CALC_ALL = [NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM].freeze
+      # Segments allowed by POST /v2/forever/orders (create).
+      FOREVER_ORDER_ALL = [NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM].freeze
+      # Segments for conditional trigger (equities and indices only). POST/PUT /v2/alerts/orders.
+      ALERT_CONDITION_ALL = [NSE_EQ, BSE_EQ, IDX_I].freeze
+      # Segments allowed by POST /v2/charts/historical and POST /v2/charts/intraday (excludes NSE_COMM).
+      CHART_ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, BSE_FNO, BSE_CURRENCY, MCX_COMM].freeze
     end
 
     # Product types for order placement.
@@ -30,6 +38,10 @@ module DhanHQ
       BO = "BO"
 
       ALL = [CNC, INTRADAY, MARGIN, MTF, CO, BO].freeze
+      # Product types allowed by POST /v2/margincalculator (single and multi).
+      MARGIN_CALC_ALL = [CNC, INTRADAY, MARGIN, MTF].freeze
+      # Product types allowed by POST /v2/forever/orders (create). Only CNC and MTF.
+      FOREVER_ORDER_ALL = [CNC, MTF].freeze
     end
 
     # Buy/Sell transaction types.
@@ -111,6 +123,17 @@ module DhanHQ
 
     # Backward-compatible alias kept for existing SDK usage.
     Instrument = InstrumentType
+
+    # Minute intervals allowed by POST /v2/charts/intraday (charts annexure).
+    module ChartInterval
+      ONE = "1"
+      FIVE = "5"
+      FIFTEEN = "15"
+      TWENTY_FIVE = "25"
+      SIXTY = "60"
+
+      ALL = [ONE, FIVE, FIFTEEN, TWENTY_FIVE, SIXTY].freeze
+    end
 
     # Option types for derivatives trading.
     module OptionType
@@ -368,7 +391,13 @@ module DhanHQ
     # Backward-compatible arrays used across existing validations.
     TRANSACTION_TYPES = TransactionType::ALL
     EXCHANGE_SEGMENTS = ExchangeSegment::ALL
+    CHART_EXCHANGE_SEGMENTS = ExchangeSegment::CHART_ALL
     INSTRUMENTS = InstrumentType::ALL
+    CHART_INTERVALS = ChartInterval::ALL
+    MARGIN_CALCULATOR_SEGMENTS = ExchangeSegment::MARGIN_CALC_ALL
+    MARGIN_PRODUCT_TYPES = ProductType::MARGIN_CALC_ALL
+    FOREVER_ORDER_SEGMENTS = ExchangeSegment::FOREVER_ORDER_ALL
+    FOREVER_ORDER_PRODUCT_TYPES = ProductType::FOREVER_ORDER_ALL
     PRODUCT_TYPES = ProductType::ALL
     ORDER_TYPES = OrderType::ALL
     VALIDITY_TYPES = Validity::ALL
@@ -376,6 +405,8 @@ module DhanHQ
     ORDER_STATUSES = OrderStatus::ALL
     COMPARISON_TYPES = ComparisonType::ALL
     OPERATORS = Operator::ALL
+    ALERT_CONDITION_SEGMENTS = ExchangeSegment::ALERT_CONDITION_ALL
+    ALERT_TIMEFRAMES = %w[DATE ONE_MIN FIVE_MIN FIFTEEN_MIN DAY].freeze
 
     # Exchange aliases used when building subscription payloads.
     NSE = ExchangeSegment::NSE_EQ

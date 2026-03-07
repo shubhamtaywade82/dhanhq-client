@@ -101,3 +101,15 @@ These are **not** sandbox-aware; they always use the URLs above.
 - **REST:** When `sandbox` is true, all REST calls go to `https://sandbox.dhan.co/v2`. Only `GET /v2/profile` and `GET /v2/fundlimit` are verified working on sandbox; other REST endpoints are not verified — see "Sandbox: verified vs not working / unverified" above.
 - **Auth:** Token generation and renewal always use production hosts.
 - **WebSockets:** Sandbox does **not** support WebSocket. Order updates, market feed, and market depth always use production URLs; the gem does not publish or use any sandbox WebSocket URLs.
+
+## Call-all-endpoints script
+
+`bin/call_all_endpoints.rb` invokes every REST endpoint exposed by the gem (read-only by default; use `--all` to include write/destructive calls). Useful for connectivity checks or sandbox verification.
+
+```bash
+bin/call_all_endpoints.rb              # read-only
+bin/call_all_endpoints.rb --list       # print endpoint list
+bin/call_all_endpoints.rb --all        # include POST/PUT/DELETE
+```
+
+Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`. Optional: `DHAN_SANDBOX=true`, `DHAN_TEST_SECURITY_ID`, `DHAN_TEST_ORDER_ID`, `DHAN_TEST_ISIN`, `DHAN_TEST_EXPIRY`.

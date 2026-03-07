@@ -56,11 +56,11 @@ module DhanHQ
         # @param params [Hash{Symbol => String, Integer, Boolean}] Request parameters
         #   @option params [String] :security_id (required) Exchange standard ID for each scrip
         #   @option params [String] :exchange_segment (required) Exchange and segment for which data is to be fetched.
-        #     Valid values: See {DhanHQ::Constants::EXCHANGE_SEGMENTS}
+        #     Valid values: See {DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS}
         #   @option params [String] :instrument (required) Instrument type of the scrip.
         #     Valid values: See {DhanHQ::Constants::INSTRUMENTS}
         #   @option params [Integer] :expiry_code (optional) Expiry of the instruments in case of derivatives.
-        #     Valid values: 0, 1, 2
+        #     Valid values: See {DhanHQ::Constants::ExpiryCode::ALL} (0, 1, 2)
         #   @option params [Boolean] :oi (optional) Include Open Interest data for Futures & Options.
         #     Default: false
         #   @option params [String] :from_date (required) Start date of the desired range in YYYY-MM-DD format
@@ -177,7 +177,7 @@ module DhanHQ
         #   make multiple requests or store data locally for analysis.
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def intraday(params)
-          validate_params!(params, DhanHQ::Contracts::HistoricalDataContract)
+          validate_params!(params, DhanHQ::Contracts::IntradayHistoricalDataContract)
           resource.intraday(params)
         end
       end

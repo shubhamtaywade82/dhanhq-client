@@ -77,7 +77,7 @@ module DhanHQ
         #     instrument. Can be found via the Instruments API.
         #   @option params [String] :underlying_seg (required) Exchange and segment of underlying
         #     for which data is to be fetched.
-        #     Valid values: "IDX_I" (Index), "NSE_FNO" (NSE F&O), "BSE_FNO" (BSE F&O), "MCX_FO" (MCX)
+        #     Valid values: See {DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS}
         #   @option params [String] :expiry (required) Expiry date of the option contract for
         #     which the option chain is requested. Must be in "YYYY-MM-DD" format.
         #     List of active expiries can be fetched using {fetch_expiry_list}.
@@ -170,7 +170,7 @@ module DhanHQ
         #     instrument. Can be found via the Instruments API.
         #   @option params [String] :underlying_seg (required) Exchange and segment of underlying
         #     for which expiry list is to be fetched.
-        #     Valid values: "IDX_I" (Index), "NSE_FNO" (NSE F&O), "BSE_FNO" (BSE F&O), "MCX_FO" (MCX)
+        #     Valid values: See {DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS}
         #
         # @return [Array<String>] Array of expiry dates in "YYYY-MM-DD" format.
         #   Returns empty array if the API response status is not "success" or if no expiries are found.

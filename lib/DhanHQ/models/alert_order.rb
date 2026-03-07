@@ -42,6 +42,8 @@ module DhanHQ
 
         def create(params)
           normalized = snake_case(params)
+          config = DhanHQ.configuration
+          normalized[:dhan_client_id] ||= config.client_id if config&.client_id
           validate_params!(normalized, DhanHQ::Contracts::AlertOrderContract)
           response = resource.create(camelize_keys(normalized))
           return nil unless response.is_a?(Hash) && response["alertId"]
@@ -65,7 +67,11 @@ module DhanHQ
         #
         def modify(alert_id, params)
           normalized = snake_case(params)
-          response = resource.update(alert_id, camelize_keys(normalized))
+          validate_params!(normalized, DhanHQ::Contracts::AlertOrderContract)
+          payload = normalized.merge(alert_id: alert_id)
+          config = DhanHQ.configuration
+          payload[:dhan_client_id] ||= config.client_id if config&.client_id
+          response = resource.update(alert_id, camelize_keys(payload))
           return nil unless success_response?(response)
 
           find(alert_id)

@@ -41,24 +41,51 @@ RSpec.describe DhanHQ::Models::ForeverOrder do
   end
 
   describe ".create" do
+    let(:minimal_create_params) do
+      {
+        dhan_client_id: "1000000132",
+        order_flag: "SINGLE",
+        transaction_type: "BUY",
+        exchange_segment: "NSE_EQ",
+        product_type: "CNC",
+        order_type: "LIMIT",
+        validity: "DAY",
+        security_id: "1333",
+        quantity: 5,
+        price: 1428.0,
+        trigger_price: 1427.0
+      }
+    end
+
     it "returns nil when the API does not return an orderId" do
       allow(resource_double).to receive(:create).and_return({ "status" => "fail" })
 
-      expect(described_class.create({})).to be_nil
+      expect(described_class.create(minimal_create_params)).to be_nil
     end
 
     it "fetches the created order when orderId is present" do
       allow(resource_double).to receive(:create).and_return({ "orderId" => "OID-1" })
       allow(resource_double).to receive(:find).with("OID-1").and_return({ "orderId" => "OID-1" })
 
-      record = described_class.create({})
+      record = described_class.create(minimal_create_params)
       expect(record).to be_a(described_class)
       expect(record.order_id).to eq("OID-1")
     end
   end
 
   describe "#modify" do
-    let(:order) { described_class.new({ orderId: "OID-1" }, skip_validation: true) }
+    let(:order) { described_class.new({ "orderId" => "OID-1" }, skip_validation: true) }
+    let(:modify_params) do
+      {
+        order_flag: "SINGLE",
+        order_type: "LIMIT",
+        leg_name: "TARGET_LEG",
+        quantity: 15,
+        price: 1421.0,
+        trigger_price: 1420.0,
+        validity: "DAY"
+      }
+    end
 
     it "raises when order_id is missing" do
       record = described_class.new({}, skip_validation: true)
@@ -67,19 +94,19 @@ RSpec.describe DhanHQ::Models::ForeverOrder do
     end
 
     it "returns updated record when the response is successful" do
-      allow(resource_double).to receive(:update).with("OID-1", { price: 100 })
-                                                .and_return({ status: "success" })
-      allow(resource_double).to receive(:find).with("OID-1").and_return({ "orderId" => "OID-1", "price" => 100 })
+      allow(resource_double).to receive(:update).with("OID-1", anything)
+                                                .and_return({ "status" => "success" })
+      allow(resource_double).to receive(:find).with("OID-1").and_return({ "orderId" => "OID-1", "price" => 1421.0 })
 
-      updated = order.modify(price: 100)
+      updated = order.modify(modify_params)
       expect(updated).to be_a(described_class)
-      expect(updated.price).to eq(100)
+      expect(updated.price).to eq(1421.0)
     end
 
     it "returns nil when the response is not successful" do
-      allow(resource_double).to receive(:update).and_return({ status: "rejected" })
+      allow(resource_double).to receive(:update).and_return({ "status" => "rejected" })
 
-      expect(order.modify(price: 100)).to be_nil
+      expect(order.modify(modify_params)).to be_nil
     end
   end
 

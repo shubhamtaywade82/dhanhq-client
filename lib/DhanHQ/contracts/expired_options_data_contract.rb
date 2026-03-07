@@ -23,7 +23,8 @@ module DhanHQ
       end
 
       rule(:exchange_segment) do
-        valid_segments = %w[NSE_FNO BSE_FNO NSE_EQ BSE_EQ]
+        # IDX_I for index options, NSE_EQ/BSE_EQ for equity options (not NSE_FNO/BSE_FNO).
+        valid_segments = %w[IDX_I NSE_EQ BSE_EQ]
         key.failure("must be one of: #{valid_segments.join(", ")}") unless valid_segments.include?(value)
       end
 

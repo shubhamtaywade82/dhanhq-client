@@ -4,24 +4,17 @@ require "date"
 
 module DhanHQ
   module Contracts
-    # Validates payloads for the historical data endpoints.
+    # Validates payloads for POST /v2/charts/historical (daily OHLC). No interval.
     class HistoricalDataContract < BaseContract
       params do
-        # Common required fields
         required(:security_id).filled(:string)
-        required(:exchange_segment).filled(:string, included_in?: EXCHANGE_SEGMENTS)
+        required(:exchange_segment).filled(:string, included_in?: CHART_EXCHANGE_SEGMENTS)
         required(:instrument).filled(:string, included_in?: INSTRUMENTS)
-
-        # Date range required for both Daily & Intraday
         required(:from_date).filled(:string, format?: /\A\d{4}-\d{2}-\d{2}\z/)
         required(:to_date).filled(:string, format?: /\A\d{4}-\d{2}-\d{2}\z/)
 
-        # Optional fields
-        optional(:expiry_code).maybe(:integer, included_in?: [0, 1, 2])
-
-        # For intraday, the user can supply an "interval"
-        # (valid: 1, 5, 15, 25, 60)
-        optional(:interval).maybe(:string, included_in?: %w[1 5 15 25 60])
+        optional(:expiry_code).maybe(:integer, included_in?: ExpiryCode::ALL)
+        optional(:interval).maybe(:string, included_in?: CHART_INTERVALS)
       end
 
       rule(:from_date) do
@@ -49,6 +42,13 @@ module DhanHQ
         return false unless date.is_a?(Date)
 
         (1..5).cover?(date.wday)
+      end
+    end
+
+    # Validates payloads for POST /v2/charts/intraday (minute OHLC). Requires interval.
+    class IntradayHistoricalDataContract < HistoricalDataContract
+      params do
+        required(:interval).filled(:string, included_in?: CHART_INTERVALS)
       end
     end
   end
