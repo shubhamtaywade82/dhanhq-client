@@ -13,6 +13,13 @@ VCR.configure do |config|
   config.filter_sensitive_data("<DHAN_CLIENT_ID>") { DhanHQ.configuration.client_id }
   config.filter_sensitive_data("<DHAN_CLIENT_ID>") { ENV.fetch("DHAN_CLIENT_ID", nil) }
 
+  # Allow overriding recording mode via ENV
+  # Usage: VCR_RECORD=all bundle exec rspec
+  config.default_cassette_options = {
+    record: ENV.fetch("VCR_RECORD", :once).to_sym,
+    match_requests_on: %i[method uri body]
+  }
+
   # Allow localhost connections (useful for Capybara)
   # config.allow_http_connections_when_no_cassette = false
   config.allow_http_connections_when_no_cassette = true

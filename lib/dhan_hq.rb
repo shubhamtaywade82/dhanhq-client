@@ -4,6 +4,7 @@ require "json"
 require "logger"
 require "zeitwerk"
 require "dotenv/load"
+require "faraday"
 # Minimal eager requires for backward-compatible constants.
 # These are widely referenced (e.g. `DhanHQ::BaseAPI`) and should not depend on
 # the autoloader being fully configured.
@@ -12,6 +13,7 @@ require_relative "DhanHQ/helpers/attribute_helper"
 require_relative "DhanHQ/helpers/validation_helper"
 require_relative "DhanHQ/helpers/request_helper"
 require_relative "DhanHQ/helpers/response_helper"
+require_relative "DhanHQ/errors"
 require_relative "DhanHQ/core/base_api"
 require_relative "DhanHQ/core/base_model"
 require_relative "DhanHQ/core/base_resource"
@@ -89,15 +91,12 @@ module DhanHQ
     #
     # @return [void]
     def configure_with_env
-      self.configuration ||= Configuration.new
-      configuration.access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
-      configuration.client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
-      configuration.base_url = ENV.fetch("DHAN_BASE_URL", BASE_URL)
-      configuration.ws_version = ENV.fetch("DHAN_WS_VERSION", configuration.ws_version || 2).to_i
-      configuration.ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", configuration.ws_order_url)
-      configuration.ws_user_type = ENV.fetch("DHAN_WS_USER_TYPE", configuration.ws_user_type)
-      configuration.partner_id = ENV.fetch("DHAN_PARTNER_ID", configuration.partner_id)
-      configuration.partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", configuration.partner_secret)
+      self.configuration = Configuration.new
+    end
+
+    # Resets the configuration to nil.
+    def reset_configuration!
+      self.configuration = nil
     end
 
     # Configures the DhanHQ client by fetching credentials from a token endpoint.
@@ -120,12 +119,12 @@ module DhanHQ
       base_url ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
       bearer_token ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
 
-      raise TokenEndpointError, "base_url and bearer_token (or ENV DHAN_TOKEN_ENDPOINT_*) are required" if base_url.to_s.empty? || bearer_token.to_s.empty?
+      raise DhanHQ::TokenEndpointError, "base_url and bearer_token (or ENV DHAN_TOKEN_ENDPOINT_*) are required" if base_url.to_s.empty? || bearer_token.to_s.empty?
 
       url = "#{base_url.to_s.chomp("/")}/auth/dhan/token"
-      conn = Faraday.new(url: url) do |c|
+      conn = ::Faraday.new(url: url) do |c|
         c.response :json, content_type: /\bjson$/
-        c.adapter Faraday.default_adapter
+        c.adapter ::Faraday.default_adapter
       end
 
       response = conn.get("") do |req|
@@ -144,7 +143,7 @@ module DhanHQ
                  end
                end
         msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
-        raise TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
+        raise DhanHQ::TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
       end
 
       data = if response.body.is_a?(Hash)
@@ -160,7 +159,7 @@ module DhanHQ
 
       access_token = data["access_token"] || data[:access_token]
       client_id = data["client_id"] || data[:client_id]
-      raise TokenEndpointError, "Token endpoint response missing access_token or client_id" if access_token.to_s.empty? || client_id.to_s.empty?
+      raise DhanHQ::TokenEndpointError, "Token endpoint response missing access_token or client_id" if access_token.to_s.empty? || client_id.to_s.empty?
 
       self.configuration ||= Configuration.new
       configuration.access_token = access_token.to_s

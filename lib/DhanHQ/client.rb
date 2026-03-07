@@ -40,29 +40,14 @@ module DhanHQ
     # @return [DhanHQ::Client] A new client instance.
     # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
     def initialize(api_type:)
-      # Configure from ENV if DHAN_CLIENT_ID is present (backward compatible behavior)
-      # Validation happens at request time in build_headers, not here
-      DhanHQ.configure_with_env if ENV.fetch("DHAN_CLIENT_ID", nil)
-
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)
 
       raise DhanHQ::Error, "RateLimiter initialization failed" unless @rate_limiter
 
-      # Get timeout values from configuration or environment, with sensible defaults
-      connect_timeout = ENV.fetch("DHAN_CONNECT_TIMEOUT", 10).to_i
-      read_timeout = ENV.fetch("DHAN_READ_TIMEOUT", 30).to_i
-      write_timeout = ENV.fetch("DHAN_WRITE_TIMEOUT", 30).to_i
-
-      @connection = Faraday.new(url: DhanHQ.configuration.base_url) do |conn|
-        conn.request :json, parser_options: { symbolize_names: true }
-        conn.response :json, content_type: /\bjson$/
-        conn.response :logger if ENV["DHAN_DEBUG"] == "true"
-        conn.options.timeout = read_timeout
-        conn.options.open_timeout = connect_timeout
-        conn.options.write_timeout = write_timeout
-        conn.adapter Faraday.default_adapter
-      end
+      # Store initial URL to detect changes
+      @last_base_url = DhanHQ.configuration.base_url
+      @connection = build_connection(@last_base_url)
     end
 
     # Sends an HTTP request to the API with automatic retry for transient errors.
@@ -77,13 +62,15 @@ module DhanHQ
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
 
+      # Ensure connection matches current configuration (e.g. sandbox toggle)
+      refresh_connection!
+
       attempt = 0
       auth_retry_done = false
       begin
-        response = connection.send(method) do |req|
-          req.url path
+        response = connection.send(method, path) do |req|
           req.headers.merge!(build_headers(path))
-          prepare_payload(req, payload, method)
+          prepare_payload(req, payload, method, path)
         end
 
         handle_response(response)
@@ -200,6 +187,31 @@ module DhanHQ
     end
 
     private
+
+    def refresh_connection!
+      current_url = DhanHQ.configuration.base_url
+      return if @last_base_url == current_url
+
+      @last_base_url = current_url
+      @connection = build_connection(current_url)
+    end
+
+    def build_connection(url)
+      # Get timeout values from configuration or environment, with sensible defaults
+      connect_timeout = ENV.fetch("DHAN_CONNECT_TIMEOUT", 10).to_i
+      read_timeout = ENV.fetch("DHAN_READ_TIMEOUT", 30).to_i
+      write_timeout = ENV.fetch("DHAN_WRITE_TIMEOUT", 30).to_i
+
+      Faraday.new(url: url) do |conn|
+        conn.request :json, parser_options: { symbolize_names: true }
+        conn.response :json, content_type: /\bjson$/
+        conn.response :logger if ENV["DHAN_DEBUG"] == "true"
+        conn.options.timeout = read_timeout
+        conn.options.open_timeout = connect_timeout
+        conn.options.write_timeout = write_timeout
+        conn.adapter Faraday.default_adapter
+      end
+    end
 
     # Calculates exponential backoff time
     #

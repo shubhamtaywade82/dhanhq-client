@@ -40,6 +40,7 @@ RSpec.configure do |config|
     # Save original ENV values
     original_env[:client_id] = ENV.fetch("DHAN_CLIENT_ID", nil)
     original_env[:access_token] = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
+    original_env[:sandbox] = ENV.fetch("DHAN_SANDBOX", nil)
   end
 
   config.after(:suite) do
@@ -54,6 +55,11 @@ RSpec.configure do |config|
     else
       ENV.delete("DHAN_ACCESS_TOKEN")
     end
+    if original_env[:sandbox]
+      ENV["DHAN_SANDBOX"] = original_env[:sandbox]
+    else
+      ENV.delete("DHAN_SANDBOX")
+    end
   end
 
   # Block real HTTP connections by default (except for VCR tests)
@@ -61,19 +67,33 @@ RSpec.configure do |config|
 
   # Enforce WebMock for all tests EXCEPT those tagged with `vcr: true`
   config.before do |example|
+    DhanHQ.reset_configuration!
+
+    # Ensure ENV variables are set correctly
+    # If we have original values from .env/shell, use them.
+    # Otherwise, only use test defaults if we are not in a VCR test that might need real ones.
+    ENV["DHAN_CLIENT_ID"] = original_env[:client_id] if original_env[:client_id]
+    ENV["DHAN_ACCESS_TOKEN"] = original_env[:access_token] if original_env[:access_token]
+
+    # Only apply test defaults if totally blank
+    ENV["DHAN_CLIENT_ID"] ||= "test_client_id"
+    ENV["DHAN_ACCESS_TOKEN"] ||= "test_access_token"
+
+    # Force sandbox to false for general test suite (to match VCR cassettes)
+    # The sandbox_connectivity_spec.rb will explicitly override this.
+    ENV["DHAN_SANDBOX"] = "false"
+
+    # Always initialize with env defaults to avoid nil configuration errors
+    DhanHQ.configure_with_env
+
     if example.metadata[:vcr]
       # Ensure VCR is active for tests using `vcr:`
       VCR.turn_on!
-      WebMock.allow_net_connect! # Allow real API calls ONLY for VCR-tagged specs
-      # Ensure ENV variables are set for VCR tests (they need auth even with cassettes)
-      # Use original values if available, otherwise use test defaults
-      ENV["DHAN_CLIENT_ID"] ||= original_env[:client_id] || "test_client_id"
-      ENV["DHAN_ACCESS_TOKEN"] ||= original_env[:access_token] || "test_access_token"
-      DhanHQ.configure_with_env
+      # WebMock.allow_net_connect! is needed for VCR to record new cassettes
+      WebMock.allow_net_connect!
     else
       # Ensure all other tests use WebMock instead of VCR
-      VCR.eject_cassette if VCR.current_cassette
-      VCR.turn_off!
+      VCR.turn_off! if VCR.turned_on?
       WebMock.disable_net_connect!(allow_localhost: true)
     end
   end

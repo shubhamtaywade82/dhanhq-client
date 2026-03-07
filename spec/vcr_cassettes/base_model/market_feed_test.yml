@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/marketfeed/ltp
     body:
       encoding: UTF-8
-      string: '{"instruments":["NSE:INFY"],"fields":["lastPrice"]}'
+      string: '{"instruments":["NSE:INFY"],"fields":["lastPrice"],"dhanClientId":"<DHAN_CLIENT_ID>"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -15,7 +15,7 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
-      Client-Id:
+      client-id:
       - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
@@ -36,4 +36,4 @@ http_interactions:
       encoding: UTF-8
       string: '{"data":{},"status":"success"}'
   recorded_at: Sun, 12 Oct 2025 09:31:04 GMT
-recorded_with: VCR 6.3.1
+recorded_with: VCR 6.4.0

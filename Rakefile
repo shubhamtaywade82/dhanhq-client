@@ -7,6 +7,17 @@ RSpec::Core::RakeTask.new(:spec)
 
 require "rubocop/rake_task"
 
-RuboCop::RakeTask.new
+# Standard check (no changes)
+RuboCop::RakeTask.new(:rubocop)
+
+# Safe autocorrect (replaces -a)
+RuboCop::RakeTask.new(:"rubocop:fix") do |t|
+  t.options = ["--autocorrect"]
+end
+
+# Aggressive autocorrect (replaces -A)
+RuboCop::RakeTask.new(:"rubocop:fix_all") do |t|
+  t.options = ["--auto-correct-all"]
+end
 
 task default: %i[spec rubocop]

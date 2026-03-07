@@ -417,7 +417,11 @@ module DhanHQ
     DATA_API_PREFIXES = [
       "/v2/marketfeed/",
       "/v2/optionchain",
-      "/v2/instrument/"
+      "/v2/instrument/",
+      "/v2/charts",
+      "/v2/margincalculator",
+      "/v2/profile",
+      "/v2/fundlimit"
     ].freeze
 
     # Mapping of exchange and segment combinations to canonical exchange segment names.

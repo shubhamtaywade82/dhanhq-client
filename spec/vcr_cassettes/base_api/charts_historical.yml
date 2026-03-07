@@ -15,6 +15,8 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
+      Client-Id:
+      - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -38,4 +40,47 @@ http_interactions:
       encoding: UTF-8
       string: '{"open":[1687.0],"high":[1687.0],"low":[1651.25],"close":[1664.9],"volume":[1.7454579E7],"timestamp":[1.7375706E9]}'
   recorded_at: Sat, 25 Jan 2025 09:54:55 GMT
-recorded_with: VCR 6.3.1
+- request:
+    method: post
+    uri: https://api.dhan.co/v2/charts/historical
+    body:
+      encoding: UTF-8
+      string: '{"securityId":"1333","exchangeSegment":"NSE_EQ","instrument":"EQUITY","expiryCode":0,"fromDate":"2025-01-23","toDate":"2025-01-24"}'
+    headers:
+      User-Agent:
+      - Faraday v1.10.5
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Access-Token:
+      - "<DHAN_ACCESS_TOKEN>"
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+  response:
+    status:
+      code: 400
+      message: ''
+    headers:
+      Date:
+      - Sat, 07 Mar 2026 06:14:45 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Access-Control-Request-Headers
+      - Access-Control-Request-Method
+      - Origin
+      Content-Security-Policy:
+      - frame-ancestors 'none'
+      X-Frame-Options:
+      - SAMEORIGIN
+    body:
+      encoding: UTF-8
+      string: '{"errorType":"Order_Error","errorCode":"DH-906","errorMessage":"Invalid
+        Token"}'
+  recorded_at: Sat, 07 Mar 2026 06:14:45 GMT
+recorded_with: VCR 6.4.0

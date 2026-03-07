@@ -1,20 +1,22 @@
 ---
 http_interactions:
 - request:
-    method: post
-    uri: https://api.dhan.co/v2/orders
+    method: get
+    uri: https://sandbox.dhan.co/v2/fundlimit
     body:
-      encoding: UTF-8
-      string: '{"correlationId":"correl-amo-test","transactionType":"BUY","exchangeSegment":"BSE_EQ","productType":"CNC","orderType":"MARKET","validity":"DAY","securityId":"539310","quantity":5,"afterMarketOrder":true,"amoTime":"OPEN","dhanClientId":"<DHAN_CLIENT_ID>"}'
+      encoding: US-ASCII
+      string: ''
     headers:
       User-Agent:
-      - Faraday v1.10.4
+      - Faraday v1.10.5
       Content-Type:
       - application/json
       Accept:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
+      Client-Id:
+      - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:
@@ -23,7 +25,7 @@ http_interactions:
       message: ''
     headers:
       Date:
-      - Sun, 16 Feb 2025 15:39:26 GMT
+      - Sat, 07 Mar 2026 06:43:51 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,6 +38,6 @@ http_interactions:
       - Origin
     body:
       encoding: UTF-8
-      string: '{"orderId":"752502167405","orderStatus":"TRANSIT"}'
-  recorded_at: Sun, 16 Feb 2025 15:39:26 GMT
-recorded_with: VCR 6.3.1
+      string: '{"dhanClientId":"<DHAN_CLIENT_ID>","availabelBalance":1000000.0,"sodLimit":0.0,"collateralAmount":0.0,"receiveableAmount":0.0,"utilizedAmount":0.0,"blockedPayoutAmount":0.0,"withdrawableBalance":0.0}'
+  recorded_at: Sat, 07 Mar 2026 06:43:51 GMT
+recorded_with: VCR 6.4.0

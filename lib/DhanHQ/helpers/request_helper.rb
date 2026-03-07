@@ -39,7 +39,7 @@ module DhanHQ
         "access-token" => token
       }
 
-      # Add client-id for DATA APIs
+      # Add client-id for DATA APIs (now including sandbox profile/funds)
       if data_api?(path)
         client_id = DhanHQ.configuration&.client_id
         unless client_id
@@ -70,12 +70,25 @@ module DhanHQ
     # @param req [Faraday::Request] The request object.
     # @param payload [Hash] The request payload.
     # @param method [Symbol] The HTTP method.
-    def prepare_payload(req, payload, method)
-      return if payload.nil? || payload.empty?
+    def prepare_payload(req, payload, method, path = nil)
+      return if payload.nil? || (payload.empty? && (path.nil? || !data_api?(path)))
 
       unless payload.is_a?(Hash)
         raise DhanHQ::InputExceptionError,
               "Invalid payload: Expected a Hash, got #{payload.class}"
+      end
+
+      # Inject dhanClientId for DATA APIs if it's a POST/PUT/PATCH and missing
+      if path && data_api?(path) && %i[post put patch].include?(method)
+        client_id = DhanHQ.configuration&.client_id
+        if client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
+          # Match existing key style if possible
+          if payload.keys.any?(String)
+            payload["dhanClientId"] = client_id
+          else
+            payload[:dhanClientId] = client_id
+          end
+        end
       end
 
       case method

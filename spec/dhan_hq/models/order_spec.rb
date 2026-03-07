@@ -3,7 +3,7 @@
 RSpec.describe DhanHQ::Models::Order do
   subject(:order_model) { described_class }
 
-  let(:order_id) { "952502167319" }
+  let(:order_id) { ENV.fetch("DHAN_TEST_ORDER_ID", "952502167319") }
 
   before { DhanHQ.configure_with_env }
 
@@ -23,7 +23,7 @@ RSpec.describe DhanHQ::Models::Order do
   describe ".create" do
     let(:valid_order_params) do
       {
-        correlationId: "correl-amo-#{Time.now.to_i}",
+        correlationId: "correl-amo-test",
         transactionType: "BUY",
         exchangeSegment: "BSE_EQ",
         productType: "CNC",

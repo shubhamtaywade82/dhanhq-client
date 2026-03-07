@@ -29,6 +29,7 @@ RSpec.describe DhanHQ::Configuration do
     before do
       ENV.delete("DHAN_ACCESS_TOKEN")
       ENV.delete("DHAN_CLIENT_ID")
+      ENV.delete("DHAN_SANDBOX")
     end
 
     it "sets default values" do
@@ -45,6 +46,34 @@ RSpec.describe DhanHQ::Configuration do
 
       expect(config_with_env.access_token).to eq("env_access_token")
       expect(config_with_env.client_id).to eq("env_client_id")
+    end
+
+    it "defaults sandbox to false" do
+      expect(config.sandbox).to be false
+    end
+
+    it "loads sandbox from ENV" do
+      ENV["DHAN_SANDBOX"] = "true"
+      expect(described_class.new.sandbox).to be true
+    end
+  end
+
+  describe "#base_url" do
+    before { ENV.delete("DHAN_SANDBOX") }
+
+    it "returns production URL by default" do
+      expect(config.base_url).to eq(DhanHQ::Configuration::BASE_URL)
+    end
+
+    it "returns sandbox URL when sandbox is true" do
+      config.sandbox = true
+      expect(config.base_url).to eq(DhanHQ::Configuration::SANDBOX_URL)
+    end
+
+    it "returns custom base_url even if sandbox is true" do
+      config.sandbox = true
+      config.base_url = "https://custom.api.com"
+      expect(config.base_url).to eq("https://custom.api.com")
     end
   end
 

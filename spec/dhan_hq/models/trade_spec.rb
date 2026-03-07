@@ -24,7 +24,7 @@ RSpec.describe DhanHQ::Models::Trade do
   end
 
   describe ".find_by_order_id" do
-    let(:order_id) { "123456789" }
+    let(:order_id) { ENV.fetch("DHAN_TEST_ORDER_ID", "123456789") }
 
     it "retrieves trade details for the order", vcr: { cassette_name: "models/trade_find" } do
       trade = trade_model.find_by_order_id(order_id)
