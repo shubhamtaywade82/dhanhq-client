@@ -16,6 +16,7 @@
 | Status    | Endpoints |
 |-----------|-----------|
 | **Verified on sandbox** (gem specs) | `GET /v2/profile`, `GET /v2/fundlimit` |
+| **Sandbox connectivity spec** | `spec/dhan_hq/sandbox_connectivity_spec.rb` — uses VCR `record: :new_episodes`. In CI, use committed cassettes or skip without sandbox credentials; locally, run with `VCR_RECORD=new_episodes` and sandbox credentials to record. |
 | **Not supported in sandbox** | All WebSocket endpoints (order updates, market feed, market depth). Use production only. |
 | **Not verified on sandbox** | All other REST endpoints below. They may fail, return differently, or be unavailable in sandbox. Use Dhan documentation or manual testing before relying on them in sandbox. |
 

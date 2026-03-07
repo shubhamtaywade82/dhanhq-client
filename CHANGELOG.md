@@ -1,3 +1,11 @@
+## [2.6.2] - 2026-03-07
+
+### Changed
+
+- **Release from main** after merging add-sandbox-support. Includes sandbox REST base URL, `ensure_configuration!`, payload non-mutation, Rakefile/VCR fixes, and docs. Full feature list is under [2.6.0](#260---2026-03-06); 2.6.0 and 2.6.1 are already on RubyGems.
+
+---
+
 ## [2.6.1] - 2026-03-07
 
 ### Changed

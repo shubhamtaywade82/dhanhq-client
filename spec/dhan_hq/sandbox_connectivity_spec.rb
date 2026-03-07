@@ -2,6 +2,10 @@
 
 require "spec_helper"
 
+# Sandbox connectivity: hits real sandbox when VCR has no cassette (record: :new_episodes).
+# In CI, either commit cassettes for these examples or run with DHAN_SANDBOX + credentials
+# when recording. Locally, use VCR_RECORD=new_episodes (or all) with sandbox credentials to
+# record or re-record. General suite forces DHAN_SANDBOX=false so this spec is isolated.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe "Sandbox Connectivity", vcr: { record: :new_episodes } do
   before do
