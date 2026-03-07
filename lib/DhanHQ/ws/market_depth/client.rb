@@ -86,11 +86,12 @@ module DhanHQ
           cid = config.client_id or raise "DhanHQ.client_id not set"
           depth_level = config.market_depth_level || 20 # Default to 20 level depth
 
-          if depth_level == 200
-            "wss://full-depth-api.dhan.co/twohundreddepth?token=#{token}&clientId=#{cid}&authType=2"
-          else
-            "wss://depth-api-feed.dhan.co/twentydepth?token=#{token}&clientId=#{cid}&authType=2"
-          end
+          base = if depth_level == 200
+                   "wss://full-depth-api.dhan.co/twohundreddepth"
+                 else
+                   config.ws_market_depth_url
+                 end
+          base.include?("?") ? base : "#{base}?token=#{token}&clientId=#{cid}&authType=2"
         end
 
         ##

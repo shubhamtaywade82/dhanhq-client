@@ -44,8 +44,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/orders/952502167319
     body:
       encoding: UTF-8
-      string: '{"dhanClientId":"<DHAN_CLIENT_ID>","orderId":"952502167319","exchangeOrderId":"0","correlationId":"NA","orderStatus":"CANCELLED","transactionType":"BUY","exchangeSegment":"BSE_EQ","productType":"CNC","orderType":"LIMIT","validity":"DAY","tradingSymbol":"THINKINK","securityId":"539310","quantity":20,"disclosedQuantity":0,"price":0.36,"triggerPrice":0.0,"afterMarketOrder":true,"boProfitValue":0.0,"boStopLossValue":0.0,"legName":"NA","createTime":"2025-02-16
-        21:07:34","updateTime":"2025-02-16 21:07:34","exchangeTime":"0001-01-01 00:00:00","drvExpiryDate":"0001-01-01","drvOptionType":"NA","drvStrikePrice":0.0,"omsErrorCode":"0","omsErrorDescription":"","algoId":"0","remainingQuantity":0,"averageTradedPrice":0.0,"filledQty":0}'
+      string: '{"dhanClientId":"<DHAN_CLIENT_ID>","orderId":"952502167319","orderType":"LIMIT","validity":"DAY","quantity":10,"disclosedQuantity":0,"price":3400.0,"legName":"NA"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -55,6 +54,8 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
+      client-id:
+      - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
   response:

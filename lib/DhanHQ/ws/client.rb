@@ -32,7 +32,8 @@ module DhanHQ
 
         cid   = DhanHQ.configuration.client_id or raise "DhanHQ.client_id not set"
         ver   = (DhanHQ.configuration.respond_to?(:ws_version) && DhanHQ.configuration.ws_version) || 2
-        @url  = url || "wss://api-feed.dhan.co?version=#{ver}&token=#{token}&clientId=#{cid}&authType=2"
+        base  = url || DhanHQ.configuration.ws_market_feed_url
+        @url  = base.include?("?") ? base : "#{base}?version=#{ver}&token=#{token}&clientId=#{cid}&authType=2"
       end
 
       # Starts the WebSocket connection and event loop.

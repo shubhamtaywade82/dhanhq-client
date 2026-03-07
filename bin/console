@@ -11,6 +11,7 @@ require "ta/technical_analysis"
 
 require "irb"
 DhanHQ.configure_with_env
+puts "=> DhanHQ Client v#{DhanHQ::VERSION} initialized in #{DhanHQ.configuration.sandbox ? "SANDBOX" : "PRODUCTION"} mode."
 
 # Load test helpers for easier testing (optional)
 # Uncomment the line below to auto-load test helpers:

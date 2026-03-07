@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/marketfeed/ltp
     body:
       encoding: UTF-8
-      string: '{"NSE_EQ":[11536,1333],"BSE_EQ":[49081,49082]}'
+      string: '{"NSE_EQ":[11536,1333],"BSE_EQ":[49081,49082],"dhanClientId":"<DHAN_CLIENT_ID>"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -15,7 +15,7 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
-      Client-Id:
+      client-id:
       - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
@@ -41,7 +41,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/marketfeed/ohlc
     body:
       encoding: UTF-8
-      string: '{"NSE_EQ":[1333]}'
+      string: '{"NSE_EQ":[1333],"dhanClientId":"<DHAN_CLIENT_ID>"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -51,7 +51,7 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
-      Client-Id:
+      client-id:
       - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
@@ -77,7 +77,7 @@ http_interactions:
     uri: https://api.dhan.co/v2/marketfeed/quote
     body:
       encoding: UTF-8
-      string: '{"NSE_FNO":[49081,49082]}'
+      string: '{"NSE_FNO":[49081,49082],"dhanClientId":"<DHAN_CLIENT_ID>"}'
     headers:
       User-Agent:
       - Faraday v1.10.4
@@ -87,7 +87,7 @@ http_interactions:
       - application/json
       Access-Token:
       - "<DHAN_ACCESS_TOKEN>"
-      Client-Id:
+      client-id:
       - "<DHAN_CLIENT_ID>"
       Accept-Encoding:
       - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
@@ -108,4 +108,4 @@ http_interactions:
       encoding: UTF-8
       string: '{"data":{"NSE_FNO":{}},"status":"success"}'
   recorded_at: Sat, 15 Mar 2025 10:30:55 GMT
-recorded_with: VCR 6.3.1
+recorded_with: VCR 6.4.0

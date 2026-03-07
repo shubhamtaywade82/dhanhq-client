@@ -207,9 +207,9 @@ module DhanHQ
         #   )
         #
         def create(params)
-          # Normalize params and auto-inject dhan_client_id from configuration if not provided
           normalized_params = snake_case(params)
-          normalized_params[:dhan_client_id] ||= DhanHQ.configuration.client_id if DhanHQ.configuration.client_id
+          config = DhanHQ.configuration
+          normalized_params[:dhan_client_id] ||= config.client_id if config&.client_id
           response = resource.create(normalized_params)
           return nil unless response.is_a?(Hash) && response["orderId"]
 

@@ -88,9 +88,10 @@ module DhanHQ
 
     # Format parameters based on API endpoint
     def format_params(endpoint, params)
-      return params if marketfeed_api?(endpoint) || params.empty?
+      full_path = build_path(endpoint)
+      return params if marketfeed_api?(full_path) || params.empty?
 
-      optionchain_api?(endpoint) ? titleize_keys(params) : camelize_keys(params)
+      optionchain_api?(full_path) ? titleize_keys(params) : camelize_keys(params)
     end
 
     # Determines if the API endpoint is for Option Chain
