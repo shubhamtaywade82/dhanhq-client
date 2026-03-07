@@ -1,5 +1,21 @@
 ## [2.6.0] - 2026-03-06
 
+### Sandbox & configuration
+
+- **Sandbox environment**: `DhanHQ.configuration.sandbox` (or `ENV["DHAN_SANDBOX"]=true`) switches REST base URL to `https://sandbox.dhan.co/v2`. Only `GET /v2/profile` and `GET /v2/fundlimit` are verified on sandbox; other REST endpoints are unverified. See `docs/ENDPOINTS_AND_SANDBOX.md`.
+- **WebSocket**: Sandbox does **not** support WebSocket. Order updates, market feed, and market depth always use production URLs regardless of `sandbox`; no sandbox WS URLs are published.
+- **Env-only bootstrap**: `DhanHQ.ensure_configuration!` ensures configuration exists (from ENV when nil). Called automatically in `Client#initialize` so apps using only `DHAN_CLIENT_ID` / `DHAN_ACCESS_TOKEN` work without calling `configure_with_env`.
+
+### Fixed
+
+- **Payload mutation**: `prepare_payload` no longer mutates the caller's hash when injecting `dhanClientId` for DATA APIs; uses a duplicate so frozen or reused hashes are safe.
+- **VCR**: Removed erroneous `/v2/v2/` market feed cassette entries (404 responses).
+- **Rakefile**: Single RuboCop task; removed redundant `rubocop:fix` / `rubocop:fix_all` and deprecated `--auto-correct-all` flag.
+
+### Added
+
+- **docs/ENDPOINTS_AND_SANDBOX.md**: Lists all REST/WebSocket endpoints, sandbox behavior, and endpoints verified vs not supported on sandbox.
+
 ### Fixed (API docs alignment)
 
 - **Kill Switch**: Manage API now uses query parameter per [dhanhq.co/docs/v2/traders-control](https://dhanhq.co/docs/v2/traders-control/). `Resources::KillSwitch#update(status)` sends `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `Models::KillSwitch.update("ACTIVATE")` / `.activate` / `.deactivate` unchanged.
