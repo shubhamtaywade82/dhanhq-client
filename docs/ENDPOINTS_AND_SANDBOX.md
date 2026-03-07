@@ -112,4 +112,4 @@ bin/call_all_endpoints.rb --list       # print endpoint list
 bin/call_all_endpoints.rb --all        # include POST/PUT/DELETE
 ```
 
-Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`. Optional: `DHAN_SANDBOX=true`, `DHAN_TEST_SECURITY_ID`, `DHAN_TEST_ORDER_ID`, `DHAN_TEST_ISIN`, `DHAN_TEST_EXPIRY`.
+Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`. Optional: `DHAN_SANDBOX=true`, `DHAN_TEST_SECURITY_ID`, `DHAN_TEST_ORDER_ID`, `DHAN_TEST_ISIN`, `DHAN_TEST_EXPIRY`. When not using `--skip-unavailable`, the script creates a temporary alert for GET/PUT/DELETE alert endpoints and deletes it at exit.

@@ -19,6 +19,7 @@
 #   DHAN_TEST_ORDER_ID=...
 #   DHAN_TEST_ISIN=...
 #   DHAN_TEST_EXPIRY=YYYY-MM-DD
+# When not using --skip-unavailable, the script creates a temporary alert for GET/PUT/DELETE alert endpoints and deletes it at exit.
 
 require "optparse"
 require "json"
@@ -101,6 +102,24 @@ alert_id = ENV["DHAN_TEST_ALERT_ID"] || "1"
 sample_isin = ENV.fetch("DHAN_TEST_ISIN", nil)
 client_id = DhanHQ.configuration&.client_id
 
+# Alert params for creating a temporary alert (used for GET/PUT/DELETE alert endpoints); cleaned up at end.
+def alert_create_params(security_id:, expiry_date:)
+  {
+    condition: {
+      security_id: security_id,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      comparison_type: DhanHQ::Constants::ComparisonType::PRICE_WITH_VALUE,
+      operator: DhanHQ::Constants::Operator::GREATER_THAN,
+      comparing_value: 1,
+      time_frame: DhanHQ::Constants::ALERT_TIMEFRAMES.first,
+      exp_date: expiry_date,
+      frequency: "ONCE"
+    },
+    orders: [{ transaction_type: DhanHQ::Constants::TransactionType::BUY, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, product_type: DhanHQ::Constants::ProductType::CNC, order_type: DhanHQ::Constants::OrderType::LIMIT, security_id: security_id, quantity: 1, validity: DhanHQ::Constants::Validity::DAY, price: 1.0 }]
+  }
+end
+created_alert_id = nil
+
 # Minimal payloads for data/market endpoints
 LTP_PARAMS = { DhanHQ::Constants::ExchangeSegment::IDX_I => [13] }.freeze
 HISTORICAL_PARAMS = {
@@ -145,7 +164,7 @@ MARGIN_PARAMS = {
 # Paths skipped when --skip-unavailable (often 404 or timeout in production).
 SKIP_UNAVAILABLE_PATHS = [
   "GET /v2/forever/orders/{id}",
-  "GET /ip/getIP",
+  "GET /v2/ip/getIP",
   "GET /edis/tpin",
   "GET /alerts/orders",
   "GET /alerts/orders/{id}"
@@ -178,7 +197,7 @@ def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, sam
     ["GET /v2/forever/orders/{id}", "ForeverOrder.find", false, -> { DhanHQ::Models::ForeverOrder.find(forever_order_id || order_id) }],
     ["GET /v2/super/orders", "SuperOrder.all", false, -> { DhanHQ::Models::SuperOrder.all }],
     ["GET /v2/killswitch", "KillSwitch.status", false, -> { DhanHQ::Models::KillSwitch.status }],
-    ["GET /ip/getIP", "IPSetup.current", false, -> { DhanHQ::Resources::IPSetup.new.current }],
+    ["GET /v2/ip/getIP", "IPSetup.current", false, -> { DhanHQ::Resources::IPSetup.new.current }],
     ["GET /edis/tpin", "Edis.generate_tpin", false, -> { DhanHQ::Models::Edis.generate_tpin }],
     ["GET /alerts/orders", "AlertOrder.all", false, -> { DhanHQ::Models::AlertOrder.all }],
     ["GET /alerts/orders/{id}", "AlertOrder.find", false, -> { DhanHQ::Models::AlertOrder.find(alert_id) }],
@@ -218,17 +237,9 @@ def write_endpoints(client_id:, security_id:, order_id:, forever_order_id:, supe
     disclosed_quantity: 0,
     after_market_order: false
   }
-  alert_condition = {
-    security_id: security_id,
-    exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
-    comparison_type: DhanHQ::Constants::ComparisonType::PRICE_WITH_VALUE,
-    operator: DhanHQ::Constants::Operator::GREATER_THAN,
-    comparing_value: 1,
-    time_frame: DhanHQ::Constants::ALERT_TIMEFRAMES.first,
-    exp_date: expiry_date,
-    frequency: "ONCE"
-  }
-  alert_orders = [{ transaction_type: DhanHQ::Constants::TransactionType::BUY, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, product_type: DhanHQ::Constants::ProductType::CNC, order_type: DhanHQ::Constants::OrderType::LIMIT, security_id: security_id, quantity: 1, validity: DhanHQ::Constants::Validity::DAY, price: 1.0 }]
+  alert_params = alert_create_params(security_id: security_id, expiry_date: expiry_date)
+  alert_condition = alert_params[:condition]
+  alert_orders = alert_params[:orders]
   position_convert_params = { dhan_client_id: client_id, from_product_type: DhanHQ::Constants::ProductType::INTRADAY, to_product_type: DhanHQ::Constants::ProductType::CNC, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, position_type: DhanHQ::Constants::PositionType::LONG, security_id: security_id, trading_symbol: "TCS", convert_qty: 1 }
   forever_params = {
     dhan_client_id: client_id,
@@ -291,7 +302,22 @@ if options[:list]
   exit 0
 end
 
-results = []
+# Create a temporary alert so GET/PUT/DELETE alert endpoints have a valid ID (removed in ensure below).
+# If create fails (e.g. 404 in production where Conditional Trigger may be unavailable), continue without one.
+unless options[:skip_unavailable]
+  begin
+    created = DhanHQ::Models::AlertOrder.create(alert_create_params(security_id: security_id, expiry_date: expiry_date))
+    if created&.alert_id
+      alert_id = created.alert_id.to_s
+      created_alert_id = alert_id
+    end
+  rescue StandardError
+    # Alert create failed; alert_id stays ENV or "1"; GET/PUT/DELETE alert endpoints may 404
+  end
+end
+
+begin
+  results = []
 
 def run(results, path, name, write:, progress: false)
   print "  #{path} ... " if progress
@@ -336,6 +362,7 @@ if options[:all]
   write_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
                               expiry_date: expiry_date)
   write_list = write_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
+  write_list = write_list.reject { |path, *_| path == "POST /alerts/orders" } if created_alert_id
   puts "Calling #{write_list.size} write endpoints..." if progress
   write_list.each do |path, name, blk|
     run(results, path, name, write: true, progress: progress, &blk)
@@ -367,3 +394,8 @@ end
 puts "-" * 60
 puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]}"
 exit(summary[:error].zero? ? 0 : 1)
+ensure
+  if created_alert_id
+    DhanHQ::Models::AlertOrder.find(created_alert_id)&.destroy
+  end
+end

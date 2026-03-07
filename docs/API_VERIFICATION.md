@@ -46,9 +46,9 @@ Model: `Models::AlertOrder`. Condition must include `exchange_segment`, `exp_dat
 
 | Doc path        | Gem method     | Path / body |
 |-----------------|----------------|-------------|
-| GET /ip/getIP   | `#current`     | `get("/getIP")` |
-| POST /ip/setIP  | `#set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `post("/setIP", params: { ip:, ip_flag:, dhan_client_id: })`; `dhan_client_id` defaults from config |
-| PUT /ip/modifyIP| `#update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `put("/modifyIP", params: { ip:, ip_flag:, dhan_client_id: })` |
+| GET /v2/ip/getIP   | `#current`     | `get("/getIP")` (HTTP_PATH = "/ip") |
+| POST /v2/ip/setIP  | `#set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `post("/setIP", params: { ip:, ip_flag:, dhan_client_id: })`; `dhan_client_id` defaults from config |
+| PUT /v2/ip/modifyIP| `#update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `put("/modifyIP", params: { ip:, ip_flag:, dhan_client_id: })` |
 
 ---
 
