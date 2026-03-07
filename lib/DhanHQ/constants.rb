@@ -455,6 +455,19 @@ module DhanHQ
       "/v2/fundlimit"
     ].freeze
 
+    # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.
+    # Injection is done in the client layer when building the payload.
+    PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES = %w[
+      /alerts/orders
+      /v2/orders
+      /v2/forever
+      /v2/super/orders
+      /v2/positions
+      /v2/pnlExit
+      /v2/margincalculator
+      /v2/killswitch
+    ].freeze
+
     # Mapping of exchange and segment combinations to canonical exchange segment names.
     SEGMENT_MAP = {
       %w[NSE E] => ExchangeSegment::NSE_EQ,

@@ -42,6 +42,12 @@ RSpec.describe DhanHQ::Models::AlertOrder do
         expect(described_class.find("AID-1")).to be_nil
       end
 
+      it "returns nil when the response is an empty hash" do
+        allow(resource_double).to receive(:find).with("AID-1").and_return({})
+
+        expect(described_class.find("AID-1")).to be_nil
+      end
+
       it "wraps the response in a model" do
         allow(resource_double).to receive(:find).with("AID-1")
                                                 .and_return({ "alertId" => "AID-1", "triggerPrice" => 100.0 })
@@ -106,7 +112,8 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       end
 
       it "raises when validation fails" do
-        invalid_params = Marshal.load(Marshal.dump(valid_params))
+        invalid_params = valid_params.dup
+        invalid_params[:orders] = valid_params[:orders].map(&:dup)
         invalid_params[:orders][0][:quantity] = -1
 
         expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)

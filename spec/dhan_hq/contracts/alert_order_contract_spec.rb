@@ -82,5 +82,13 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
       expect(result.success?).to be(false)
       expect(result.errors.to_h[:orders][0][:quantity]).to include("must be greater than 0")
     end
+
+    it "rejects invalid exp_date format" do
+      params = valid_params.dup
+      params[:condition] = params[:condition].merge(exp_date: "31-12-2026")
+      result = contract.call(params)
+      expect(result.success?).to be(false)
+      expect(result.errors.to_h.dig(:condition, :exp_date)).not_to be_empty
+    end
   end
 end

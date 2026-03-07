@@ -54,8 +54,11 @@ Model: `Models::AlertOrder`. Condition must include `exchange_segment`, `exp_dat
 
 ## Trader Control / Kill Switch
 
-- **Kill Switch:** `Resources::KillSwitch`, `Models::KillSwitch` – path `/v2/killswitch`. Manage (activate/deactivate) uses **query parameter** per [traders-control](https://dhanhq.co/docs/v2/traders-control/): `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `#status` is GET.
-- **Trader Control:** `Resources::TraderControl` – path `/trader-control`; `#status`, `#enable`, `#disable`. Not found on the public docs; kept for compatibility.
+**Doc:** [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/) → Trading APIs → Trader's Control.
+
+- **Kill Switch:** `Resources::KillSwitch`, `Models::KillSwitch` – path `/v2/killswitch`. Manage (activate/deactivate) uses **query parameter**: `POST /v2/killswitch?killSwitchStatus=ACTIVATE` (or `DEACTIVATE`) with no body. `#status` is GET.
+- **P&L Exit:** `Models::PnlExit` – path `/v2/pnlExit`. GET status, POST configure, DELETE stop.
+- **TraderControl:** `Resources::TraderControl` – path `/trader-control` is **not** in the Dhan v2 API. The class is kept for backward compatibility but raises `DhanHQ::Error` when any method is called; use KillSwitch and PnlExit instead.
 
 ---
 

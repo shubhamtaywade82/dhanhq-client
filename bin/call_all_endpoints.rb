@@ -6,8 +6,11 @@
 #
 # Usage:
 #   bin/call_all_endpoints.rb              # read-only (GET + safe POST for data APIs)
-#   bin/call_all_endpoints.rb --all        # include write/destructive endpoints
+#   bin/call_all_endpoints.rb --all        # include write/destructive endpoints (requires DHAN_SANDBOX=true)
 #   bin/call_all_endpoints.rb --list       # print endpoint list and exit
+#   bin/call_all_endpoints.rb --skip-unavailable  # skip endpoints that often 404/timeout in production
+#
+# Write endpoints (--all) can be tested safely in sandbox. They are only run when DHAN_SANDBOX=true.
 #
 # Requires DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN (or token endpoint). Optional:
 #   DHAN_SANDBOX=true
@@ -45,15 +48,17 @@ options = {
   all: false,
   list: false,
   json: false,
-  verbose: false
+  verbose: false,
+  skip_unavailable: false
 }
 
 OptionParser.new do |opts|
   opts.banner = "Usage: bin/call_all_endpoints.rb [options]"
-  opts.on("--all", "Include write/destructive endpoints (POST/PUT/DELETE that change state)") { options[:all] = true }
+  opts.on("--all", "Include write/destructive endpoints (requires DHAN_SANDBOX=true; safe to test in sandbox)") { options[:all] = true }
   opts.on("--list", "Print all endpoints and exit") { options[:list] = true }
   opts.on("--json", "Output results as JSON") { options[:json] = true }
   opts.on("--verbose", "Print each result summary") { options[:verbose] = true }
+  opts.on("--skip-unavailable", "Skip endpoints that often 404/timeout in production (e.g. alerts, edis/tpin, forever/orders/{id})") { options[:skip_unavailable] = true }
 end.parse!
 
 puts "DhanHQ — Call all endpoints"
@@ -68,6 +73,11 @@ if DhanHQ.configuration.access_token.to_s.empty? && DhanHQ.configuration.client_
   endpoint_base = ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
   endpoint_bearer = ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
   DhanHQ.configure_from_token_endpoint(base_url: endpoint_base, bearer_token: endpoint_bearer) if endpoint_base.to_s != "" && endpoint_bearer.to_s != ""
+end
+
+if options[:all] && !DhanHQ.configuration&.sandbox?
+  puts "Write endpoints require sandbox. Set DHAN_SANDBOX=true to test them."
+  exit 1
 end
 
 # Suppress gem ERROR logs (e.g. JSON parse errors when API returns HTML); script reports failures in its summary.
@@ -132,6 +142,17 @@ MARGIN_PARAMS = {
   trigger_price: 0.0
 }.freeze
 
+# Paths skipped when --skip-unavailable (often 404 or timeout in production).
+SKIP_UNAVAILABLE_PATHS = [
+  "GET /v2/forever/orders/{id}",
+  "GET /ip/getIP",
+  "GET /edis/tpin",
+  "GET /alerts/orders",
+  "GET /alerts/orders/{id}"
+].freeze
+# Write paths skipped when --skip-unavailable (reserved for future use).
+SKIP_UNAVAILABLE_WRITE_PATHS = [].freeze
+
 # Build list of [ path, name, write?, block ]
 def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, sample_isin:, forever_order_id:, alert_id:)
   h_params = HISTORICAL_PARAMS.merge(from_date: from_date, to_date: to_date)
@@ -157,7 +178,6 @@ def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, sam
     ["GET /v2/forever/orders/{id}", "ForeverOrder.find", false, -> { DhanHQ::Models::ForeverOrder.find(forever_order_id || order_id) }],
     ["GET /v2/super/orders", "SuperOrder.all", false, -> { DhanHQ::Models::SuperOrder.all }],
     ["GET /v2/killswitch", "KillSwitch.status", false, -> { DhanHQ::Models::KillSwitch.status }],
-    ["GET /trader-control", "TraderControl.status", false, -> { DhanHQ::Resources::TraderControl.new.status }],
     ["GET /ip/getIP", "IPSetup.current", false, -> { DhanHQ::Resources::IPSetup.new.current }],
     ["GET /edis/tpin", "Edis.generate_tpin", false, -> { DhanHQ::Models::Edis.generate_tpin }],
     ["GET /alerts/orders", "AlertOrder.all", false, -> { DhanHQ::Models::AlertOrder.all }],
@@ -244,8 +264,6 @@ def write_endpoints(client_id:, security_id:, order_id:, forever_order_id:, supe
     ["POST /v2/positions/convert", "Position.convert", -> { DhanHQ::Models::Position.convert(position_convert_params) }],
     ["DELETE /v2/positions", "Position.exit_all!", -> { DhanHQ::Models::Position.exit_all! }],
     ["POST /v2/killswitch", "KillSwitch.activate", -> { DhanHQ::Models::KillSwitch.activate }],
-    ["POST /trader-control", "TraderControl.enable", -> { DhanHQ::Resources::TraderControl.new.enable }],
-    ["POST /trader-control", "TraderControl.disable", -> { DhanHQ::Resources::TraderControl.new.disable }],
     ["POST /v2/pnlExit", "PnlExit.configure", -> { DhanHQ::Models::PnlExit.configure(profit_value: 1000, loss_value: 500, product_type: %w[INTRADAY CNC], enable_kill_switch: false) }],
     ["DELETE /v2/pnlExit", "PnlExit.stop", -> { DhanHQ::Models::PnlExit.stop }],
     ["POST /alerts/orders", "AlertOrder.create", -> { DhanHQ::Models::AlertOrder.create(condition: alert_condition, orders: alert_orders) }],
@@ -262,12 +280,13 @@ end
 
 if options[:list]
   list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
+  list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) } if options[:skip_unavailable]
   list.each { |path, name, write| puts "#{write ? "[W]" : "[R]"} #{path}  (#{name})" }
   if options[:all]
-    write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
-                    expiry_date: expiry_date).each do |path, name, _|
-      puts "[W] #{path}  (#{name})"
-    end
+    w_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
+                            expiry_date: expiry_date)
+    w_list = w_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
+    w_list.each { |path, name, _| puts "[W] #{path}  (#{name})" }
   end
   exit 0
 end
@@ -288,15 +307,23 @@ rescue Timeout::Error
   puts "error" if progress
 rescue StandardError => e
   duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-  msg = e.message.to_s.gsub(/\s+/, " ").strip[0, 200]
-  results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "#{e.class}: #{msg}" }
+  msg = e.message.to_s.gsub(/\s+/, " ").strip
+  msg = "#{msg[0, 380]}..." if msg.length > 380
+  err_display = "#{e.class.name.split("::").last}: #{msg}"
+  results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: err_display }
   puts "error" if progress
 end
 
 list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
+skipped_count = 0
+if options[:skip_unavailable]
+  skipped_count = list.count { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+  list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+end
 progress = !options[:json]
 if progress
   puts "Calling #{list.size} endpoints..."
+  puts "Skipped #{skipped_count} unavailable endpoint(s)." if skipped_count.positive?
   $stdout.flush
 end
 list.each do |path, name, write, blk|
@@ -308,6 +335,7 @@ end
 if options[:all]
   write_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
                               expiry_date: expiry_date)
+  write_list = write_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
   puts "Calling #{write_list.size} write endpoints..." if progress
   write_list.each do |path, name, blk|
     run(results, path, name, write: true, progress: progress, &blk)
@@ -315,6 +343,7 @@ if options[:all]
 end
 
 summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" } }
+summary[:skipped] = skipped_count if skipped_count.positive?
 
 if options[:json]
   puts JSON.pretty_generate(summary: summary, results: results)
@@ -323,6 +352,7 @@ end
 
 puts "Sandbox: #{DhanHQ.configuration&.sandbox?}"
 puts "Read-only: #{!options[:all]}"
+puts "Skipped unavailable: #{skipped_count}" if skipped_count.positive?
 puts "-" * 60
 if options[:verbose]
   results.each do |r|
