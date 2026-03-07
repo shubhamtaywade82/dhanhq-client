@@ -576,7 +576,7 @@ module DhanHQ
 
         # Don't send trigger_price when it's 0 for non–stop-loss orders (API default; avoids validation noise).
         order_type = filtered_payload[:order_type].to_s
-        filtered_payload.delete(:trigger_price) if !%w[STOP_LOSS STOP_LOSS_MARKET].include?(order_type) && filtered_payload[:trigger_price].to_f.zero?
+        filtered_payload.delete(:trigger_price) unless %w[STOP_LOSS STOP_LOSS_MARKET].include?(order_type) || filtered_payload[:trigger_price].to_f.nonzero?
 
         filtered_payload.compact
       end

@@ -13,7 +13,7 @@ module DhanHQ
       end
 
       rule(:profitValue, :lossValue) do
-        key.failure("at least one of profitValue or lossValue must be provided") if !values[:profitValue] && !values[:lossValue]
+        key.failure("at least one of profitValue or lossValue must be provided") unless values[:profitValue] || values[:lossValue]
       end
     end
   end
