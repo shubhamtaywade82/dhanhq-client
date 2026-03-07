@@ -142,28 +142,12 @@ module DhanHQ
       end
 
       unless response.success?
-        body = if response.body.is_a?(Hash)
-                 response.body
-               else
-                 begin
-                   JSON.parse(response.body.to_s)
-                 rescue StandardError
-                   {}
-                 end
-               end
+        body = parse_json_body(response.body)
         msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
         raise DhanHQ::TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
       end
 
-      data = if response.body.is_a?(Hash)
-               response.body
-             else
-               begin
-                 JSON.parse(response.body.to_s)
-               rescue StandardError
-                 {}
-               end
-             end
+      data = parse_json_body(response.body)
       data = data.transform_keys(&:to_s) if data.is_a?(Hash)
 
       access_token = data["access_token"] || data[:access_token]
@@ -176,6 +160,18 @@ module DhanHQ
       dhan_base = data["base_url"] || data[:base_url]
       configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
       configuration
+    end
+
+    # @param body [String, Hash] Raw response body
+    # @return [Hash] Parsed hash; empty hash on parse failure or empty string
+    def parse_json_body(body)
+      return {} if body.nil?
+      return body if body.is_a?(Hash)
+      return {} if body.to_s.strip.empty?
+
+      JSON.parse(body.to_s)
+    rescue StandardError
+      {}
     end
   end
 end

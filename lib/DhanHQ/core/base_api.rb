@@ -86,21 +86,21 @@ module DhanHQ
       "#{self.class::HTTP_PATH}#{endpoint}"
     end
 
-    # Format parameters based on API endpoint
+    # Format parameters based on API endpoint. Uses path-based strategy (marketfeed: pass-through,
+    # optionchain: titleize, default: camelize).
     def format_params(endpoint, params)
       full_path = build_path(endpoint)
-      return params if marketfeed_api?(full_path) || params.empty?
+      return params if params.empty?
 
-      optionchain_api?(full_path) ? titleize_keys(params) : camelize_keys(params)
+      param_formatter_for(full_path).call(params)
     end
 
-    # Determines if the API endpoint is for Option Chain
-    def optionchain_api?(endpoint)
-      endpoint.include?("/optionchain")
-    end
+    # Returns a callable that formats params for the given path (Strategy).
+    def param_formatter_for(full_path)
+      return ->(p) { p } if full_path.include?("/marketfeed")
+      return ->(p) { titleize_keys(p) } if full_path.include?("/optionchain")
 
-    def marketfeed_api?(endpoint)
-      endpoint.include?("/marketfeed")
+      ->(p) { camelize_keys(p) }
     end
   end
 end
