@@ -1,3 +1,11 @@
+## [2.6.1] - 2026-03-07
+
+### Changed
+
+- **Version bump**: 2.6.0 was already published on RubyGems; no code changes. Use this version for the same 2.6.0 feature set (sandbox, contracts, Order methods, stability fixes).
+
+---
+
 ## [2.6.0] - 2026-03-06
 
 ### Sandbox & configuration
