@@ -40,6 +40,7 @@ module DhanHQ
     # @return [DhanHQ::Client] A new client instance.
     # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
     def initialize(api_type:)
+      DhanHQ.ensure_configuration!
       # Use shared rate limiter instance per API type to ensure proper coordination
       @rate_limiter = RateLimiter.for(api_type)
 

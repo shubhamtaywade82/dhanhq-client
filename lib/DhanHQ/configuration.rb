@@ -55,21 +55,24 @@ module DhanHQ
     attr_accessor :ws_version
 
     # Websocket order updates endpoint.
+    # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_order_url
-      @ws_order_url || (sandbox? ? "wss://sandbox-api-order-update.dhan.co" : "wss://api-order-update.dhan.co")
+      @ws_order_url || "wss://api-order-update.dhan.co"
     end
 
     # Websocket market feed endpoint.
+    # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_market_feed_url
-      @ws_market_feed_url || (sandbox? ? "wss://sandbox-api-feed.dhan.co" : "wss://api-feed.dhan.co")
+      @ws_market_feed_url || "wss://api-feed.dhan.co"
     end
 
     # Websocket market depth endpoint.
+    # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_market_depth_url
-      @ws_market_depth_url || (sandbox? ? "wss://sandbox-depth-api-feed.dhan.co/twentydepth" : "wss://depth-api-feed.dhan.co/twentydepth")
+      @ws_market_depth_url || "wss://depth-api-feed.dhan.co/twentydepth"
     end
 
     # Market depth level (20 or 200).

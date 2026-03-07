@@ -78,23 +78,23 @@ module DhanHQ
               "Invalid payload: Expected a Hash, got #{payload.class}"
       end
 
-      # Inject dhanClientId for DATA APIs if it's a POST/PUT/PATCH and missing
+      out = payload
       if path && data_api?(path) && %i[post put patch].include?(method)
         client_id = DhanHQ.configuration&.client_id
         if client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
-          # Match existing key style if possible
-          if payload.keys.any?(String)
-            payload["dhanClientId"] = client_id
+          out = payload.dup
+          if out.keys.any?(String)
+            out["dhanClientId"] = client_id
           else
-            payload[:dhanClientId] = client_id
+            out[:dhanClientId] = client_id
           end
         end
       end
 
       case method
       when :delete then req.params = {}
-      when :get then req.params = payload
-      else req.body = payload.to_json
+      when :get then req.params = out
+      else req.body = out.to_json
       end
     end
   end

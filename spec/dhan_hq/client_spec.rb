@@ -33,6 +33,20 @@ RSpec.describe DhanHQ::Client do
       expect(client.connection).to be_a(Faraday::Connection)
     end
 
+    it "bootstraps configuration from ENV when configuration is nil (env-only integrations)" do
+      DhanHQ.configuration = nil
+      ENV["DHAN_CLIENT_ID"] = "env_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "env_access_token"
+      expect(DhanHQ.configuration).to be_nil
+
+      new_client = described_class.new(api_type: :order_api)
+
+      expect(DhanHQ.configuration).to be_a(DhanHQ::Configuration)
+      expect(DhanHQ.configuration.client_id).to eq("env_client_id")
+      expect(DhanHQ.configuration.access_token).to eq("env_access_token")
+      expect(new_client.connection).to be_a(Faraday::Connection)
+    end
+
     it "sets timeout configuration" do
       expect(client.connection.options.timeout).to eq(30)
       expect(client.connection.options.open_timeout).to eq(10)
@@ -186,6 +200,24 @@ RSpec.describe DhanHQ::Client do
       allow(req).to receive(:body=)
       client.send(:prepare_payload, req, order_payload, :post)
       expect(req).to have_received(:body=).with(order_payload.to_json)
+    end
+
+    context "when injecting dhanClientId for DATA API" do
+      let(:data_api_path) { "/v2/marketfeed/ltp" }
+
+      it "does not mutate the caller payload" do
+        payload = { "NSE_EQ" => [123] }
+        allow(req).to receive(:body=)
+        client.send(:prepare_payload, req, payload, :post, data_api_path)
+        expect(payload).not_to have_key("dhanClientId")
+        expect(payload).not_to have_key(:dhanClientId)
+      end
+
+      it "accepts frozen payload without raising" do
+        payload = { "NSE_EQ" => [456] }.freeze
+        allow(req).to receive(:body=)
+        expect { client.send(:prepare_payload, req, payload, :post, data_api_path) }.not_to raise_error
+      end
     end
   end
 

@@ -94,6 +94,15 @@ module DhanHQ
       self.configuration = Configuration.new
     end
 
+    # Ensures configuration exists, bootstrapping from ENV when nil.
+    # Called automatically when building a Client so env-only integrations work without
+    # an explicit configure/configure_with_env call. Idempotent when configuration is already set.
+    #
+    # @return [DhanHQ::Configuration]
+    def ensure_configuration!
+      self.configuration ||= Configuration.new
+    end
+
     # Resets the configuration to nil.
     def reset_configuration!
       self.configuration = nil

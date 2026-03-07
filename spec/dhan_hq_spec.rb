@@ -27,4 +27,28 @@ RSpec.describe DhanHQ do
       expect(described_class.configuration.access_token).to eq("new_access_token")
     end
   end
+
+  describe ".ensure_configuration!" do
+    it "creates configuration from ENV when nil" do
+      described_class.configuration = nil
+      ENV["DHAN_CLIENT_ID"] = "ensure_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "ensure_token"
+
+      result = described_class.ensure_configuration!
+
+      expect(result).to be_a(DhanHQ::Configuration)
+      expect(result.client_id).to eq("ensure_client_id")
+      expect(result.access_token).to eq("ensure_token")
+    end
+
+    it "returns existing configuration when already set" do
+      described_class.configure { |c| c.client_id = "existing" }
+      existing = described_class.configuration
+
+      result = described_class.ensure_configuration!
+
+      expect(result).to equal(existing)
+      expect(result.client_id).to eq("existing")
+    end
+  end
 end
