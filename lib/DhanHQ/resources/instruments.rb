@@ -19,9 +19,10 @@ module DhanHQ
         resp = client.connection.get(path)
         if resp.status.between?(300, 399) && resp.headers["location"]
           redirect_url = resp.headers["location"]
-          return Faraday.get(redirect_url).body
+          Faraday.get(redirect_url).body
+        else
+          resp.body
         end
-        resp.body
       end
     end
   end

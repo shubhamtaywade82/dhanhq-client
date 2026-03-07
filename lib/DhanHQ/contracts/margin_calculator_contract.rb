@@ -25,7 +25,9 @@ module DhanHQ
       end
 
       rule(:triggerPrice) do
-        key(:triggerPrice).failure("must be a finite number") if values[:triggerPrice].is_a?(Float) && (values[:triggerPrice].nan? || values[:triggerPrice].infinite?)
+        next unless values[:triggerPrice].is_a?(Float)
+
+        key(:triggerPrice).failure("must be a finite number") if values[:triggerPrice].nan? || values[:triggerPrice].infinite?
       end
 
       # Segment-Based Product Restrictions for margin calculations

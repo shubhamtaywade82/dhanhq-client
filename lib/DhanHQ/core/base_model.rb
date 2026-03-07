@@ -145,7 +145,10 @@ module DhanHQ
       def parse_collection_response(response)
         # Some endpoints return arrays, others might return a `[:data]` structure
         unless response.is_a?(Array) || (response.is_a?(Hash) && response[:data].is_a?(Array))
-          DhanHQ.logger&.warn("[DhanHQ::BaseModel] Unexpected response format for collection: #{response.class}. Expected Array or Hash with :data key.")
+          DhanHQ.logger&.warn(
+            "[DhanHQ::BaseModel] Unexpected response format for collection: #{response.class}. " \
+            "Expected Array or Hash with :data key."
+          )
           return []
         end
 

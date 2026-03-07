@@ -95,7 +95,9 @@ module DhanHQ
       raise if attempt > retries
 
       backoff = calculate_backoff(attempt)
-      DhanHQ.logger&.warn("[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})")
+      DhanHQ.logger&.warn(
+        "[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+      )
       sleep(backoff)
       retry
     rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
@@ -103,7 +105,9 @@ module DhanHQ
       raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
 
       backoff = calculate_backoff(attempt)
-      DhanHQ.logger&.warn("[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})")
+      DhanHQ.logger&.warn(
+        "[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+      )
       sleep(backoff)
       retry
     end

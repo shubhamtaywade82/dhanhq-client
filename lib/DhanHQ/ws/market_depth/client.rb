@@ -164,7 +164,10 @@ module DhanHQ
 
             send_message(subscription_message)
             @subscriptions[label] = resolution
-            DhanHQ.logger&.info("[DhanHQ::WS::MarketDepth] Subscribed to #{resolution[:original_label]} (#{resolution[:exchange_segment]}:#{resolution[:security_id]})")
+            DhanHQ.logger&.info(
+              "[DhanHQ::WS::MarketDepth] Subscribed to #{resolution[:original_label]} " \
+              "(#{resolution[:exchange_segment]}:#{resolution[:security_id]})"
+            )
           rescue StandardError => e
             DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth] Subscription error for #{symbol.inspect}: #{e.class} #{e.message}")
           end
@@ -192,7 +195,10 @@ module DhanHQ
 
             send_message(unsubscribe_message)
             @subscriptions.delete(label)
-            DhanHQ.logger&.info("[DhanHQ::WS::MarketDepth] Unsubscribed from #{security_data[:original_label]} (#{security_data[:exchange_segment]}:#{security_data[:security_id]})")
+            DhanHQ.logger&.info(
+              "[DhanHQ::WS::MarketDepth] Unsubscribed from #{security_data[:original_label]} " \
+              "(#{security_data[:exchange_segment]}:#{security_data[:security_id]})"
+            )
           rescue StandardError => e
             DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth] Unsubscribe error for #{symbol.inspect}: #{e.class} #{e.message}")
           end
@@ -217,7 +223,8 @@ module DhanHQ
           instrument = find_instrument(symbol_code, segment_hint)
           unless instrument
             DhanHQ.logger&.warn(
-              "[DhanHQ::WS::MarketDepth] Unable to locate instrument for #{symbol_code} (segment hint: #{segment_hint || "AUTO"})"
+              "[DhanHQ::WS::MarketDepth] Unable to locate instrument for #{symbol_code} " \
+              "(segment hint: #{segment_hint || "AUTO"})"
             )
             return nil
           end
