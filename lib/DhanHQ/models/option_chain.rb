@@ -28,12 +28,12 @@ module DhanHQ
     #     expiry: "2024-10-31"
     #   )
     #   puts "Underlying LTP: ₹#{chain[:last_price]}"
-    #   nifty_25000 = chain[:oc]["25000.000000"]
-    #   puts "CE LTP: ₹#{nifty_25000['ce'][:last_price]}"
-    #   puts "CE OI: #{nifty_25000['ce'][:oi]}"
+    #   nifty_first_strike = chain[:strikes].first
+    #   puts "Strike: #{nifty_first_strike[:strike]}"
+    #   puts "Call LTP: ₹#{nifty_first_strike[:call][:last_price]}"
     #
     # @example Fetch expiry list for an underlying
-    #   expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
+    #   expiries = DhanHQ::Models::OptionChain.expiry_list(
     #     underlying_scrip: 13,
     #     underlying_seg: "IDX_I"
     #   )
@@ -45,16 +45,11 @@ module DhanHQ
     #     underlying_seg: "NSE_FNO",
     #     expiry: "2024-12-26"
     #   )
-    #   strike_data = chain[:oc]["25000.000000"]
-    #   ce_greeks = strike_data['ce'][:greeks]
+    #   strike_data = chain[:strikes].find { |s| s[:strike] == 25000.0 }
+    #   ce_greeks = strike_data[:call][:greeks]
     #   puts "Delta: #{ce_greeks[:delta]}"
-    #   puts "Gamma: #{ce_greeks[:gamma]}"
-    #   puts "Theta: #{ce_greeks[:theta]}"
-    #   puts "Vega: #{ce_greeks[:vega]}"
     #
     class OptionChain < BaseModel
-      attr_reader :underlying_scrip, :underlying_seg, :expiry, :last_price, :option_data
-
       class << self
         ##
         # Provides a shared instance of the OptionChain resource.
@@ -73,129 +68,36 @@ module DhanHQ
         # both Call (CE) and Put (PE) options at each strike price.
         #
         # @param params [Hash{Symbol => Integer, String}] Request parameters for option chain
-        #   @option params [Integer] :underlying_scrip (required) Security ID of the underlying
-        #     instrument. Can be found via the Instruments API.
-        #   @option params [String] :underlying_seg (required) Exchange and segment of underlying
-        #     for which data is to be fetched.
-        #     Valid values: See {DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS}
-        #   @option params [String] :expiry (required) Expiry date of the option contract for
-        #     which the option chain is requested. Must be in "YYYY-MM-DD" format.
-        #     List of active expiries can be fetched using {fetch_expiry_list}.
+        #   @option params [Integer] :underlying_scrip (required) Security ID of the underlying instrument.
+        #   @option params [String] :underlying_seg (required) Exchange and segment of underlying.
+        #   @option params [String] :expiry (required) Expiry date in "YYYY-MM-DD" format.
         #
-        # @return [HashWithIndifferentAccess] Filtered option chain data.
+        # @return [HashWithIndifferentAccess] Normalized option chain data.
         #   Response structure:
         #   - **:last_price** [Float] Last Traded Price (LTP) of the underlying instrument
-        #   - **:oc** [Hash{String => Hash}] Option chain data organized by strike price.
-        #     Strike prices are stored as string keys (e.g., "25000.000000").
-        #     Each strike contains:
-        #     - **"ce"** [Hash{Symbol => Float, Integer, Hash}] Call Option data for this strike:
-        #       - **:greeks** [Hash{Symbol => Float}] Option Greeks:
-        #         - **:delta** [Float] Measures the change of option's premium based on
-        #           every 1 rupee change in underlying
-        #         - **:theta** [Float] Measures how quickly an option's value decreases over time
-        #         - **:gamma** [Float] Rate of change in an option's delta in relation to the
-        #           price of the underlying asset
-        #         - **:vega** [Float] Measures the change of option's premium in response to
-        #           a 1% change in implied volatility
-        #       - **:implied_volatility** [Float] Value of expected volatility of a stock
-        #         over the life of the option
-        #       - **:last_price** [Float] Last Traded Price of the Call Option Instrument
-        #       - **:oi** [Integer] Open Interest of the Call Option Instrument
-        #       - **:previous_close_price** [Float] Previous day close price
-        #       - **:previous_oi** [Integer] Previous day Open Interest
-        #       - **:previous_volume** [Integer] Previous day volume
-        #       - **:top_ask_price** [Float] Current best ask price available
-        #       - **:top_ask_quantity** [Integer] Quantity available at current best ask price
-        #       - **:top_bid_price** [Float] Current best bid price available
-        #       - **:top_bid_quantity** [Integer] Quantity available at current best bid price
-        #       - **:volume** [Integer] Day volume for Call Option Instrument
-        #     - **"pe"** [Hash{Symbol => Float, Integer, Hash}] Put Option data for this strike.
-        #       Contains the same fields as "ce" (Call Option data).
+        #   - **:strikes** [Array<Hash>] Sorted array of strike data:
+        #     - **:strike** [Float] The strike price
+        #     - **:call** [Hash] Call Option (CE) data for this strike
+        #     - **:put** [Hash] Put Option (PE) data for this strike
         #
-        # @note Strikes where both CE and PE have zero `last_price` are automatically filtered out.
-        #   This keeps the payload compact and focused on actively traded strikes.
-        #
-        # @example Fetch option chain for NIFTY index options
-        #   chain = DhanHQ::Models::OptionChain.fetch(
-        #     underlying_scrip: 13,
-        #     underlying_seg: "IDX_I",
-        #     expiry: "2024-10-31"
-        #   )
-        #   puts "NIFTY LTP: ₹#{chain[:last_price]}"
-        #
-        # @example Access Call and Put data for a specific strike
-        #   chain = DhanHQ::Models::OptionChain.fetch(
-        #     underlying_scrip: 13,
-        #     underlying_seg: "IDX_I",
-        #     expiry: "2024-10-31"
-        #   )
-        #   strike_25000 = chain[:oc]["25000.000000"]
-        #   ce_data = strike_25000["ce"]
-        #   pe_data = strike_25000["pe"]
-        #   puts "CE LTP: ₹#{ce_data[:last_price]}, OI: #{ce_data[:oi]}"
-        #   puts "PE LTP: ₹#{pe_data[:last_price]}, OI: #{pe_data[:oi]}"
-        #
-        # @example Calculate OI change and analyze Greeks
-        #   chain = DhanHQ::Models::OptionChain.fetch(
-        #     underlying_scrip: 1333,
-        #     underlying_seg: "NSE_FNO",
-        #     expiry: "2024-12-26"
-        #   )
-        #   strike_data = chain[:oc]["25000.000000"]
-        #   ce = strike_data["ce"]
-        #   oi_change = ce[:oi] - ce[:previous_oi]
-        #   puts "OI Change: #{oi_change}"
-        #   puts "Delta: #{ce[:greeks][:delta]}"
-        #   puts "IV: #{ce[:implied_volatility]}%"
-        #
-        # @raise [DhanHQ::ValidationError] If validation fails for any parameter or date format
+        # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def fetch(params)
           validate_params!(params, DhanHQ::Contracts::OptionChainContract)
 
           response = resource.fetch(params)
           return {}.with_indifferent_access unless response[:status] == "success"
 
-          filter_valid_strikes(response[:data]).with_indifferent_access
+          normalize_chain(response[:data]).with_indifferent_access
         end
 
         ##
         # Fetches the list of active expiry dates for an underlying instrument.
         #
-        # Retrieves all expiry dates for which option instruments are active for the given
-        # underlying. This list is useful for selecting valid expiry dates when fetching
-        # option chains.
-        #
         # @param params [Hash{Symbol => Integer, String}] Request parameters for expiry list
-        #   @option params [Integer] :underlying_scrip (required) Security ID of the underlying
-        #     instrument. Can be found via the Instruments API.
-        #   @option params [String] :underlying_seg (required) Exchange and segment of underlying
-        #     for which expiry list is to be fetched.
-        #     Valid values: See {DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS}
+        #   @option params [Integer] :underlying_scrip (required) Security ID of the underlying instrument.
+        #   @option params [String] :underlying_seg (required) Exchange and segment of underlying.
         #
         # @return [Array<String>] Array of expiry dates in "YYYY-MM-DD" format.
-        #   Returns empty array if the API response status is not "success" or if no expiries are found.
-        #
-        # @example Fetch expiry list for NIFTY index
-        #   expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
-        #     underlying_scrip: 13,
-        #     underlying_seg: "IDX_I"
-        #   )
-        #   puts "Available expiries:"
-        #   expiries.each { |expiry| puts "  #{expiry}" }
-        #
-        # @example Use expiry list to fetch option chains
-        #   expiries = DhanHQ::Models::OptionChain.fetch_expiry_list(
-        #     underlying_scrip: 1333,
-        #     underlying_seg: "NSE_FNO"
-        #   )
-        #   nearest_expiry = expiries.first
-        #   chain = DhanHQ::Models::OptionChain.fetch(
-        #     underlying_scrip: 1333,
-        #     underlying_seg: "NSE_FNO",
-        #     expiry: nearest_expiry
-        #   )
-        #
-        # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def fetch_expiry_list(params)
           validate_params!(params, DhanHQ::Contracts::OptionChainExpiryListContract)
 
@@ -203,50 +105,40 @@ module DhanHQ
           response[:status] == "success" ? response[:data] : []
         end
 
+        alias expiry_list fetch_expiry_list
+
         private
 
         ##
-        # Filters valid strikes where at least one of CE or PE has a non-zero last_price.
+        # Normalizes the raw API option chain data.
+        # - Converts strike keys to numeric
+        # - Renames 'ce' to 'call' and 'pe' to 'put'
+        # - Filters strikes with zero prices
+        # - Sorts strikes ascending
         #
-        # Removes strikes from the option chain where both Call (CE) and Put (PE) options
-        # have zero `last_price`, keeping only actively traded strikes. This keeps the
-        # payload compact and focused on relevant data.
-        #
-        # @param data [Hash] The API response data containing option chain information
-        # @return [Hash] The filtered option chain data with original strike price keys preserved
-        #
-        # @api private
-        def filter_valid_strikes(data)
+        # @param data [Hash] The raw API response data
+        # @return [Hash] Normalized option chain
+        def normalize_chain(data)
           return {} unless data.is_a?(Hash) && data.key?(:oc)
 
-          filtered_oc = data[:oc].each_with_object({}) do |(strike_price, strike_data), result|
-            ce_last_price = strike_data.dig("ce", "last_price").to_f
-            pe_last_price = strike_data.dig("pe", "last_price").to_f
+          strikes = data[:oc].map do |strike_price, strike_data|
+            ce = strike_data["ce"] || strike_data[:ce]
+            pe = strike_data["pe"] || strike_data[:pe]
 
-            # Only keep strikes where at least one of CE or PE has a valid last_price
-            result[strike_price] = strike_data if ce_last_price.positive? || pe_last_price.positive?
-          end
+            next if ce.dig("last_price").to_f.zero? && pe.dig("last_price").to_f.zero?
 
-          data.merge(oc: filtered_oc)
+            {
+              strike: strike_price.to_f,
+              call: ce,
+              put: pe
+            }
+          end.compact
+
+          {
+            last_price: data[:last_price],
+            strikes: strikes.sort_by { |s| s[:strike] }
+          }
         end
-
-        # Validation contract for option chain
-        #
-        # @return [DhanHQ::Contracts::OptionChainContract]
-        # @api private
-        def validation_contract
-          DhanHQ::Contracts::OptionChainContract.new
-        end
-      end
-
-      private
-
-      # Validation contract for option chain
-      #
-      # @return [DhanHQ::Contracts::OptionChainContract]
-      # @api private
-      def validation_contract
-        DhanHQ::Contracts::OptionChainContract.new
       end
     end
   end

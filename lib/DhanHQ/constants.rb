@@ -418,7 +418,16 @@ module DhanHQ
     BSE_FNO = ExchangeSegment::BSE_FNO
     INDEX = ExchangeSegment::IDX_I
 
-    OPTION_SEGMENTS = [NSE, BSE, CUR, MCX, FNO, NSE_FNO, BSE_FNO, INDEX].freeze
+    OPTION_SEGMENTS = [
+      ExchangeSegment::IDX_I,
+      ExchangeSegment::NSE_EQ,
+      ExchangeSegment::NSE_FNO,
+      ExchangeSegment::NSE_CURRENCY,
+      ExchangeSegment::BSE_EQ,
+      ExchangeSegment::MCX_COMM,
+      ExchangeSegment::BSE_CURRENCY,
+      ExchangeSegment::BSE_FNO
+    ].freeze
 
     # Canonical labels kept for compatibility with previous SDK versions.
     BUY = TransactionType::BUY
