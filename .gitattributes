@@ -3,3 +3,5 @@
 /yardoc linguist-generated
 /_site linguist-generated
 /coverage linguist-generated
+docs/** linguist-vendored
+*.html linguist-generated
