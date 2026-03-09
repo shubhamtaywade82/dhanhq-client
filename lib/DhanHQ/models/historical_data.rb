@@ -100,8 +100,9 @@ module DhanHQ
         #
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def daily(params)
-          validate_params!(params, DhanHQ::Contracts::HistoricalDataContract)
-          resource.daily(params)
+          validated_params = validate_params!(params, DhanHQ::Contracts::HistoricalDataContract)
+          response = resource.daily(validated_params)
+          normalize(response)
         end
 
         ##
@@ -177,8 +178,41 @@ module DhanHQ
         #   make multiple requests or store data locally for analysis.
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def intraday(params)
-          validate_params!(params, DhanHQ::Contracts::IntradayHistoricalDataContract)
-          resource.intraday(params)
+          validated_params = validate_params!(params, DhanHQ::Contracts::IntradayHistoricalDataContract)
+          response = resource.intraday(validated_params)
+          normalize(response)
+        end
+
+        private
+
+        # Normalizes the columnar API response into an array of candle hashes.
+        #
+        # @param response [Hash] The raw API response
+        # @return [Array<Hash>, Hash] Normalized array of candles, or raw response if structure unexpected
+        def normalize(response)
+          # Use symbols or strings depending on HashWithIndifferentAccess behavior
+          close = response[:close] || response["close"]
+          return response unless response.is_a?(Hash) && close.is_a?(Array)
+
+          ts = response[:timestamp] || response["timestamp"]
+          open = response[:open] || response["open"]
+          high = response[:high] || response["high"]
+          low = response[:low] || response["low"]
+          volume = response[:volume] || response["volume"]
+          oi = response[:open_interest] || response["open_interest"]
+
+          (0...close.size).map do |i|
+            candle = {
+              timestamp: ts[i].is_a?(Numeric) ? Time.at(ts[i]) : ts[i],
+              open: open[i],
+              high: high[i],
+              low: low[i],
+              close: close[i],
+              volume: volume[i]
+            }
+            candle[:open_interest] = oi[i] if oi && oi[i]
+            candle
+          end
         end
       end
     end

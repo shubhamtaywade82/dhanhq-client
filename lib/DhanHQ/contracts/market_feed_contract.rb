@@ -27,8 +27,16 @@ module DhanHQ
       rule do
         base.failure("must provide at least one exchange segment and security ID") if values.to_h.empty?
 
+        total_instruments = 0
         values.to_h.each do |key, value|
-          key(key).failure("must not be empty") if value.is_a?(Array) && value.empty?
+          if value.is_a?(Array)
+            key(key).failure("must not be empty") if value.empty?
+            total_instruments += value.size
+          end
+        end
+
+        if total_instruments > 1000
+          base.failure("cannot fetch more than 1000 instruments in a single request (found #{total_instruments})")
         end
       end
     end
