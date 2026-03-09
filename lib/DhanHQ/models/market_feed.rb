@@ -44,6 +44,14 @@ module DhanHQ
     class MarketFeed < BaseModel
       class << self
         ##
+        # Returns the validation contract for MarketFeed requests.
+        #
+        # @return [Class] The MarketFeedContract class
+        def validation_contract
+          DhanHQ::Contracts::MarketFeedContract
+        end
+
+        ##
         # Provides a shared instance of the MarketFeed resource.
         #
         # @return [DhanHQ::Resources::MarketFeed] The MarketFeed resource client instance
@@ -84,7 +92,8 @@ module DhanHQ
         #   puts "Last Price: ₹#{data[:last_price]}"
         #
         def ltp(params)
-          resource.ltp(params)
+          validated_params = validate_params!(params, validation_contract)
+          resource.ltp(validated_params)
         end
 
         ##
@@ -127,7 +136,8 @@ module DhanHQ
         #   puts "LTP: ₹#{tcs_data[:last_price]}"
         #
         def ohlc(params)
-          resource.ohlc(params)
+          validated_params = validate_params!(params, validation_contract)
+          resource.ohlc(validated_params)
         end
 
         ##
@@ -197,7 +207,8 @@ module DhanHQ
         #   puts "Best Buy Quantity: #{buy_depth[0][:quantity]}"
         #
         def quote(params)
-          resource.quote(params)
+          validated_params = validate_params!(params, validation_contract)
+          resource.quote(validated_params)
         end
       end
     end

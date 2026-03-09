@@ -294,8 +294,12 @@ if options[:list]
   list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) } if options[:skip_unavailable]
   list.each { |path, name, write| puts "#{write ? "[W]" : "[R]"} #{path}  (#{name})" }
   if options[:all]
-    w_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
-                            expiry_date: expiry_date)
+    w_list = write_endpoints(
+      client_id: client_id,
+      security_id: security_id,
+      order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
+      expiry_date: expiry_date
+    )
     w_list = w_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
     w_list.each { |path, name, _| puts "[W] #{path}  (#{name})" }
   end
@@ -319,83 +323,81 @@ end
 begin
   results = []
 
-def run(results, path, name, write:, progress: false)
-  print "  #{path} ... " if progress
-  $stdout.flush if progress
-  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  Timeout.timeout(25) { yield }
-  duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-  results << { path: path, name: name, write: write, status: "ok", duration_ms: duration_ms }
-  puts "ok (#{duration_ms}ms)" if progress
-rescue Timeout::Error
-  duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-  results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "Timeout::Error: request timed out after 25s" }
-  puts "error" if progress
-rescue StandardError => e
-  duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-  msg = e.message.to_s.gsub(/\s+/, " ").strip
-  msg = "#{msg[0, 380]}..." if msg.length > 380
-  err_display = "#{e.class.name.split("::").last}: #{msg}"
-  results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: err_display }
-  puts "error" if progress
-end
-
-list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
-skipped_count = 0
-if options[:skip_unavailable]
-  skipped_count = list.count { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
-  list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
-end
-progress = !options[:json]
-if progress
-  puts "Calling #{list.size} endpoints..."
-  puts "Skipped #{skipped_count} unavailable endpoint(s)." if skipped_count.positive?
-  $stdout.flush
-end
-list.each do |path, name, write, blk|
-  next if path.include?("edis/inquire") && sample_isin.to_s.empty?
-
-  run(results, path, name, write: write, progress: progress, &blk)
-end
-
-if options[:all]
-  write_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
-                              expiry_date: expiry_date)
-  write_list = write_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
-  write_list = write_list.reject { |path, *_| path == "POST /alerts/orders" } if created_alert_id
-  puts "Calling #{write_list.size} write endpoints..." if progress
-  write_list.each do |path, name, blk|
-    run(results, path, name, write: true, progress: progress, &blk)
+  def run(results, path, name, write:, progress: false, &)
+    print "  #{path} ... " if progress
+    $stdout.flush if progress
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    Timeout.timeout(25, &)
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    results << { path: path, name: name, write: write, status: "ok", duration_ms: duration_ms }
+    puts "ok (#{duration_ms}ms)" if progress
+  rescue Timeout::Error
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "Timeout::Error: request timed out after 25s" }
+    puts "error" if progress
+  rescue StandardError => e
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    msg = e.message.to_s.gsub(/\s+/, " ").strip
+    msg = "#{msg[0, 380]}..." if msg.length > 380
+    err_display = "#{e.class.name.split("::").last}: #{msg}"
+    results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: err_display }
+    puts "error" if progress
   end
-end
 
-summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" } }
-summary[:skipped] = skipped_count if skipped_count.positive?
+  list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
+  skipped_count = 0
+  if options[:skip_unavailable]
+    skipped_count = list.count { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+    list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+  end
+  progress = !options[:json]
+  if progress
+    puts "Calling #{list.size} endpoints..."
+    puts "Skipped #{skipped_count} unavailable endpoint(s)." if skipped_count.positive?
+    $stdout.flush
+  end
+  list.each do |path, name, write, blk|
+    next if path.include?("edis/inquire") && sample_isin.to_s.empty?
 
-if options[:json]
-  puts JSON.pretty_generate(summary: summary, results: results)
+    run(results, path, name, write: write, progress: progress, &blk)
+  end
+
+  if options[:all]
+    write_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id, alert_id: alert_id,
+                                 expiry_date: expiry_date)
+    write_list = write_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
+    write_list = write_list.reject { |path, *_| path == "POST /alerts/orders" } if created_alert_id
+    puts "Calling #{write_list.size} write endpoints..." if progress
+    write_list.each do |path, name, blk|
+      run(results, path, name, write: true, progress: progress, &blk)
+    end
+  end
+
+  summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" } }
+  summary[:skipped] = skipped_count if skipped_count.positive?
+
+  if options[:json]
+    puts JSON.pretty_generate(summary: summary, results: results)
+    exit(summary[:error].zero? ? 0 : 1)
+  end
+
+  puts "Sandbox: #{DhanHQ.configuration&.sandbox?}"
+  puts "Read-only: #{!options[:all]}"
+  puts "Skipped unavailable: #{skipped_count}" if skipped_count.positive?
+  puts "-" * 60
+  if options[:verbose]
+    results.each do |r|
+      sym = r[:status] == "ok" ? "OK" : "ERR"
+      puts "[#{sym}] #{r[:path]} (#{r[:duration_ms]}ms) #{r[:error] || ""}"
+    end
+  else
+    results.select { |r| r[:status] == "error" }.each do |r|
+      puts "[ERR] #{r[:path]} — #{r[:error]}"
+    end
+  end
+  puts "-" * 60
+  puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]}"
   exit(summary[:error].zero? ? 0 : 1)
-end
-
-puts "Sandbox: #{DhanHQ.configuration&.sandbox?}"
-puts "Read-only: #{!options[:all]}"
-puts "Skipped unavailable: #{skipped_count}" if skipped_count.positive?
-puts "-" * 60
-if options[:verbose]
-  results.each do |r|
-    sym = r[:status] == "ok" ? "OK" : "ERR"
-    puts "[#{sym}] #{r[:path]} (#{r[:duration_ms]}ms) #{r[:error] || ""}"
-  end
-else
-  results.select { |r| r[:status] == "error" }.each do |r|
-    puts "[ERR] #{r[:path]} — #{r[:error]}"
-  end
-end
-puts "-" * 60
-puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]}"
-exit(summary[:error].zero? ? 0 : 1)
 ensure
-  if created_alert_id
-    DhanHQ::Models::AlertOrder.find(created_alert_id)&.destroy
-  end
+  DhanHQ::Models::AlertOrder.find(created_alert_id)&.destroy if created_alert_id
 end

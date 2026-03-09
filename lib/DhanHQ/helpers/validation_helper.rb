@@ -12,6 +12,8 @@ module DhanHQ
       result = contract.call(params)
 
       raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
+
+      result.to_h
     end
 
     # Validate instance attributes using the defined validation contract

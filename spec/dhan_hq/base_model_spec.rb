@@ -42,8 +42,7 @@ RSpec.describe DhanHQ::BaseModel do
 
     it "works with MarketFeed LTP", vcr: { cassette_name: "base_model/market_feed_test" } do
       response = DhanHQ::Models::MarketFeed.ltp(
-        instruments: ["NSE:INFY"],
-        fields: ["lastPrice"]
+        "NSE_EQ" => [13_247]
       )
 
       expect(response["status"]).to eq("success")
