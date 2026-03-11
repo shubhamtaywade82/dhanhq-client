@@ -9,7 +9,7 @@ module DhanHQ
     # (dates are YYYY-MM-DD from which the IP can be modified; IPs are IPv4 or IPv6).
     class IPSetup < BaseAPI
       API_TYPE  = :order_api
-      HTTP_PATH = "/ip"
+      HTTP_PATH = "/v2/ip"
 
       def current
         get("/getIP")

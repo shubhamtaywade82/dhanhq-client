@@ -26,7 +26,7 @@ module DhanHQ
     #   status = DhanHQ::Models::Edis.inquire(isin: "INE155A01022")
     #
     class Edis < BaseModel
-      HTTP_PATH = "/edis"
+      HTTP_PATH = "/v2/edis"
 
       class << self
         ##

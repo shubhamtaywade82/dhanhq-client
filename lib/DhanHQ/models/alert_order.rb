@@ -8,7 +8,7 @@ module DhanHQ
     class AlertOrder < BaseModel
       include Concerns::ApiResponseHandler
 
-      HTTP_PATH = "/alerts/orders"
+      HTTP_PATH = "/v2/alerts/orders"
 
       attributes :alert_id, :exchange_segment, :security_id, :condition,
                  :trigger_price, :order_type, :transaction_type, :quantity,

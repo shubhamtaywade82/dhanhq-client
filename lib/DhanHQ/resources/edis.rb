@@ -8,7 +8,7 @@ module DhanHQ
     # Form response: dhanClientId, edisFormHtml. Inquire response: clientId, isin, totalQty, aprvdQty, status, remarks.
     class Edis < BaseAPI
       API_TYPE  = :order_api
-      HTTP_PATH = "/edis"
+      HTTP_PATH = "/v2/edis"
 
       def form(params)
         post("/form", params: params)
