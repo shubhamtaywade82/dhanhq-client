@@ -173,7 +173,10 @@ SKIP_UNAVAILABLE_PATHS = [
 SKIP_UNAVAILABLE_WRITE_PATHS = [].freeze
 
 # Build list of [ path, name, write?, block ]
-def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, sample_isin:, forever_order_id:, alert_id:)
+def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, **options)
+  sample_isin = options[:sample_isin]
+  forever_order_id = options[:forever_order_id]
+  alert_id = options[:alert_id]
   h_params = HISTORICAL_PARAMS.merge(from_date: from_date, to_date: to_date)
   oc_params = OPTION_CHAIN_PARAMS.merge(expiry: expiry_date)
   eo_params = EXPIRED_OPTIONS_PARAMS.merge(from_date: from_date, to_date: to_date)
