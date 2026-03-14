@@ -9,6 +9,7 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
         security_id: "11536",
         exchange_segment: "NSE_EQ",
         comparison_type: "PRICE_WITH_VALUE",
+        time_frame: "DAY",
         operator: "GREATER_THAN",
         comparing_value: 100.0,
         exp_date: "2026-12-31",
@@ -22,7 +23,8 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
           order_type: "LIMIT",
           security_id: "11536",
           quantity: 10,
-          validity: "DAY"
+          validity: "DAY",
+          price: "100.0"
         }
       ]
     }
@@ -62,7 +64,7 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
       params[:condition].delete(:time_frame)
       result = contract.call(params)
       expect(result.success?).to be(false)
-      expect(result.errors.to_h[:condition][:time_frame]).to include("is required for technical comparisons")
+      expect(result.errors.to_h.dig(:condition, :time_frame)).not_to be_empty
     end
 
     it "rejects invalid transaction_type inside orders array" do
@@ -79,6 +81,14 @@ RSpec.describe DhanHQ::Contracts::AlertOrderContract do
       result = contract.call(params)
       expect(result.success?).to be(false)
       expect(result.errors.to_h[:orders][0][:quantity]).to include("must be greater than 0")
+    end
+
+    it "rejects invalid exp_date format" do
+      params = valid_params.dup
+      params[:condition] = params[:condition].merge(exp_date: "31-12-2026")
+      result = contract.call(params)
+      expect(result.success?).to be(false)
+      expect(result.errors.to_h.dig(:condition, :exp_date)).not_to be_empty
     end
   end
 end

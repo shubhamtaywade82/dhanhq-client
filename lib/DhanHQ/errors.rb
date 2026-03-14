@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  # Base error class for all DhanHQ API errors
-  class Error < StandardError; end
+  # Base error class for all DhanHQ API errors.
+  # When raised from API response handling, {#response_body} holds the parsed error payload.
+  class Error < StandardError
+    attr_reader :response_body
+
+    def initialize(message = nil, response_body: nil)
+      super(message)
+      @response_body = response_body
+    end
+  end
 
   # Authentication and access errors
   # Raised when access token cannot be resolved (missing config or provider returned nil).
@@ -36,6 +44,10 @@ module DhanHQ
 
   # Order and market data errors
   class OrderError < Error; end
+
+  # Raised when the 25-modifications-per-order API cap would be exceeded.
+  # Count is tracked per Order instance in this process only (see Order#modify).
+  class ModificationLimitError < Error; end
   # Raised when the API signals an issue with the requested data payload.
   class DataError < Error; end
 

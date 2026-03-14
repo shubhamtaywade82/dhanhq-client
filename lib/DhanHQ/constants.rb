@@ -18,6 +18,14 @@ module DhanHQ
       BSE_FNO = "BSE_FNO"
 
       ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, NSE_COMM, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO].freeze
+      # Segments allowed by POST /v2/margincalculator (single and multi).
+      MARGIN_CALC_ALL = [NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM].freeze
+      # Segments allowed by POST /v2/forever/orders (create).
+      FOREVER_ORDER_ALL = [NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM].freeze
+      # Segments for conditional trigger (equities and indices only). POST/PUT /v2/alerts/orders.
+      ALERT_CONDITION_ALL = [NSE_EQ, BSE_EQ, IDX_I].freeze
+      # Segments allowed by POST /v2/charts/historical and POST /v2/charts/intraday (excludes NSE_COMM).
+      CHART_ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, BSE_FNO, BSE_CURRENCY, MCX_COMM].freeze
     end
 
     # Product types for order placement.
@@ -30,6 +38,10 @@ module DhanHQ
       BO = "BO"
 
       ALL = [CNC, INTRADAY, MARGIN, MTF, CO, BO].freeze
+      # Product types allowed by POST /v2/margincalculator (single and multi).
+      MARGIN_CALC_ALL = [CNC, INTRADAY, MARGIN, MTF].freeze
+      # Product types allowed by POST /v2/forever/orders (create). Only CNC and MTF.
+      FOREVER_ORDER_ALL = [CNC, MTF].freeze
     end
 
     # Buy/Sell transaction types.
@@ -111,6 +123,17 @@ module DhanHQ
 
     # Backward-compatible alias kept for existing SDK usage.
     Instrument = InstrumentType
+
+    # Minute intervals allowed by POST /v2/charts/intraday (charts annexure).
+    module ChartInterval
+      ONE = "1"
+      FIVE = "5"
+      FIFTEEN = "15"
+      TWENTY_FIVE = "25"
+      SIXTY = "60"
+
+      ALL = [ONE, FIVE, FIFTEEN, TWENTY_FIVE, SIXTY].freeze
+    end
 
     # Option types for derivatives trading.
     module OptionType
@@ -365,10 +388,33 @@ module DhanHQ
       ORDER_MODIFICATIONS_PER_ORDER = 25
     end
 
+    # Canonical Dhan API, auth, WebSocket and instrument URLs (see https://dhanhq.co/docs/v2/).
+    # Configuration and Auth use these as defaults; ENV overrides apply at runtime.
+    module Urls
+      REST_API_BASE = "https://api.dhan.co/v2"
+      SANDBOX_API_BASE = "https://sandbox.dhan.co/v2"
+      AUTH_BASE = "https://auth.dhan.co"
+      WS_MARKET_FEED = "wss://api-feed.dhan.co"
+      WS_ORDER_UPDATE = "wss://api-order-update.dhan.co"
+      WS_DEPTH_20 = "wss://depth-api-feed.dhan.co/twentydepth"
+      WS_DEPTH_200 = "wss://full-depth-api.dhan.co/twohundreddepth"
+      INSTRUMENT_CSV_COMPACT = "https://images.dhan.co/api-data/api-scrip-master.csv"
+      INSTRUMENT_CSV_DETAILED = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+      DOCS = "https://dhanhq.co/docs/v2"
+      # Origin header value for WebSocket connections (Dhan main site).
+      ORIGIN = "https://dhanhq.co"
+    end
+
     # Backward-compatible arrays used across existing validations.
     TRANSACTION_TYPES = TransactionType::ALL
     EXCHANGE_SEGMENTS = ExchangeSegment::ALL
+    CHART_EXCHANGE_SEGMENTS = ExchangeSegment::CHART_ALL
     INSTRUMENTS = InstrumentType::ALL
+    CHART_INTERVALS = ChartInterval::ALL
+    MARGIN_CALCULATOR_SEGMENTS = ExchangeSegment::MARGIN_CALC_ALL
+    MARGIN_PRODUCT_TYPES = ProductType::MARGIN_CALC_ALL
+    FOREVER_ORDER_SEGMENTS = ExchangeSegment::FOREVER_ORDER_ALL
+    FOREVER_ORDER_PRODUCT_TYPES = ProductType::FOREVER_ORDER_ALL
     PRODUCT_TYPES = ProductType::ALL
     ORDER_TYPES = OrderType::ALL
     VALIDITY_TYPES = Validity::ALL
@@ -376,6 +422,8 @@ module DhanHQ
     ORDER_STATUSES = OrderStatus::ALL
     COMPARISON_TYPES = ComparisonType::ALL
     OPERATORS = Operator::ALL
+    ALERT_CONDITION_SEGMENTS = ExchangeSegment::ALERT_CONDITION_ALL
+    ALERT_TIMEFRAMES = %w[DATE ONE_MIN FIVE_MIN FIFTEEN_MIN DAY].freeze
 
     # Exchange aliases used when building subscription payloads.
     NSE = ExchangeSegment::NSE_EQ
@@ -387,7 +435,8 @@ module DhanHQ
     BSE_FNO = ExchangeSegment::BSE_FNO
     INDEX = ExchangeSegment::IDX_I
 
-    OPTION_SEGMENTS = [NSE, BSE, CUR, MCX, FNO, NSE_FNO, BSE_FNO, INDEX].freeze
+    # Underlying segments accepted by POST /v2/optionchain and POST /v2/optionchain/expirylist.
+    OPTION_CHAIN_UNDERLYING_SEGMENTS = %w[IDX_I NSE_FNO BSE_FNO MCX_FO].freeze
 
     # Canonical labels kept for compatibility with previous SDK versions.
     BUY = TransactionType::BUY
@@ -409,19 +458,30 @@ module DhanHQ
     IOC = Validity::IOC
 
     # Download URL for the compact instrument master CSV.
-    COMPACT_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
+    COMPACT_CSV_URL = Urls::INSTRUMENT_CSV_COMPACT
     # Download URL for the detailed instrument master CSV.
-    DETAILED_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+    DETAILED_CSV_URL = Urls::INSTRUMENT_CSV_DETAILED
 
     # API route prefixes that require a `client-id` header in addition to the access token.
     DATA_API_PREFIXES = [
       "/v2/marketfeed/",
       "/v2/optionchain",
       "/v2/instrument/",
-      "/v2/charts",
-      "/v2/margincalculator",
-      "/v2/profile",
-      "/v2/fundlimit"
+      "/v2/charts"
+    ].freeze
+
+    # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.
+    # Injection is done in the client layer when building the payload.
+    PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES = %w[
+      /alerts/orders
+      /v2/orders
+      /v2/forever
+      /v2/super/orders
+      /v2/positions
+      /v2/pnlExit
+      /v2/margincalculator
+      /v2/killswitch
+      /v2/ip
     ].freeze
 
     # Mapping of exchange and segment combinations to canonical exchange segment names.

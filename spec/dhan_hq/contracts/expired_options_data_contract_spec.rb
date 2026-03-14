@@ -6,7 +6,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
   # Use weekday dates only (no weekends); from_date must be before to_date
   let(:valid_params) do
     {
-      exchange_segment: "NSE_FNO",
+      exchange_segment: "IDX_I",
       interval: "1",
       security_id: 13,
       instrument: "OPTIDX",
@@ -31,7 +31,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
 
   describe "exchange_segment validation" do
     it "validates valid exchange segments" do
-      valid_segments = %w[NSE_FNO BSE_FNO NSE_EQ BSE_EQ]
+      valid_segments = %w[IDX_I NSE_EQ BSE_EQ]
 
       valid_segments.each do |segment|
         params = valid_params.merge(exchange_segment: segment)

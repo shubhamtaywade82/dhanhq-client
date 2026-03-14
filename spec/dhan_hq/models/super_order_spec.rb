@@ -87,5 +87,12 @@ RSpec.describe DhanHQ::Models::SuperOrder do
 
       expect(order.cancel("TARGET_LEG")).to be(false)
     end
+
+    it "raises ValidationError when leg_name is not ENTRY_LEG, STOP_LOSS_LEG, or TARGET_LEG" do
+      real_resource = DhanHQ::Resources::SuperOrders.new
+      allow(described_class).to receive(:resource).and_return(real_resource)
+
+      expect { order.cancel("INVALID_LEG") }.to raise_error(DhanHQ::ValidationError, /ENTRY_LEG|STOP_LOSS_LEG|TARGET_LEG/)
+    end
   end
 end

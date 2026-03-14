@@ -219,6 +219,32 @@ RSpec.describe DhanHQ::Client do
         expect { client.send(:prepare_payload, req, payload, :post, data_api_path) }.not_to raise_error
       end
     end
+
+    context "when injecting dhanClientId for order-api payload paths" do
+      before do
+        ENV["DHAN_CLIENT_ID"] = "injected_client_id"
+        DhanHQ.configure_with_env
+      end
+
+      it "injects dhanClientId for POST /alerts/orders when missing" do
+        payload = { condition: {}, orders: [] }
+        allow(req).to receive(:body=)
+        client.send(:prepare_payload, req, payload, :post, "/alerts/orders")
+        expect(req).to have_received(:body=) do |json|
+          parsed = JSON.parse(json)
+          expect(parsed).to include("dhanClientId" => "injected_client_id")
+        end
+      end
+
+      it "does not overwrite existing dhanClientId" do
+        payload = { dhanClientId: "existing_id", condition: {} }
+        allow(req).to receive(:body=)
+        client.send(:prepare_payload, req, payload, :post, "/alerts/orders")
+        expect(req).to have_received(:body=) do |json|
+          expect(JSON.parse(json)["dhanClientId"]).to eq("existing_id")
+        end
+      end
+    end
   end
 
   describe "#handle_response" do

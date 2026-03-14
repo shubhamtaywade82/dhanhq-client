@@ -1,0 +1,615 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Single consolidated test script for the DhanHQ client gem.
+#
+# CLI (run as script):
+#   bin/test_all                    # run all read endpoints (GET + data-fetch POSTs)
+#   bin/test_all --list             # print endpoint list and exit
+#   bin/test_all --all              # include write endpoints (requires DHAN_SANDBOX=true)
+#   bin/test_all --skip-unavailable # skip endpoints that often 404/timeout
+#   bin/test_all --ip current       # fetch current IP and exit
+#   bin/test_all --ip secondary     # test updating SECONDARY IP and exit
+#   bin/test_all --json             # output JSON
+#   bin/test_all --verbose          # print each result
+#
+# Console (load in bin/console):
+#   load 'bin/test_all'
+#   run_all_tests                   # quick smoke: config, funds, market feed, orders, positions, holdings, profile, instrument
+#   run_comprehensive_tests         # full suite: all read APIs, validation, errors, rate limit, WebSocket
+#   check_config / test_funds / test_market_feed / etc.
+#
+# ENV: DHAN_CLIENT_ID, DHAN_ACCESS_TOKEN (or token endpoint); optional DHAN_TEST_* (see RUN_TESTS.md).
+
+require "optparse"
+require "json"
+require "date"
+require "logger"
+require "timeout"
+require_relative "../lib/dhan_hq"
+
+def load_dotenv(path = ".env")
+  return unless File.exist?(path)
+
+  File.readlines(path, chomp: true).each do |line|
+    next if line.strip.empty? || line.strip.start_with?("#")
+    next unless line.include?("=")
+
+    key, value = line.split("=", 2)
+    key = key.to_s.strip
+    value = value.to_s.strip.gsub(/\A['"]|['"]\z/, "")
+    next if key.empty?
+    next if ENV.key?(key)
+
+    ENV[key] = value
+  end
+end
+
+# --- CLI mode: run endpoint tests or --ip, then exit ---
+if __FILE__ == $PROGRAM_NAME
+  options = {
+    all: false,
+    list: false,
+    json: false,
+    verbose: false,
+    skip_unavailable: false,
+    ip: nil
+  }
+
+  OptionParser.new do |opts|
+    opts.banner = "Usage: bin/test_all [options]"
+    opts.on("--all", "Include write endpoints (requires DHAN_SANDBOX=true)") { options[:all] = true }
+    opts.on("--list", "Print endpoint list and exit") { options[:list] = true }
+    opts.on("--json", "Output results as JSON") { options[:json] = true }
+    opts.on("--verbose", "Print each result") { options[:verbose] = true }
+    opts.on("--skip-unavailable", "Skip endpoints that often 404/timeout") { options[:skip_unavailable] = true }
+    opts.on("--ip MODE", %w[current secondary], "Run IP test (current or secondary) and exit") { |m| options[:ip] = m }
+  end.parse!
+
+  load_dotenv
+  ENV["DHAN_READ_TIMEOUT"] ||= "15"
+  ENV["DHAN_CONNECT_TIMEOUT"] ||= "5"
+  DhanHQ.ensure_configuration!
+  if DhanHQ.configuration.access_token.to_s.empty? && DhanHQ.configuration.client_id.to_s.empty?
+    endpoint_base = ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
+    endpoint_bearer = ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
+    DhanHQ.configure_from_token_endpoint(base_url: endpoint_base, bearer_token: endpoint_bearer) if endpoint_base.to_s != "" && endpoint_bearer.to_s != ""
+  end
+
+  if options[:ip]
+    ip_setup = DhanHQ::Resources::IPSetup.new
+    if options[:ip] == "current"
+      puts "=== Current IP ==="
+      puts JSON.pretty_generate(ip_setup.current)
+    else
+      puts "=== Update SECONDARY IP ==="
+      puts JSON.pretty_generate(ip_setup.update(ip: "1.2.3.4", ip_flag: "SECONDARY"))
+    end
+    exit 0
+  end
+
+  if options[:all] && !DhanHQ.configuration&.sandbox?
+    puts "Write endpoints require sandbox. Set DHAN_SANDBOX=true."
+    exit 1
+  end
+
+  DhanHQ.logger.level = Logger::FATAL
+
+  def next_weekday(date)
+    date += 1 until date.wday.between?(1, 5)
+    date
+  end
+
+  today = Date.today
+  from_date = next_weekday(today - 14).strftime("%Y-%m-%d")
+  to_date = next_weekday(today - 1).strftime("%Y-%m-%d")
+  expiry_date = ENV["DHAN_TEST_EXPIRY"] || next_weekday(today + 7).strftime("%Y-%m-%d")
+  security_id = ENV["DHAN_TEST_SECURITY_ID"] || "11536"
+  order_id = ENV["DHAN_TEST_ORDER_ID"] || "1"
+  forever_order_id = ENV.fetch("DHAN_TEST_FOREVER_ORDER_ID", nil)
+  super_order_id = ENV.fetch("DHAN_TEST_SUPER_ORDER_ID", nil)
+  alert_id = ENV["DHAN_TEST_ALERT_ID"] || "1"
+  sample_isin = ENV.fetch("DHAN_TEST_ISIN", nil)
+  correlation_id = ENV.fetch("DHAN_TEST_CORRELATION_ID", nil)
+  client_id = DhanHQ.configuration&.client_id
+
+  def alert_create_params(security_id:, expiry_date:)
+    {
+      condition: {
+        security_id: security_id,
+        exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+        comparison_type: DhanHQ::Constants::ComparisonType::PRICE_WITH_VALUE,
+        operator: DhanHQ::Constants::Operator::GREATER_THAN,
+        comparing_value: 1,
+        time_frame: DhanHQ::Constants::ALERT_TIMEFRAMES.first,
+        exp_date: expiry_date,
+        frequency: "ONCE"
+      },
+      orders: [{
+        transaction_type: DhanHQ::Constants::TransactionType::BUY,
+        exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+        product_type: DhanHQ::Constants::ProductType::CNC,
+        order_type: DhanHQ::Constants::OrderType::LIMIT,
+        security_id: security_id,
+        quantity: 1,
+        validity: DhanHQ::Constants::Validity::DAY,
+        price: 1.0
+      }]
+    }
+  end
+  created_alert_id = nil
+
+  LTP_PARAMS = { DhanHQ::Constants::ExchangeSegment::IDX_I => [13] }.freeze
+  HISTORICAL_PARAMS = {
+    security_id: "11536",
+    exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+    instrument: DhanHQ::Constants::InstrumentType::EQUITY,
+    expiry_code: DhanHQ::Constants::ExpiryCode::CURRENT,
+    oi: false,
+    from_date: nil,
+    to_date: nil
+  }.freeze
+  OPTION_CHAIN_PARAMS = { underlying_scrip: 13, underlying_seg: DhanHQ::Constants::ExchangeSegment::IDX_I, expiry: nil }.freeze
+  EXPIRED_OPTIONS_PARAMS = {
+    exchange_segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
+    interval: "1",
+    security_id: 13,
+    instrument: DhanHQ::Constants::InstrumentType::OPTIDX,
+    expiry_flag: "MONTH",
+    expiry_code: DhanHQ::Constants::ExpiryCode::NEXT,
+    strike: "ATM",
+    drv_option_type: DhanHQ::Constants::OptionType::CALL,
+    required_data: %w[open high low close],
+    from_date: nil,
+    to_date: nil
+  }.freeze
+  MARGIN_PARAMS = { dhan_client_id: nil, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, transaction_type: DhanHQ::Constants::TransactionType::BUY, quantity: 1,
+                    product_type: DhanHQ::Constants::ProductType::CNC, order_type: DhanHQ::Constants::OrderType::LIMIT,
+                    security_id: "11536", price: 1.0 }.freeze
+
+  SKIP_UNAVAILABLE_PATHS = [
+    "GET /v2/forever/orders/{id}", "GET /v2/ip/getIP", "GET /v2/edis/tpin",
+    "GET /v2/alerts/orders", "GET /v2/alerts/orders/{id}"
+  ].freeze
+  SKIP_UNAVAILABLE_WRITE_PATHS = [].freeze
+
+  def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, correlation_id: nil, **opts)
+    h_params = HISTORICAL_PARAMS.merge(from_date: from_date, to_date: to_date)
+    oc_params = OPTION_CHAIN_PARAMS.merge(expiry: expiry_date)
+    eo_params = EXPIRED_OPTIONS_PARAMS.merge(from_date: from_date, to_date: to_date)
+    margin_p = MARGIN_PARAMS.merge(dhan_client_id: client_id)
+    oc_expiries = []
+
+    ctx = {
+      from_date: from_date, to_date: to_date, expiry_date: expiry_date,
+      order_id: order_id, correlation_id: correlation_id, alert_id: opts[:alert_id], sample_isin: opts[:sample_isin],
+      h_params: h_params, oc_params: oc_params, eo_params: eo_params, oc_expiries: oc_expiries
+    }
+    list = base_read_endpoints(ctx)
+    append_optional_read_endpoints(list, opts[:forever_order_id], client_id, margin_p)
+    list.reject! { |path, _| path.include?("orders/external") } if correlation_id.to_s.empty?
+    list
+  end
+
+  def base_read_endpoints(ctx)
+    from_date = ctx[:from_date]
+    to_date = ctx[:to_date]
+    order_id = ctx[:order_id]
+    correlation_id = ctx[:correlation_id]
+    alert_id = ctx[:alert_id]
+    sample_isin = ctx[:sample_isin]
+    h_params = ctx[:h_params]
+    oc_params = ctx[:oc_params]
+    eo_params = ctx[:eo_params]
+    oc_expiries = ctx[:oc_expiries]
+    expiry_date = ctx[:expiry_date]
+    [
+      ["GET /v2/profile", "Profile.fetch", false, -> { DhanHQ::Models::Profile.fetch }],
+      ["GET /v2/fundlimit", "Funds.fetch", false, -> { DhanHQ::Models::Funds.fetch }],
+      ["GET /v2/ledger", "LedgerEntry.all", false, -> { DhanHQ::Models::LedgerEntry.all(from_date: from_date, to_date: to_date) }],
+      ["GET /v2/trades/{from}/{to}/{page}", "Trade.history", false, -> { DhanHQ::Models::Trade.history(from_date: from_date, to_date: to_date, page: 0) }],
+      ["GET /v2/orders", "Order.all", false, -> { DhanHQ::Models::Order.all }],
+      ["GET /v2/orders/{id}", "Order.find", false, -> { DhanHQ::Models::Order.find(order_id) }],
+      ["GET /v2/orders/external/{correlation_id}", "Order.find_by_correlation", false, -> { DhanHQ::Models::Order.find_by_correlation(correlation_id) }],
+      ["GET /v2/positions", "Position.all", false, -> { DhanHQ::Models::Position.all }],
+      ["GET /v2/holdings", "Holding.all", false, -> { DhanHQ::Models::Holding.all }],
+      ["GET /v2/trades", "Trade.today", false, -> { DhanHQ::Models::Trade.today }],
+      ["GET /v2/trades/{order_id}", "Trade.find_by_order_id", false, -> { DhanHQ::Models::Trade.find_by_order_id(order_id) }],
+      ["GET /v2/forever/orders", "ForeverOrder.all", false, -> { DhanHQ::Models::ForeverOrder.all }],
+      ["GET /v2/super/orders", "SuperOrder.all", false, -> { DhanHQ::Models::SuperOrder.all }],
+      ["GET /v2/killswitch", "KillSwitch.status", false, -> { DhanHQ::Models::KillSwitch.status }],
+      ["GET /v2/ip/getIP", "IPSetup.current", false, -> { DhanHQ::Resources::IPSetup.new.current }],
+      ["GET /v2/edis/tpin", "Edis.generate_tpin", false, -> { DhanHQ::Models::Edis.generate_tpin }],
+      ["GET /v2/alerts/orders", "AlertOrder.all", false, -> { DhanHQ::Models::AlertOrder.all }],
+      ["GET /v2/alerts/orders/{id}", "AlertOrder.find", false, -> { DhanHQ::Models::AlertOrder.find(alert_id) }],
+      ["POST /v2/marketfeed/ltp", "MarketFeed.ltp", false, -> { DhanHQ::Models::MarketFeed.ltp(LTP_PARAMS) }],
+      ["POST /v2/marketfeed/ohlc", "MarketFeed.ohlc", false, -> { DhanHQ::Models::MarketFeed.ohlc(LTP_PARAMS) }],
+      ["POST /v2/marketfeed/quote", "MarketFeed.quote", false, -> { DhanHQ::Models::MarketFeed.quote(LTP_PARAMS) }],
+      ["POST /v2/optionchain/expirylist", "OptionChain.fetch_expiry_list", false, lambda {
+        oc_expiries.replace(DhanHQ::Models::OptionChain.fetch_expiry_list(oc_params.except(:expiry)))
+      }],
+      ["POST /v2/optionchain", "OptionChain.fetch", false, -> { DhanHQ::Models::OptionChain.fetch(oc_params.merge(expiry: oc_expiries.first || expiry_date)) }],
+      ["POST /v2/charts/historical", "HistoricalData.daily", false, -> { DhanHQ::Models::HistoricalData.daily(h_params) }],
+      ["POST /v2/charts/intraday", "HistoricalData.intraday", false, -> { DhanHQ::Models::HistoricalData.intraday(h_params.merge(interval: "5")) }],
+      ["POST /v2/charts/rollingoption", "ExpiredOptionsData.fetch", false, -> { DhanHQ::Models::ExpiredOptionsData.fetch(eo_params) }],
+      ["GET /v2/instrument/{segment}", "Instrument.by_segment", false, -> { DhanHQ::Models::Instrument.by_segment(DhanHQ::Constants::ExchangeSegment::NSE_EQ) }],
+      ["GET /v2/edis/inquire/{isin}", "Edis.inquire", false, -> { sample_isin ? DhanHQ::Models::Edis.inquire(isin: sample_isin) : (raise "Set DHAN_TEST_ISIN") }]
+    ]
+  end
+
+  def append_optional_read_endpoints(list, forever_order_id, client_id, margin_p)
+    list << ["GET /v2/forever/orders/{id}", "ForeverOrder.find", false, -> { DhanHQ::Models::ForeverOrder.find(forever_order_id) }] if forever_order_id.to_s != ""
+    list << ["GET /v2/pnlExit", "PnlExit.status", false, -> { DhanHQ::Models::PnlExit.status }] if pnl_exit_test_enabled?
+    return unless margin_test_enabled?
+
+    margin_security_id = margin_p[:security_id].to_s
+    list << margin_calculate_entry(margin_security_id, margin_p)
+    list << margin_calculate_multi_entry(margin_security_id, client_id)
+  end
+
+  def pnl_exit_test_enabled?
+    ENV.fetch("DHAN_TEST_PNL_EXIT", "false").to_s.casecmp("true").zero?
+  end
+
+  def margin_test_enabled?
+    ENV.fetch("DHAN_TEST_MARGIN", "false").to_s.casecmp("true").zero?
+  end
+
+  def margin_calculate_entry(margin_security_id, margin_p)
+    ["POST /v2/margincalculator", "Margin.calculate", false, lambda {
+      ltp = DhanHQ::Models::MarketFeed.ltp("NSE_EQ" => [margin_security_id.to_i])
+      last_price = ltp.dig(:data, DhanHQ::Constants::ExchangeSegment::NSE_EQ, margin_security_id, :last_price)
+      DhanHQ::Models::Margin.calculate(margin_p.merge(price: last_price.to_f))
+    }]
+  end
+
+  def margin_calculate_multi_entry(margin_security_id, client_id)
+    ["POST /v2/margincalculator/multi", "Margin.calculate_multi", false, lambda {
+      scrip = margin_multi_scrip(margin_security_id)
+      ltp = DhanHQ::Models::MarketFeed.ltp("NSE_EQ" => [margin_security_id.to_i])
+      scrip[:price] = ltp.dig(:data, DhanHQ::Constants::ExchangeSegment::NSE_EQ, margin_security_id, :last_price).to_f
+      DhanHQ::Models::Margin.calculate_multi(dhan_client_id: client_id, include_position: false, include_order: false, scrip_list: [scrip])
+    }]
+  end
+
+  def margin_multi_scrip(margin_security_id)
+    {
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      quantity: 1,
+      product_type: DhanHQ::Constants::ProductType::CNC,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      security_id: margin_security_id,
+      price: nil
+    }
+  end
+
+  def write_endpoints(client_id:, security_id:, order_id:, forever_order_id:, super_order_id:, alert_id:, expiry_date:)
+    order_params = {
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      product_type: DhanHQ::Constants::ProductType::INTRADAY,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      validity: DhanHQ::Constants::Validity::DAY,
+      security_id: security_id,
+      quantity: 1,
+      price: 1.0,
+      disclosed_quantity: 0,
+      after_market_order: false
+    }
+    alert_params = alert_create_params(security_id: security_id, expiry_date: expiry_date)
+    position_convert_params = {
+      dhan_client_id: client_id,
+      from_product_type: DhanHQ::Constants::ProductType::INTRADAY,
+      to_product_type: DhanHQ::Constants::ProductType::CNC,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      position_type: DhanHQ::Constants::PositionType::LONG,
+      security_id: security_id,
+      trading_symbol: "TCS",
+      convert_qty: 1
+    }
+    forever_params = {
+      dhan_client_id: client_id,
+      order_flag: DhanHQ::Constants::OrderFlag::OCO,
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      product_type: DhanHQ::Constants::ProductType::CNC,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      validity: DhanHQ::Constants::Validity::DAY,
+      security_id: security_id,
+      quantity: 1,
+      price: 1.0,
+      trigger_price: 0.9,
+      price1: 1.2,
+      trigger_price1: 1.1,
+      quantity1: 1
+    }
+    forever_modify_params = {
+      order_flag: DhanHQ::Constants::OrderFlag::SINGLE,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      leg_name: DhanHQ::Constants::LegName::TARGET_LEG,
+      quantity: 1,
+      price: 1.0,
+      trigger_price: 0.9,
+      validity: DhanHQ::Constants::Validity::DAY
+    }
+    super_params = {
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      product_type: DhanHQ::Constants::ProductType::INTRADAY,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      security_id: security_id,
+      quantity: 1,
+      price: 1.0,
+      target_price: 1.5,
+      stop_loss_price: 0.5,
+      trailing_jump: 0.1
+    }
+
+    [
+      ["POST /v2/orders", "Order.place", -> { DhanHQ::Models::Order.place(order_params) }],
+      ["PUT /v2/orders/{id}", "Order.modify", -> { DhanHQ::Models::Order.find(order_id).modify(quantity: 1, price: 1.0) }],
+      ["DELETE /v2/orders/{id}", "Order.cancel", -> { DhanHQ::Models::Order.find(order_id).cancel }],
+      ["POST /v2/positions/convert", "Position.convert", -> { DhanHQ::Models::Position.convert(position_convert_params) }],
+      ["DELETE /v2/positions", "Position.exit_all!", -> { DhanHQ::Models::Position.exit_all! }],
+      ["POST /v2/killswitch", "KillSwitch.activate", -> { DhanHQ::Models::KillSwitch.activate }],
+      ["POST /v2/pnlExit", "PnlExit.configure", lambda {
+        DhanHQ::Models::PnlExit.configure(profit_value: 1000, loss_value: 500, product_type: %w[INTRADAY CNC], enable_kill_switch: false)
+      }],
+      ["DELETE /v2/pnlExit", "PnlExit.stop", -> { DhanHQ::Models::PnlExit.stop }],
+      ["POST /v2/alerts/orders", "AlertOrder.create", -> { DhanHQ::Models::AlertOrder.create(condition: alert_params[:condition], orders: alert_params[:orders]) }],
+      ["PUT /v2/alerts/orders/{id}", "AlertOrder.modify", -> { DhanHQ::Models::AlertOrder.modify(alert_id, condition: alert_params[:condition], orders: alert_params[:orders]) }],
+      ["DELETE /v2/alerts/orders/{id}", "AlertOrder.destroy", -> { DhanHQ::Models::AlertOrder.find(alert_id)&.destroy }],
+      ["POST /v2/forever/orders", "ForeverOrder.create", -> { DhanHQ::Models::ForeverOrder.create(forever_params) }],
+      ["PUT /v2/forever/orders/{id}", "ForeverOrder.modify", -> { DhanHQ::Models::ForeverOrder.find(forever_order_id || order_id).modify(forever_modify_params) }],
+      ["DELETE /v2/forever/orders/{id}", "ForeverOrder.cancel", -> { DhanHQ::Models::ForeverOrder.find(forever_order_id || order_id).cancel }],
+      ["POST /v2/super/orders", "SuperOrder.create", -> { DhanHQ::Models::SuperOrder.create(super_params) }],
+      ["PUT /v2/super/orders/{id}", "SuperOrder.modify", -> { DhanHQ::Models::SuperOrder.find(super_order_id || order_id).modify(price: 1.0, quantity: 1) }],
+      ["DELETE /v2/super/orders/{id}/{leg}", "SuperOrder.cancel", -> { DhanHQ::Models::SuperOrder.find(super_order_id || order_id).cancel(DhanHQ::Constants::LegName::ENTRY_LEG) }]
+    ]
+  end
+
+  if options[:list]
+    list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, correlation_id: correlation_id,
+                         sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
+    list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) } if options[:skip_unavailable]
+    list.each { |path, name, write| puts "#{write ? "[W]" : "[R]"} #{path}  (#{name})" }
+    if options[:all]
+      w_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id,
+                               alert_id: alert_id, expiry_date: expiry_date)
+      w_list = w_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
+      w_list.each { |path, name, _| puts "[W] #{path}  (#{name})" }
+    end
+    exit 0
+  end
+
+  unless options[:skip_unavailable]
+    begin
+      created = DhanHQ::Models::AlertOrder.create(alert_create_params(security_id: security_id, expiry_date: expiry_date))
+      if created&.alert_id
+        alert_id = created.alert_id.to_s
+        created_alert_id = alert_id
+      end
+    rescue StandardError
+      nil
+    end
+  end
+
+  def run_endpoint(results, path, name, write:, progress: false, &blk)
+    print "  #{path} ... " if progress
+    $stdout.flush if progress
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    # Timeout.timeout yields the duration to the block; endpoint lambdas are 0-arity, so invoke with no args.
+    Timeout.timeout(25) { blk.call } # rubocop:disable Performance/RedundantBlockCall -- must call with 0 args
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    results << { path: path, name: name, write: write, status: "ok", duration_ms: duration_ms }
+    puts "ok (#{duration_ms}ms)" if progress
+  rescue Timeout::Error
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "Timeout::Error (25s)" }
+    puts "error" if progress
+  rescue StandardError => e
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    msg = e.message.to_s.gsub(/\s+/, " ").strip[0, 380]
+    results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "#{e.class.name.split("::").last}: #{msg}" }
+    puts "error" if progress
+  end
+
+  begin
+    results = []
+    list = endpoint_list(from_date: from_date, to_date: to_date, expiry_date: expiry_date, order_id: order_id, client_id: client_id, correlation_id: correlation_id,
+                         sample_isin: sample_isin, forever_order_id: forever_order_id, alert_id: alert_id)
+    skipped_count = 0
+    if options[:skip_unavailable]
+      skipped_count = list.count { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+      list = list.reject { |path, *_| SKIP_UNAVAILABLE_PATHS.include?(path) }
+    end
+    progress = !options[:json]
+    puts "Calling #{list.size} endpoints..." if progress
+    puts "Skipped #{skipped_count} unavailable." if progress && skipped_count.positive?
+    $stdout.flush if progress
+    list.each do |path, name, write, blk|
+      next if path.include?("edis/inquire") && sample_isin.to_s.empty?
+
+      run_endpoint(results, path, name, write: write, progress: progress, &blk)
+    end
+    if options[:all]
+      write_list = write_endpoints(client_id: client_id, security_id: security_id, order_id: order_id, forever_order_id: forever_order_id, super_order_id: super_order_id,
+                                   alert_id: alert_id, expiry_date: expiry_date)
+      write_list = write_list.reject { |path, *_| SKIP_UNAVAILABLE_WRITE_PATHS.include?(path) } if options[:skip_unavailable]
+      write_list = write_list.reject { |path, *_| path == "POST /v2/alerts/orders" } if created_alert_id
+      puts "Calling #{write_list.size} write endpoints..." if progress
+      write_list.each { |path, name, blk| run_endpoint(results, path, name, write: true, progress: progress, &blk) }
+    end
+    summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" } }
+    summary[:skipped] = skipped_count if skipped_count.positive?
+    if options[:json]
+      puts JSON.pretty_generate(summary: summary, results: results)
+      exit(summary[:error].zero? ? 0 : 1)
+    end
+    puts "Sandbox: #{DhanHQ.configuration&.sandbox?} | Read-only: #{!options[:all]}"
+    puts "Skipped: #{skipped_count}" if skipped_count.positive?
+    puts "-" * 60
+    if options[:verbose]
+      results.each { |r| puts (r[:status] == "ok" ? "[OK]" : "[ERR]") + " #{r[:path]} (#{r[:duration_ms]}ms) #{r[:error] || ""}" }
+    else
+      results.select { |r| r[:status] == "error" }.each { |r| puts "[ERR] #{r[:path]} — #{r[:error]}" }
+    end
+    puts "-" * 60
+    puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]}"
+    exit(summary[:error].zero? ? 0 : 1)
+  ensure
+    DhanHQ::Models::AlertOrder.find(created_alert_id)&.destroy if created_alert_id
+  end
+end
+
+# --- Console mode: define helpers and comprehensive test when loaded ---
+unless __FILE__ == $PROGRAM_NAME
+  load_dotenv
+  DhanHQ.ensure_configuration!
+  if DhanHQ.configuration.access_token.to_s.empty? && DhanHQ.configuration.client_id.to_s.empty?
+    endpoint_base = ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
+    endpoint_bearer = ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
+    DhanHQ.configure_from_token_endpoint(base_url: endpoint_base, bearer_token: endpoint_bearer) if endpoint_base.to_s != "" && endpoint_bearer.to_s != ""
+  end
+
+  module DhanHQ
+    # Helpers for quick smoke tests when script is loaded in console.
+    module TestHelpers
+      def self.check_config
+        puts "=== DhanHQ Configuration ==="
+        puts "Client ID: #{DhanHQ.configuration.client_id}"
+        puts "Access Token: #{DhanHQ.configuration.access_token ? "Set" : "Not Set"}"
+        puts "Base URL: #{DhanHQ.configuration.base_url}"
+        puts "============================"
+      end
+
+      def self.test_funds
+        puts "Testing Funds..."
+        funds = DhanHQ::Models::Funds.fetch
+        puts "Available balance: #{funds.available_balance}"
+        puts "SOD limit: #{funds.sod_limit}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_market_feed
+        puts "Testing Market Feed..."
+        r = DhanHQ::Models::MarketFeed.ltp(DhanHQ::Constants::ExchangeSegment::IDX_I => [13])
+        puts "NIFTY LTP: #{r[:data][DhanHQ::Constants::ExchangeSegment::IDX_I]["13"][:last_price]}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_orders
+        puts "Testing Orders..."
+        orders = DhanHQ::Models::Order.all
+        puts "Total: #{orders.size}"
+        puts "Pending: #{orders.count { |o| o.order_status == DhanHQ::Constants::OrderStatus::PENDING }}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_positions
+        puts "Testing Positions..."
+        puts "Total: #{DhanHQ::Models::Position.all.size}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_holdings
+        puts "Testing Holdings..."
+        puts "Total: #{DhanHQ::Models::Holding.all.size}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_profile
+        puts "Testing Profile..."
+        p = DhanHQ::Models::Profile.fetch
+        puts "Client ID: #{p.dhan_client_id}"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.test_instrument(symbol = "TCS")
+        puts "Testing Instrument: #{symbol}..."
+        i = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, symbol)
+        puts i ? "Found: #{i.symbol_name} (#{i.security_id})" : "Not found"
+      rescue StandardError => e
+        puts "Error: #{e.class} - #{e.message}"
+      end
+
+      def self.run_all_tests
+        puts "=== Quick tests ===\n\n"
+        check_config
+        puts "\n"
+        test_funds
+        puts "\n"
+        test_market_feed
+        puts "\n"
+        test_orders
+        puts "\n"
+        test_positions
+        puts "\n"
+        test_holdings
+        puts "\n"
+        test_profile
+        puts "\n"
+        test_instrument("TCS")
+        puts "\n=== Done ==="
+      end
+    end
+  end
+
+  def check_config
+    DhanHQ::TestHelpers.check_config
+  end
+
+  def test_funds
+    DhanHQ::TestHelpers.test_funds
+  end
+
+  def test_market_feed
+    DhanHQ::TestHelpers.test_market_feed
+  end
+
+  def test_orders
+    DhanHQ::TestHelpers.test_orders
+  end
+
+  def test_positions
+    DhanHQ::TestHelpers.test_positions
+  end
+
+  def test_holdings
+    DhanHQ::TestHelpers.test_holdings
+  end
+
+  def test_profile
+    DhanHQ::TestHelpers.test_profile
+  end
+
+  def test_instrument(symbol = "TCS")
+    DhanHQ::TestHelpers.test_instrument(symbol)
+  end
+
+  def run_all_tests
+    DhanHQ::TestHelpers.run_all_tests
+  end
+
+  require_relative "comprehensive_test"
+  def run_comprehensive_tests
+    runner = DhanHQ::ComprehensiveTest::TestRunner.new
+    begin
+      runner.run_all
+    ensure
+      runner.cleanup
+    end
+  end
+
+  puts "DhanHQ test script loaded."
+  puts "  run_all_tests           — quick smoke (config, funds, feed, orders, positions, holdings, profile, instrument)"
+  puts "  run_comprehensive_tests — full suite (read APIs, validation, errors, rate limit, WebSocket)"
+  puts "  check_config, test_funds, test_market_feed, test_orders, test_positions, test_holdings, test_profile, test_instrument(symbol)"
+end

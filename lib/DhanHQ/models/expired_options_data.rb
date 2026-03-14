@@ -42,7 +42,12 @@ module DhanHQ
     #   call_data = data.call_data
     #   put_data = data.put_data
     #
+    # @example Normalize to candles
+    #   candles = data.to_candles
+    #
     class ExpiredOptionsData < BaseModel
+      OHLC_FIELDS = %i[open high low close iv volume strike spot oi open_interest].freeze
+
       # All expired options data attributes
       attributes :exchange_segment, :interval, :security_id, :instrument,
                  :expiry_flag, :expiry_code, :strike, :drv_option_type,
@@ -56,69 +61,37 @@ module DhanHQ
         # 31 days in a single request. Historical data is available for up to the last 5 years.
         #
         # @param params [Hash{Symbol => String, Integer, Array<String>}] Request parameters
+        #   @option params [String, Integer] :security_id (required) Underlying exchange standard ID for each scrip
         #   @option params [String] :exchange_segment (required) Exchange and segment identifier.
-        #     Valid values: "NSE_FNO", "BSE_FNO", "NSE_EQ", "BSE_EQ"
-        #   @option params [String] :interval (required) Minute intervals for the timeframe.
-        #     Valid values: "1", "5", "15", "25", "60"
-        #   @option params [Integer] :security_id (required) Underlying exchange standard ID for each scrip
+        #     Valid values: "NSE_FNO", "IDX_I", "NSE_EQ", "BSE_EQ"
         #   @option params [String] :instrument (required) Instrument type of the scrip.
         #     Valid values: "OPTIDX" (Index Options), "OPTSTK" (Stock Options)
+        #   @option params [String, Integer] :interval (required) Minute intervals for the timeframe.
+        #     Valid values: "1", "5", "15", "25", "60"
         #   @option params [String] :expiry_flag (required) Expiry interval of the instrument.
         #     Valid values: "WEEK", "MONTH"
         #   @option params [Integer] :expiry_code (required) Expiry code for the instrument
         #   @option params [String] :strike (required) Strike price specification.
         #     Format: "ATM" for At The Money, "ATM+X" or "ATM-X" for offset strikes.
-        #     For Index Options (near expiry): Up to ATM+10 / ATM-10
-        #     For all other contracts: Up to ATM+3 / ATM-3
-        #   @option params [String] :drv_option_type (required) Option type.
-        #     Valid values: "CALL", "PUT"
+        #   @option params [String] :option_type (required) Option type ("CALL" or "PUT").
         #   @option params [Array<String>] :required_data (required) Array of required data fields.
-        #     Valid values: "open", "high", "low", "close", "iv", "volume", "strike", "oi", "spot"
-        #   @option params [String] :from_date (required) Start date of the desired range in YYYY-MM-DD format.
-        #     Cannot be more than 5 years ago. Same-day ranges are allowed.
-        #   @option params [String] :to_date (required) End date of the desired range (non-inclusive) in YYYY-MM-DD format.
-        #     Date range cannot exceed 31 days from from_date (to_date is non-inclusive). Same-day `from_date`/`to_date` is valid.
+        #   @option params [String] :from_date (required) Start date in YYYY-MM-DD format.
+        #   @option params [String] :to_date (required) End date in YYYY-MM-DD format.
         #
         # @return [ExpiredOptionsData] Expired options data object with fetched data
-        #
-        # @example Fetch NIFTY index options data
-        #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
-        #     exchange_segment: "NSE_FNO",
-        #     interval: "1",
-        #     security_id: 13,
-        #     instrument: "OPTIDX",
-        #     expiry_flag: "MONTH",
-        #     expiry_code: 1,
-        #     strike: "ATM",
-        #     drv_option_type: "CALL",
-        #     required_data: ["open", "high", "low", "close", "volume", "iv", "oi", "spot"],
-        #     from_date: "2021-08-01",
-        #     to_date: "2021-09-01"
-        #   )
-        #
-        # @example Fetch stock options data for ATM+2 strike
-        #   data = DhanHQ::Models::ExpiredOptionsData.fetch(
-        #     exchange_segment: "NSE_FNO",
-        #     interval: "15",
-        #     security_id: 11536,
-        #     instrument: "OPTSTK",
-        #     expiry_flag: "WEEK",
-        #     expiry_code: 0,
-        #     strike: "ATM+2",
-        #     drv_option_type: "PUT",
-        #     required_data: ["open", "high", "low", "close", "volume"],
-        #     from_date: "2024-01-01",
-        #     to_date: "2024-01-31"
-        #   )
-        #
         # @raise [DhanHQ::ValidationError] If validation fails for any parameter
         def fetch(params)
+          # Map option_type to drv_option_type if provided
+          params[:drv_option_type] ||= params[:option_type] if params.key?(:option_type)
+
           normalized = normalize_params(params)
           validate_params(normalized)
 
           response = expired_options_resource.fetch(normalized)
           new(response.merge(normalized), skip_validation: true)
         end
+
+        alias rolling fetch
 
         private
 
@@ -177,6 +150,43 @@ module DhanHQ
           normalized[:to_date] = normalized[:to_date].to_s if normalized.key?(:to_date)
 
           normalized
+        end
+      end
+
+      ##
+      # Normalizes the columnar response into an array of candle hashes.
+      #
+      # @param option_type [String, nil] Option type to retrieve ("CALL" or "PUT").
+      #   If nil, uses the {#drv_option_type} from the request.
+      # @return [Array<Hash>] Normalized array of candles.
+      def to_candles(option_type = nil)
+        option_type ||= drv_option_type
+        opt_data = data_for_type(option_type)
+        return [] unless opt_data.is_a?(Hash)
+
+        # Standardize keys to symbols
+        opt_data = opt_data.transform_keys(&:to_sym)
+        ts_arr = opt_data[:timestamp]
+        return [] unless ts_arr.is_a?(Array)
+
+        type_sym = option_type.to_s.downcase.to_sym
+
+        ts_arr.each_with_index.map do |ts, i|
+          candle = {
+            option_type: type_sym,
+            timestamp: ts.is_a?(Numeric) ? Time.at(ts) : ts
+          }
+
+          # Map requested fields
+          OHLC_FIELDS.each do |field|
+            val_arr = opt_data[field]
+            next unless val_arr.is_a?(Array)
+
+            # Map 'oi' to 'open_interest' if requested
+            target_field = field == :oi ? :open_interest : field
+            candle[target_field] = val_arr[i]
+          end
+          candle
         end
       end
 

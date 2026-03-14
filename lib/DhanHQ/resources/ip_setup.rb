@@ -4,9 +4,12 @@ module DhanHQ
   module Resources
     # Resource for IP whitelist per API docs: GET /v2/ip/getIP, POST /v2/ip/setIP, PUT /v2/ip/modifyIP.
     # Set/Modify require dhanClientId, ip, ipFlag (PRIMARY | SECONDARY). See dhanhq.co/docs/v2/authentication/#setup-static-ip
+    #
+    # GET /v2/ip/getIP response: modifyDateSecondary, secondaryIP, modifyDatePrimary, primaryIP
+    # (dates are YYYY-MM-DD from which the IP can be modified; IPs are IPv4 or IPv6).
     class IPSetup < BaseAPI
       API_TYPE  = :order_api
-      HTTP_PATH = "/ip"
+      HTTP_PATH = "/v2/ip"
 
       def current
         get("/getIP")

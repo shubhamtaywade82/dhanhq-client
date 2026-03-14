@@ -370,8 +370,16 @@ module DhanHQ
       #
       # @raise [RuntimeError] If order ID is missing
       # @raise [DhanHQ::ValidationError] If validation fails for any parameter
+      # @raise [DhanHQ::ModificationLimitError] If this instance has already been modified 25 times (Dhan API cap)
+      # @note Count is per Order instance in this process; a fresh find() resets it.
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
+
+        count = @modification_count || 0
+        if count >= Constants::RateLimit::ORDER_MODIFICATIONS_PER_ORDER
+          raise ModificationLimitError,
+                "Order modification limit reached (#{Constants::RateLimit::ORDER_MODIFICATIONS_PER_ORDER} per order)"
+        end
 
         warn_invalid_state if order_status_invalid_for_modification?
 
@@ -384,6 +392,7 @@ module DhanHQ
 
         return DhanHQ::ErrorObject.new(response) unless success_response?(response)
 
+        @modification_count = count + 1
         @attributes.merge!(normalize_keys(response))
         assign_attributes
         self
@@ -543,13 +552,15 @@ module DhanHQ
       private
 
       def save_new_order
-        DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price).inspect}")
+        slice_attrs = attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price)
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{slice_attrs.inspect}")
         response = self.class.resource.create(to_request_params)
         handle_api_response(response, success_key: "orderId", context: "[DhanHQ::Models::Order] Order placement")
       end
 
       def modify_existing_order
-        DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{attributes.slice(:price, :quantity, :order_type).inspect}")
+        slice_attrs = attributes.slice(:price, :quantity, :order_type)
+        DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{slice_attrs.inspect}")
         response = self.class.resource.update(id, to_request_params)
         handle_api_response(response, success_key: "orderStatus", context: "[DhanHQ::Models::Order] Order modification")
       end
@@ -559,7 +570,9 @@ module DhanHQ
       end
 
       def warn_invalid_state
-        DhanHQ.logger&.warn("[DhanHQ::Models::Order] Attempting to modify order #{id} in #{order_status} state - API will reject")
+        DhanHQ.logger&.warn(
+          "[DhanHQ::Models::Order] Attempting to modify order #{id} in #{order_status} state - API will reject"
+        )
       end
 
       def prepare_modify_payload(new_params)
@@ -576,7 +589,9 @@ module DhanHQ
 
         # Don't send trigger_price when it's 0 for non–stop-loss orders (API default; avoids validation noise).
         order_type = filtered_payload[:order_type].to_s
-        filtered_payload.delete(:trigger_price) if !%w[STOP_LOSS STOP_LOSS_MARKET].include?(order_type) && filtered_payload[:trigger_price].to_f.zero?
+        trigger_zero = filtered_payload[:trigger_price].to_f.zero?
+        drop_trigger = !%w[STOP_LOSS STOP_LOSS_MARKET].include?(order_type) && trigger_zero
+        filtered_payload.delete(:trigger_price) if drop_trigger
 
         filtered_payload.compact
       end

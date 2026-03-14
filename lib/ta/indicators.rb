@@ -16,13 +16,12 @@ module TA
 
     def rsi(series, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:RSI)
-        return RubyTechnicalAnalysis::RSI.new(series: series, period: period).call
+        RubyTechnicalAnalysis::RSI.new(series: series, period: period).call
+      elsif defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:rsi)
+        TechnicalAnalysis.rsi(series, period: period)
+      else
+        simple_rsi(series, period)
       end
-      if defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:rsi)
-        return TechnicalAnalysis.rsi(series, period: period)
-      end
-
-      simple_rsi(series, period)
     end
 
     def macd(series, fast, slow, signal)
@@ -56,24 +55,22 @@ module TA
 
     def adx(high, low, close, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:ADX)
-        return RubyTechnicalAnalysis::ADX.new(high: high, low: low, close: close, period: period).call
+        RubyTechnicalAnalysis::ADX.new(high: high, low: low, close: close, period: period).call
+      elsif defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:adx)
+        TechnicalAnalysis.adx(high: high, low: low, close: close, period: period)
+      else
+        simple_adx(high, low, close, period)
       end
-      if defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:adx)
-        return TechnicalAnalysis.adx(high: high, low: low, close: close, period: period)
-      end
-
-      simple_adx(high, low, close, period)
     end
 
     def atr(high, low, close, period)
       if defined?(RubyTechnicalAnalysis) && RubyTechnicalAnalysis.const_defined?(:ATR)
-        return RubyTechnicalAnalysis::ATR.new(high: high, low: low, close: close, period: period).call
+        RubyTechnicalAnalysis::ATR.new(high: high, low: low, close: close, period: period).call
+      elsif defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:atr)
+        TechnicalAnalysis.atr(high: high, low: low, close: close, period: period)
+      else
+        simple_atr(high, low, close, period)
       end
-      if defined?(TechnicalAnalysis) && TechnicalAnalysis.respond_to?(:atr)
-        return TechnicalAnalysis.atr(high: high, low: low, close: close, period: period)
-      end
-
-      simple_atr(high, low, close, period)
     end
 
     def simple_rsi(series, period)

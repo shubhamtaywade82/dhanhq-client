@@ -61,48 +61,56 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload, retries: 3)
       @token_manager&.ensure_valid_token!
-      @rate_limiter.throttle! # **Ensure we don't hit rate limit before calling API**
-
-      # Ensure connection matches current configuration (e.g. sandbox toggle)
+      @rate_limiter.throttle!
       refresh_connection!
 
-      attempt = 0
-      auth_retry_done = false
-      begin
-        response = connection.send(method, path) do |req|
-          req.headers.merge!(build_headers(path))
-          prepare_payload(req, payload, method, path)
+      with_auth_retry do
+        with_transient_retry(retries: retries) do
+          response = connection.send(method, path) do |req|
+            req.headers.merge!(build_headers(path))
+            prepare_payload(req, payload, method, path)
+          end
+          handle_response(response)
         end
+      end
+    end
 
-        handle_response(response)
-      rescue DhanHQ::InvalidAuthenticationError, DhanHQ::InvalidTokenError,
-             DhanHQ::TokenExpiredError, DhanHQ::AuthenticationFailedError => e
-        config = DhanHQ.configuration
-        if !auth_retry_done && config&.access_token_provider
-          auth_retry_done = true
-          config.on_token_expired&.call(e)
-          DhanHQ.logger&.warn("[DhanHQ::Client] Auth failure (#{e.class}), retrying once with fresh token")
-          retry
-        end
-        raise
+    def with_auth_retry
+      yield
+    rescue DhanHQ::InvalidAuthenticationError, DhanHQ::InvalidTokenError,
+           DhanHQ::TokenExpiredError, DhanHQ::AuthenticationFailedError => e
+      config = DhanHQ.configuration
+      raise unless config&.access_token_provider
+
+      config.on_token_expired&.call(e)
+      DhanHQ.logger&.warn("[DhanHQ::Client] Auth failure (#{e.class}), retrying once with fresh token")
+      yield
+    end
+
+    def with_transient_retry(retries:)
+      attempt = 0
+      begin
+        yield
       rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
         attempt += 1
-        if attempt <= retries
-          backoff_time = calculate_backoff(attempt)
-          DhanHQ.logger&.warn("[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff_time}s (attempt #{attempt}/#{retries})")
-          sleep(backoff_time)
-          retry
-        end
-        raise
+        raise if attempt > retries
+
+        backoff = calculate_backoff(attempt)
+        DhanHQ.logger&.warn(
+          "[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+        )
+        sleep(backoff)
+        retry
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
         attempt += 1
-        if attempt <= retries
-          backoff_time = calculate_backoff(attempt)
-          DhanHQ.logger&.warn("[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff_time}s (attempt #{attempt}/#{retries})")
-          sleep(backoff_time)
-          retry
-        end
-        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}"
+        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
+
+        backoff = calculate_backoff(attempt)
+        DhanHQ.logger&.warn(
+          "[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+        )
+        sleep(backoff)
+        retry
       end
     end
 

@@ -42,6 +42,12 @@ RSpec.describe DhanHQ::Models::AlertOrder do
         expect(described_class.find("AID-1")).to be_nil
       end
 
+      it "returns nil when the response is an empty hash" do
+        allow(resource_double).to receive(:find).with("AID-1").and_return({})
+
+        expect(described_class.find("AID-1")).to be_nil
+      end
+
       it "wraps the response in a model" do
         allow(resource_double).to receive(:find).with("AID-1")
                                                 .and_return({ "alertId" => "AID-1", "triggerPrice" => 100.0 })
@@ -68,6 +74,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
             security_id: "11536",
             exchange_segment: "NSE_EQ",
             comparison_type: "PRICE_WITH_VALUE",
+            time_frame: "DAY",
             operator: "GREATER_THAN_EQUAL",
             comparing_value: 100.0,
             exp_date: "2026-12-31",
@@ -82,7 +89,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
               security_id: "11536",
               quantity: 10,
               validity: "DAY",
-              price: 150.0
+              price: "150.0"
             }
           ]
         }
@@ -105,10 +112,11 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       end
 
       it "raises when validation fails" do
-        invalid_params = Marshal.load(Marshal.dump(valid_params))
+        invalid_params = valid_params.dup
+        invalid_params[:orders] = valid_params[:orders].map(&:dup)
         invalid_params[:orders][0][:quantity] = -1
 
-        expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)
+        expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       end
     end
 
@@ -132,6 +140,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
               security_id: "11536",
               exchange_segment: "NSE_EQ",
               comparison_type: "PRICE_WITH_VALUE",
+              time_frame: "DAY",
               operator: "GREATER_THAN_EQUAL",
               comparing_value: 100.0,
               exp_date: "2026-12-31",
@@ -146,7 +155,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
                 security_id: "11536",
                 quantity: 10,
                 validity: "DAY",
-                price: 150.0
+                price: "150.0"
               }
             ]
           },
@@ -227,14 +236,41 @@ RSpec.describe DhanHQ::Models::AlertOrder do
     end
 
     describe ".modify" do
+      let(:modify_params) do
+        {
+          condition: {
+            security_id: "11536",
+            exchange_segment: "NSE_EQ",
+            comparison_type: "PRICE_WITH_VALUE",
+            time_frame: "DAY",
+            operator: "GREATER_THAN",
+            comparing_value: 300,
+            exp_date: "2026-12-31",
+            frequency: "ONCE"
+          },
+          orders: [
+            {
+              transaction_type: "BUY",
+              exchange_segment: "NSE_EQ",
+              product_type: "CNC",
+              order_type: "LIMIT",
+              security_id: "11536",
+              quantity: 10,
+              validity: "DAY",
+              price: "250.0"
+            }
+          ]
+        }
+      end
+
       it "updates and re-fetches the alert order on success" do
         allow(resource_double).to receive(:update)
-          .with("AID-1", hash_including("condition" => hash_including(comparing_value: 300), "orders" => []))
+          .with("AID-1", hash_including("condition", "orders"))
           .and_return({ status: "success" })
         allow(resource_double).to receive(:find).with("AID-1")
                                                 .and_return({ "alertId" => "AID-1", "triggerPrice" => 300.0 })
 
-        result = described_class.modify("AID-1", condition: { comparing_value: 300, exchange_segment: "NSE_EQ", exp_date: "2026-12-31", frequency: "ONCE" }, orders: [])
+        result = described_class.modify("AID-1", modify_params)
         expect(result).to be_a(described_class)
         expect(result.alert_id).to eq("AID-1")
       end
@@ -242,7 +278,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
       it "returns nil when the update fails" do
         allow(resource_double).to receive(:update).and_return({ "status" => "fail" })
 
-        expect(described_class.modify("AID-1", condition: { comparing_value: 300, exchange_segment: "NSE_EQ", exp_date: "2026-12-31", frequency: "ONCE" }, orders: [])).to be_nil
+        expect(described_class.modify("AID-1", modify_params)).to be_nil
       end
     end
   end

@@ -31,17 +31,17 @@ RSpec.describe DhanHQ::Models::Edis do
     describe ".generate_form" do
       it "delegates to resource.form with the correct params" do
         allow(resource_double).to receive(:form) do |params|
-          expect(params).to include(isin: "INE155A01022", qty: 10, exchange: "NSE", segment: "E", bulk: false)
-          { "formHtml" => "<html>...</html>" }
+          expect(params).to include(isin: "INE155A01022", qty: 10, exchange: "NSE", segment: "EQ", bulk: false)
+          { "edisFormHtml" => "<html>...</html>" }
         end
 
         response = described_class.generate_form(
           isin: "INE155A01022",
           qty: 10,
           exchange: "NSE",
-          segment: "E"
+          segment: "EQ"
         )
-        expect(response).to include("formHtml")
+        expect(response).to include("edisFormHtml")
       end
 
       it "defaults bulk to false" do
@@ -50,16 +50,27 @@ RSpec.describe DhanHQ::Models::Edis do
           {}
         end
 
-        described_class.generate_form(isin: "X", qty: 1, exchange: "NSE", segment: "E")
+        described_class.generate_form(isin: "INE155A01022", qty: 1, exchange: "NSE", segment: "EQ")
+      end
+
+      it "raises when validation fails" do
+        expect do
+          described_class.generate_form(
+            isin: "INE155A01022",
+            qty: 0,
+            exchange: "NSE",
+            segment: "EQ"
+          )
+        end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       end
     end
 
     describe ".generate_bulk_form" do
       it "delegates to resource.bulk_form" do
-        allow(resource_double).to receive(:bulk_form).and_return({ "formHtml" => "bulk" })
+        allow(resource_double).to receive(:bulk_form).and_return({ "edisFormHtml" => "bulk" })
 
-        response = described_class.generate_bulk_form({ exchange: "NSE", segment: "E", bulk: true })
-        expect(response).to include("formHtml" => "bulk")
+        response = described_class.generate_bulk_form(exchange: "NSE", segment: "EQ", bulk: true)
+        expect(response).to include("edisFormHtml" => "bulk")
         expect(resource_double).to have_received(:bulk_form)
       end
     end

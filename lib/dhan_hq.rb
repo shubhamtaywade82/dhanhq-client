@@ -12,8 +12,9 @@ require_relative "DhanHQ/helpers/api_helper"
 require_relative "DhanHQ/helpers/attribute_helper"
 require_relative "DhanHQ/helpers/validation_helper"
 require_relative "DhanHQ/helpers/request_helper"
-require_relative "DhanHQ/helpers/response_helper"
 require_relative "DhanHQ/errors"
+require_relative "DhanHQ/version"
+require_relative "DhanHQ/helpers/response_helper"
 require_relative "DhanHQ/core/base_api"
 require_relative "DhanHQ/core/base_model"
 require_relative "DhanHQ/core/base_resource"
@@ -49,7 +50,7 @@ module DhanHQ
     # Default REST API host used when no custom base URL is provided.
     #
     # @return [String]
-    BASE_URL = "https://api.dhan.co/v2"
+    BASE_URL = Constants::Urls::REST_API_BASE
     # The current configuration instance.
     #
     # @return [DhanHQ::Configuration, nil] The current configuration or `nil` if not set.
@@ -142,28 +143,12 @@ module DhanHQ
       end
 
       unless response.success?
-        body = if response.body.is_a?(Hash)
-                 response.body
-               else
-                 begin
-                   JSON.parse(response.body.to_s)
-                 rescue StandardError
-                   {}
-                 end
-               end
+        body = parse_json_body(response.body)
         msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
         raise DhanHQ::TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
       end
 
-      data = if response.body.is_a?(Hash)
-               response.body
-             else
-               begin
-                 JSON.parse(response.body.to_s)
-               rescue StandardError
-                 {}
-               end
-             end
+      data = parse_json_body(response.body)
       data = data.transform_keys(&:to_s) if data.is_a?(Hash)
 
       access_token = data["access_token"] || data[:access_token]
@@ -176,6 +161,18 @@ module DhanHQ
       dhan_base = data["base_url"] || data[:base_url]
       configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
       configuration
+    end
+
+    # @param body [String, Hash] Raw response body
+    # @return [Hash] Parsed hash; empty hash on parse failure or empty string
+    def parse_json_body(body)
+      return {} if body.nil?
+      return body if body.is_a?(Hash)
+      return {} if body.to_s.strip.empty?
+
+      JSON.parse(body.to_s)
+    rescue StandardError
+      {}
     end
   end
 end

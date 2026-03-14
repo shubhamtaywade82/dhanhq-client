@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe DhanHQ::Models::ExpiredOptionsData do
   let(:valid_params) do
     {
-      exchange_segment: "NSE_FNO",
+      exchange_segment: "IDX_I",
       interval: "1",
       security_id: 13,
       instrument: "OPTIDX",
@@ -51,7 +51,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       result = described_class.fetch(valid_params)
 
       expect(result).to be_a(described_class)
-      expect(result.exchange_segment).to eq("NSE_FNO")
+      expect(result.exchange_segment).to eq("IDX_I")
       expect(result.instrument).to eq("OPTIDX")
       expect(result.strike).to eq("ATM")
       expect(result.drv_option_type).to eq("CALL")

@@ -11,7 +11,9 @@ module DhanHQ
       contract = contract_class.new
       result = contract.call(params)
 
-      raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}" unless result.success?
+      raise DhanHQ::ValidationError, "Invalid parameters: #{result.errors.to_h}" unless result.success?
+
+      result.to_h
     end
 
     # Validate instance attributes using the defined validation contract
@@ -23,7 +25,7 @@ module DhanHQ
 
       result = contract.call(@attributes)
       @errors = result.errors.to_h unless result.success?
-      raise DhanHQ::Error, "Validation Error: #{@errors}" unless valid?
+      raise DhanHQ::ValidationError, "Invalid parameters: #{@errors}" unless valid?
     end
 
     # Checks if the current instance is valid

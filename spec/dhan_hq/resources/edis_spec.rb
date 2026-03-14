@@ -11,34 +11,34 @@ RSpec.describe DhanHQ::Resources::Edis do
   end
 
   describe "#form" do
-    it "posts to /edis/form with params" do
+    it "posts to /v2/edis/form with params" do
       edis.form(isin: "INE733E01010", qty: 1, exchange: "NSE", segment: "EQ", bulk: false)
 
-      expect(client).to have_received(:post).with("/edis/form", anything)
+      expect(client).to have_received(:post).with("/v2/edis/form", anything)
     end
   end
 
   describe "#bulk_form" do
-    it "posts to /edis/bulkform with params" do
+    it "posts to /v2/edis/bulkform with params" do
       edis.bulk_form(exchange: "NSE", segment: "EQ", bulk: true)
 
-      expect(client).to have_received(:post).with("/edis/bulkform", anything)
+      expect(client).to have_received(:post).with("/v2/edis/bulkform", anything)
     end
   end
 
   describe "#tpin" do
-    it "gets /edis/tpin" do
+    it "gets /v2/edis/tpin" do
       edis.tpin
 
-      expect(client).to have_received(:get).with("/edis/tpin", {})
+      expect(client).to have_received(:get).with("/v2/edis/tpin", {})
     end
   end
 
   describe "#inquire" do
-    it "gets /edis/inquire/{isin}" do
+    it "gets /v2/edis/inquire/{isin}" do
       edis.inquire("INE002A01018")
 
-      expect(client).to have_received(:get).with("/edis/inquire/INE002A01018", {})
+      expect(client).to have_received(:get).with("/v2/edis/inquire/INE002A01018", {})
     end
   end
 end

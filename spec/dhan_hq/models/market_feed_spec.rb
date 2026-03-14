@@ -114,27 +114,36 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
 
   describe "unit tests" do
     let(:resource_double) { instance_double(DhanHQ::Resources::MarketFeed) }
+    let(:valid_payload) { { "NSE_EQ" => [11_536] } }
+    let(:coercible_payload) { { "NSE_EQ" => ["11536"] } }
+    let(:expected_coerced) { { NSE_EQ: [11_536] } }
 
     before do
       allow(described_class).to receive(:resource).and_return(resource_double)
     end
 
-    it "delegates ltp" do
-      allow(resource_double).to receive(:ltp).with(:payload).and_return({})
-      expect(described_class.ltp(:payload)).to eq({})
-      expect(resource_double).to have_received(:ltp).with(:payload)
+    it "delegates ltp with coercion" do
+      allow(resource_double).to receive(:ltp).with(expected_coerced).and_return({})
+      expect(described_class.ltp(coercible_payload)).to eq({})
+      expect(resource_double).to have_received(:ltp).with(expected_coerced)
     end
 
-    it "delegates ohlc" do
-      allow(resource_double).to receive(:ohlc).with(:payload).and_return({})
-      expect(described_class.ohlc(:payload)).to eq({})
-      expect(resource_double).to have_received(:ohlc).with(:payload)
+    it "delegates ohlc with coercion" do
+      allow(resource_double).to receive(:ohlc).with(expected_coerced).and_return({})
+      expect(described_class.ohlc(coercible_payload)).to eq({})
+      expect(resource_double).to have_received(:ohlc).with(expected_coerced)
     end
 
-    it "delegates quote" do
-      allow(resource_double).to receive(:quote).with(:payload).and_return({})
-      expect(described_class.quote(:payload)).to eq({})
-      expect(resource_double).to have_received(:quote).with(:payload)
+    it "delegates quote with coercion" do
+      allow(resource_double).to receive(:quote).with(expected_coerced).and_return({})
+      expect(described_class.quote(coercible_payload)).to eq({})
+      expect(resource_double).to have_received(:quote).with(expected_coerced)
+    end
+
+    it "raises validation error for invalid payload" do
+      expect do
+        described_class.ltp({ "INVALID" => [123] })
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
   end
 end

@@ -173,7 +173,7 @@ module DhanHQ
       def default_headers
         {
           "User-Agent" => "DhanHQ-Ruby-Client/#{DhanHQ::VERSION}",
-          "Origin" => "https://dhanhq.co"
+          "Origin" => Constants::Urls::ORIGIN
         }
       end
 

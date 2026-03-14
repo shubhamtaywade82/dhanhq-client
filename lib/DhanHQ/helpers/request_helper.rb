@@ -79,9 +79,10 @@ module DhanHQ
       end
 
       out = payload
-      if path && data_api?(path) && %i[post put patch].include?(method)
+      if path && %i[post put patch].include?(method)
         client_id = DhanHQ.configuration&.client_id
-        if client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
+        needs_client_id = data_api?(path) || payload_requires_dhan_client_id?(path)
+        if client_id && needs_client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
           out = payload.dup
           if out.keys.any?(String)
             out["dhanClientId"] = client_id
@@ -96,6 +97,14 @@ module DhanHQ
       when :get then req.params = out
       else req.body = out.to_json
       end
+    end
+
+    # True when the path is one where the request body must include dhanClientId (order-api style).
+    def payload_requires_dhan_client_id?(path)
+      return false if path.nil? || path.empty?
+
+      prefixes = DhanHQ::Constants::PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES
+      prefixes.any? { |p| path.start_with?(p) }
     end
   end
 end

@@ -23,7 +23,9 @@ module DhanHQ
       end
 
       rule(:exchange_segment) do
-        valid_segments = %w[NSE_FNO BSE_FNO NSE_EQ BSE_EQ]
+        # IDX_I for index options, NSE_EQ/BSE_EQ for equity options,
+        # plus NSE_FNO/BSE_FNO for derivatives.
+        valid_segments = %w[IDX_I NSE_EQ BSE_EQ NSE_FNO BSE_FNO]
         key.failure("must be one of: #{valid_segments.join(", ")}") unless valid_segments.include?(value)
       end
 
@@ -43,7 +45,7 @@ module DhanHQ
       end
 
       rule(:strike) do
-        unless value.match?(/\AATM(\+|-)?\d*\z/) || value == "ATM"
+        unless value.match?(/\AATM(\+|-)?\d+\z/) || value == "ATM"
           key.failure("must be in format ATM, ATM+1, ATM-1, etc. " \
                       "(up to ATM+10/ATM-10 for Index Options, ATM+3/ATM-3 for others)")
         end

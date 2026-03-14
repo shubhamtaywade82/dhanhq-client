@@ -27,8 +27,8 @@ module DhanHQ
   #     client_id: ENV["DHAN_CLIENT_ID"]
   #   )
   module Auth
-    AUTH_BASE_URL = "https://auth.dhan.co"
-    API_BASE_URL  = "https://api.dhan.co/v2"
+    AUTH_BASE_URL = Constants::Urls::AUTH_BASE
+    API_BASE_URL  = Constants::Urls::REST_API_BASE
 
     # Generates an access token using TOTP authentication.
     #

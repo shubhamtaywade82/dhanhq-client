@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../contracts/edis_contract"
+
 module DhanHQ
   module Models
     ##
@@ -16,15 +18,15 @@ module DhanHQ
     #     isin: "INE155A01022",
     #     qty: 10,
     #     exchange: "NSE",
-    #     segment: "E",
+    #     segment: "EQ",
     #     bulk: false
     #   )
     #
-    # @example Check EDIS status for a security
+    # @example Check EDIS status for a security (or "ALL" for all holdings)
     #   status = DhanHQ::Models::Edis.inquire(isin: "INE155A01022")
     #
     class Edis < BaseModel
-      HTTP_PATH = "/edis"
+      HTTP_PATH = "/v2/edis"
 
       class << self
         ##
@@ -52,24 +54,26 @@ module DhanHQ
         ##
         # Generate an eDIS form for authorizing sale of holdings.
         #
-        # @param isin [String] ISIN of the security (e.g., "INE155A01022")
+        # @param isin [String] ISIN of the security (e.g. "INE733E01010")
         # @param qty [Integer] Quantity to authorize for sale
-        # @param exchange [String] Exchange name (e.g., "NSE", "BSE")
-        # @param segment [String] Segment identifier (e.g., "E")
-        # @param bulk [Boolean] Whether this is a bulk authorization (default: false)
+        # @param exchange [String] Exchange: "NSE" or "BSE"
+        # @param segment [String] Segment: "EQ", "COMM", or "FNO"
+        # @param bulk [Boolean] If true, mark eDIS for all stocks in portfolio (default: false)
         #
-        # @return [Hash] API response containing the eDIS form data
+        # @return [Hash] API response with dhanClientId and edisFormHtml (escaped HTML to render)
         #
         # @example Authorize sale of 10 shares
         #   DhanHQ::Models::Edis.generate_form(
         #     isin: "INE155A01022",
         #     qty: 10,
         #     exchange: "NSE",
-        #     segment: "E"
+        #     segment: "EQ"
         #   )
         #
         def generate_form(isin:, qty:, exchange:, segment:, bulk: false)
-          resource.form({ isin: isin, qty: qty, exchange: exchange, segment: segment, bulk: bulk })
+          params = { isin: isin, qty: qty, exchange: exchange, segment: segment, bulk: bulk }
+          validate_params!(params, DhanHQ::Contracts::EdisFormContract)
+          resource.form(params)
         end
 
         ##
@@ -85,12 +89,15 @@ module DhanHQ
         ##
         # Check EDIS authorization status for a security.
         #
-        # @param isin [String] ISIN of the security to check
+        # @param isin [String] ISIN of the security, or "ALL" for all holdings
         #
-        # @return [Hash] API response containing authorization status
+        # @return [Hash] API response with clientId, isin, totalQty, aprvdQty, status, remarks
         #
-        # @example Check if EDIS is authorized
+        # @example Check if EDIS is authorized for one security
         #   status = DhanHQ::Models::Edis.inquire(isin: "INE155A01022")
+        #
+        # @example Check EDIS status for all holdings
+        #   status = DhanHQ::Models::Edis.inquire(isin: "ALL")
         #
         def inquire(isin:)
           resource.inquire(isin)

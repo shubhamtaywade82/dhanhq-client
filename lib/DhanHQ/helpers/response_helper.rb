@@ -3,6 +3,14 @@
 module DhanHQ
   # Helper mixin for normalising API responses and raising mapped errors.
   module ResponseHelper
+    STATUS_ERROR_FALLBACK = {
+      400 => DhanHQ::InputExceptionError,
+      401 => DhanHQ::InvalidAuthenticationError,
+      403 => DhanHQ::InvalidAccessError,
+      404 => DhanHQ::NotFoundError,
+      429 => DhanHQ::RateLimitError
+    }.freeze
+
     private
 
     # Determines if the API response indicates success.
@@ -53,31 +61,52 @@ module DhanHQ
       end
 
       error_class = DhanHQ::Constants::DHAN_ERROR_MAPPING[error_code]
-
       unless error_class
-        # Log unmapped error codes for investigation
         DhanHQ.logger&.warn("[DhanHQ] Unmapped error code: #{error_code} (status: #{response.status})")
-
-        error_class =
-          case response.status
-          when 400 then DhanHQ::InputExceptionError
-          when 401 then DhanHQ::InvalidAuthenticationError
-          when 403 then DhanHQ::InvalidAccessError
-          when 404 then DhanHQ::NotFoundError
-          when 429 then DhanHQ::RateLimitError
-          when 500..599 then DhanHQ::InternalServerError
-          else DhanHQ::OtherError
-          end
+        error_class = status_fallback_error_class(response.status)
       end
 
-      error_text =
-        if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
-          "#{error_message} (error code: #{error_code})"
-        else
-          "#{error_code}: #{error_message}"
-        end
+      message = build_error_text(error_code, error_message, body)
+      raise error_class.new(message, response_body: body)
+    end
 
-      raise error_class, error_text
+    def status_fallback_error_class(status)
+      STATUS_ERROR_FALLBACK[status] ||
+        (status.between?(500, 599) ? DhanHQ::InternalServerError : DhanHQ::OtherError)
+    end
+
+    def build_error_text(error_code, error_message, body = {})
+      text = if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
+               "#{error_message} (error code: #{error_code})"
+             else
+               "#{error_code}: #{error_message}"
+             end
+
+      extra = extra_error_detail(body)
+      text += " | #{extra}" if extra
+
+      if error_code == DhanHQ::Constants::TradingErrorCode::INPUT_EXCEPTION
+        text += " (API does not return which field failed; check required params and value types for this endpoint.)"
+      end
+
+      text
+    end
+
+    # Returns any additional error detail from the response body (errors array, details, etc.).
+    def extra_error_detail(body)
+      return nil unless body.is_a?(Hash)
+
+      parts = []
+      if body[:errors].is_a?(Array) && body[:errors].any?
+        parts << body[:errors].join("; ")
+      end
+      if body[:details].is_a?(String) && body[:details].to_s.strip != ""
+        parts << body[:details].to_s
+      end
+      if body[:validationErrors].is_a?(Array) && body[:validationErrors].any?
+        parts << body[:validationErrors].map { |e| e.is_a?(Hash) ? e[:message] || e[:field] : e }.join("; ")
+      end
+      parts.empty? ? nil : parts.join(" ")
     end
 
     # Parses JSON response safely. Converts response body to a hash or array with indifferent access.

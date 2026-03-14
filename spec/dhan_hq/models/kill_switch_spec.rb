@@ -27,6 +27,13 @@ RSpec.describe DhanHQ::Models::KillSwitch do
         expect(response).to eq({ "killSwitchStatus" => "ACTIVATE" })
         expect(resource_double).to have_received(:update).with("ACTIVATE")
       end
+
+      it "raises ValidationError when status is not ACTIVATE or DEACTIVATE" do
+        real_resource = DhanHQ::Resources::KillSwitch.new
+        allow(described_class).to receive(:resource).and_return(real_resource)
+
+        expect { described_class.update("INVALID") }.to raise_error(DhanHQ::ValidationError, /ACTIVATE|DEACTIVATE/)
+      end
     end
 
     describe ".activate" do

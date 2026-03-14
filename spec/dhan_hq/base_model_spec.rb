@@ -20,9 +20,8 @@ RSpec.describe DhanHQ::BaseModel do
         to_date: "2024-01-16"
       )
 
-      expect(data).to be_a(Hash)
-      expect(data["close"]).to be_an(Array)
-      expect(data["close"]).not_to be_empty
+      expect(data).to be_an(Array)
+      expect(data.first).to include(:open, :high, :low, :close)
     end
 
     it "returns proper OHLC data structure", vcr: { cassette_name: "base_model/historical_data_test" } do
@@ -35,15 +34,14 @@ RSpec.describe DhanHQ::BaseModel do
         to_date: "2024-01-16"
       )
 
-      expect(data["open"]).to be_an(Array)
-      expect(data["high"]).to be_an(Array)
-      expect(data["low"]).to be_an(Array)
+      expect(data.first[:open]).to be_a(Numeric)
+      expect(data.first[:high]).to be_a(Numeric)
+      expect(data.first[:low]).to be_a(Numeric)
     end
 
     it "works with MarketFeed LTP", vcr: { cassette_name: "base_model/market_feed_test" } do
       response = DhanHQ::Models::MarketFeed.ltp(
-        instruments: ["NSE:INFY"],
-        fields: ["lastPrice"]
+        "NSE_EQ" => [13_247]
       )
 
       expect(response["status"]).to eq("success")
@@ -61,7 +59,7 @@ RSpec.describe DhanHQ::BaseModel do
           from_date: "2024-01-15",
           to_date: "2024-01-15"
         )
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
 
     it "converts snake_case to camelCase for API requests" do
