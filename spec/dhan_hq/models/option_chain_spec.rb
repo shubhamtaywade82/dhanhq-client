@@ -83,24 +83,24 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
     end
 
     it "validates required parameters for fetch" do
-      expect { described_class.fetch({}) }.to raise_error(DhanHQ::Error, /Validation Error/)
-      expect { described_class.fetch({ underlying_scrip: 13 }) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect { described_class.fetch({}) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
+      expect { described_class.fetch({ underlying_scrip: 13 }) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       expect do
         described_class.fetch({ underlying_scrip: 13,
                                 underlying_seg: "IDX_I" })
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
 
     it "validates required parameters for fetch_expiry_list" do
-      expect { described_class.fetch_expiry_list({}) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect { described_class.fetch_expiry_list({}) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       expect do
         described_class.fetch_expiry_list({ underlying_scrip: 13 })
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
 
     it "validates expiry format for fetch" do
       invalid_params = { underlying_scrip: 13, underlying_seg: "IDX_I", expiry: "invalid-date" }
-      expect { described_class.fetch(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)
+      expect { described_class.fetch(invalid_params) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
 
     it "accepts valid parameters for fetch_expiry_list without expiry" do

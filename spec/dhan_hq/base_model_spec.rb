@@ -59,7 +59,7 @@ RSpec.describe DhanHQ::BaseModel do
           from_date: "2024-01-15",
           to_date: "2024-01-15"
         )
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
 
     it "converts snake_case to camelCase for API requests" do

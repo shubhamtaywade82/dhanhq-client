@@ -25,6 +25,8 @@ bundle exec rake                           # default: rspec + rubocop
 
 ## Architecture
 
+See **[ARCHITECTURE.md](ARCHITECTURE.md)** for layers, dependency flow, and design patterns.
+
 ```
 lib/DhanHQ/
   core/          # BaseAPI, BaseModel, BaseResource

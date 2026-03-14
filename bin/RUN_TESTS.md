@@ -1,68 +1,43 @@
-# Running Comprehensive Tests
+# Running Tests
 
-This guide explains how to run the comprehensive test suite for the DhanHQ client gem.
+All manual/connectivity tests live in **one script**: `bin/test_all`.
 
-## Quick Start
+## CLI (run as script)
 
-1. **Start the console:**
-   ```bash
-   bin/console
-   ```
+```bash
+bin/test_all
+```
 
-2. **Load the comprehensive test suite:**
-   ```ruby
-   load 'bin/comprehensive_test.rb'
-   ```
+Runs every **read** endpoint (GETs and POSTs that only fetch data: profile, funds, orders, marketfeed, optionchain, charts, margin, etc.).
 
-3. **Run all tests:**
-   ```ruby
-   run_comprehensive_tests
-   ```
+Options:
 
-## What Gets Tested
+| Option | Description |
+|--------|-------------|
+| `--list` | Print endpoint list and exit |
+| `--skip-unavailable` | Skip endpoints that often 404/timeout in production |
+| `--all` | Include write endpoints (requires `DHAN_SANDBOX=true`) |
+| `--ip current` | Fetch current IP and exit |
+| `--ip secondary` | Test updating SECONDARY IP and exit |
+| `--json` | Output results as JSON |
+| `--verbose` | Print each result |
 
-The comprehensive test suite covers:
+Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` (or token endpoint). Optional: `DHAN_TEST_SECURITY_ID`, `DHAN_TEST_ORDER_ID`, `DHAN_TEST_ISIN`, `DHAN_TEST_EXPIRY`, `DHAN_TEST_CORRELATION_ID`.
 
-### 1. Setup & Configuration
-- Configuration check
-- Environment variables validation
+## Console (load in bin/console)
 
-### 2. Model Testing (Read Operations)
-- **Profile**: Fetch user profile
-- **Funds**: Get account funds and margins
-- **Holdings**: Get all holdings
-- **Positions**: Get all positions
-- **Orders**: Get all orders, find by ID
-- **Trades**: Get today's trades and trade history
-- **Instruments**: Find instruments, use helper methods
-- **Market Feed**: LTP, OHLC, Quote data
-- **Historical Data**: Daily and intraday data
-- **Option Chain**: Expiry list and option chain
-- **Super Orders**: Get all super orders
-- **Forever Orders**: Get all forever orders (GTT)
-- **EDIS**: TPIN, form, bulk form, inquire (resource-only; see dhanhq.co/docs/v2/edis)
-- **Margin Calculator**: Calculate margin requirements
-- **Ledger Entries**: Get ledger entries
+1. Start the console: `bin/console`
+2. Load the test script: `load 'bin/test_all'`
+3. Run:
+   - **`run_all_tests`** — quick smoke (config, funds, market feed, orders, positions, holdings, profile, instrument)
+   - **`run_comprehensive_tests`** — full suite (all read APIs, validation, errors, rate limit, WebSocket)
+   - Or individual helpers: `check_config`, `test_funds`, `test_market_feed`, `test_orders`, `test_positions`, `test_holdings`, `test_profile`, `test_instrument(symbol)`
 
-### 3. Validation Contracts
-- Place Order Contract (valid and invalid cases)
-- Historical Data Contract (valid and invalid cases)
-- NaN and Infinity validation
-- Date range validation
+## What gets tested
 
-### 4. Error Handling
-- Network error handling with retry logic
-
-### 5. Rate Limiting
-- Rate limiter functionality
-
-### 6. WebSocket Testing
-- Market Feed WebSocket (Ticker, OHLC, Quote)
-- Order Update WebSocket
-- Market Depth WebSocket
-
-### 7. Order Operations (Write)
-- **Disabled by default** - Uncomment in the script to test order placement/modification
+- **CLI `bin/test_all`**: Every read endpoint (profile, funds, ledger, orders, positions, holdings, trades, forever/super orders, killswitch, IP, EDIS, alerts, pnlExit, marketfeed LTP/OHLC/quote, optionchain, historical, expired options, margin, instruments). With `--all`: write endpoints (orders, positions, killswitch, pnlExit, alerts, forever/super orders).
+- **`run_all_tests`** (console): Config, funds, market feed, orders, positions, holdings, profile, instrument find.
+- **`run_comprehensive_tests`** (console): Full suite — config, profile, funds, holdings, positions, orders, trades, instruments, market feed, historical, option chain, super/forever orders, EDIS, kill switch, margin, ledger, validation contracts, error handling, rate limiting, WebSocket (ticker/quote/full, order updates, market depth). Order write operations are disabled by default.
 
 ## Test Output
 
@@ -132,25 +107,22 @@ If you see configuration errors, ensure:
 - Check if your IP is whitelisted (required for order operations)
 - Review API rate limits
 
-## Running Individual Tests
+## Running individual checks
 
-You can also run individual test sections by modifying the `run_all` method or calling specific test methods directly:
+In console after `load 'bin/test_all'`:
+
+```ruby
+test_funds
+test_market_feed
+test_orders
+# etc.
+```
+
+For the full suite, call specific sections via the runner:
 
 ```ruby
 runner = DhanHQ::ComprehensiveTest::TestRunner.new
 runner.test_funds
 runner.test_market_feed
-# etc.
-```
-
-## Using Test Helpers
-
-The gem also includes quick test helpers in `bin/test_helpers.rb`:
-
-```ruby
-load 'bin/test_helpers.rb'
-run_all_tests  # Quick tests
-test_funds
-test_market_feed
 # etc.
 ```

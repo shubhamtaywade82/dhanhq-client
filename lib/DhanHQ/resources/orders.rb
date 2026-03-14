@@ -63,7 +63,7 @@ module DhanHQ
       end
 
       def raise_validation_error!(result)
-        raise DhanHQ::Error, "Validation Error: #{result.errors.to_h}"
+        raise DhanHQ::ValidationError, "Invalid parameters: #{result.errors.to_h}"
       end
     end
   end

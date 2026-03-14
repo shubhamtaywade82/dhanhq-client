@@ -10,9 +10,9 @@ module DhanHQ
     def self.handle(error)
       case error
       when Dry::Validation::Result
-        raise "Validation Error: #{error.errors.to_h}"
+        raise DhanHQ::ValidationError, "Invalid parameters: #{error.errors.to_h}"
       else
-        raise "Error: #{error.message}"
+        raise DhanHQ::Error, error.message
       end
     end
   end

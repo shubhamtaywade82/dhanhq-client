@@ -116,7 +116,7 @@ RSpec.describe DhanHQ::Models::AlertOrder do
         invalid_params[:orders] = valid_params[:orders].map(&:dup)
         invalid_params[:orders][0][:quantity] = -1
 
-        expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::Error, /Validation Error/)
+        expect { described_class.create(invalid_params) }.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       end
     end
 

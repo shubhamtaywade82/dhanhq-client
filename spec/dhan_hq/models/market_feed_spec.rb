@@ -143,7 +143,7 @@ RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
     it "raises validation error for invalid payload" do
       expect do
         described_class.ltp({ "INVALID" => [123] })
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
     end
   end
 end

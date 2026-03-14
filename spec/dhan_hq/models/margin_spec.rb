@@ -68,7 +68,7 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
 
       expect do
         described_class.calculate({})
-      end.to raise_error(DhanHQ::Error, /Validation Error/)
+      end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
 
       expect(resource_double).not_to have_received(:calculate)
     end

@@ -61,7 +61,7 @@ RSpec.describe DhanHQ::Models::Edis do
             exchange: "NSE",
             segment: "EQ"
           )
-        end.to raise_error(DhanHQ::Error, /Validation Error/)
+        end.to raise_error(DhanHQ::ValidationError, /Invalid parameters/)
       end
     end
 
