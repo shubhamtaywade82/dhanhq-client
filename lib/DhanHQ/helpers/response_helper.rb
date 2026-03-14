@@ -66,7 +66,8 @@ module DhanHQ
         error_class = status_fallback_error_class(response.status)
       end
 
-      raise error_class, build_error_text(error_code, error_message)
+      message = build_error_text(error_code, error_message, body)
+      raise error_class.new(message, response_body: body)
     end
 
     def status_fallback_error_class(status)
@@ -74,12 +75,38 @@ module DhanHQ
         (status.between?(500, 599) ? DhanHQ::InternalServerError : DhanHQ::OtherError)
     end
 
-    def build_error_text(error_code, error_message)
-      if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
-        "#{error_message} (error code: #{error_code})"
-      else
-        "#{error_code}: #{error_message}"
+    def build_error_text(error_code, error_message, body = {})
+      text = if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
+               "#{error_message} (error code: #{error_code})"
+             else
+               "#{error_code}: #{error_message}"
+             end
+
+      extra = extra_error_detail(body)
+      text += " | #{extra}" if extra
+
+      if error_code == DhanHQ::Constants::TradingErrorCode::INPUT_EXCEPTION
+        text += " (API does not return which field failed; check required params and value types for this endpoint.)"
       end
+
+      text
+    end
+
+    # Returns any additional error detail from the response body (errors array, details, etc.).
+    def extra_error_detail(body)
+      return nil unless body.is_a?(Hash)
+
+      parts = []
+      if body[:errors].is_a?(Array) && body[:errors].any?
+        parts << body[:errors].join("; ")
+      end
+      if body[:details].is_a?(String) && body[:details].to_s.strip != ""
+        parts << body[:details].to_s
+      end
+      if body[:validationErrors].is_a?(Array) && body[:validationErrors].any?
+        parts << body[:validationErrors].map { |e| e.is_a?(Hash) ? e[:message] || e[:field] : e }.join("; ")
+      end
+      parts.empty? ? nil : parts.join(" ")
     end
 
     # Parses JSON response safely. Converts response body to a hash or array with indifferent access.

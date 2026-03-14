@@ -15,6 +15,7 @@ module DhanHQ
           required(:transactionType).filled(:string, included_in?: TRANSACTION_TYPES)
           required(:quantity).filled(:integer, gt?: 0)
           required(:productType).filled(:string, included_in?: MARGIN_PRODUCT_TYPES)
+          optional(:orderType).maybe(:string, included_in?: ORDER_TYPES)
           required(:securityId).filled(:string)
           required(:price).filled(:float, gt?: 0)
           optional(:triggerPrice).maybe(:float)

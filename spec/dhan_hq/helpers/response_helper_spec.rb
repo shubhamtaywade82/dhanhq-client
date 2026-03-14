@@ -121,5 +121,41 @@ RSpec.describe DhanHQ::ResponseHelper do
           .to raise_error(DhanHQ::InputExceptionError)
       end
     end
+
+    context "when error is raised" do
+      let(:status) { 400 }
+      let(:body) { { errorCode: "DH-905", errorMessage: "Missing required fields, bad values for parameters etc." } }
+
+      it "sets response_body on the exception with the parsed API payload" do
+        error = nil
+        begin
+          helper.send(:handle_error, response)
+        rescue DhanHQ::InputExceptionError => e
+          error = e
+        end
+        expect(error).not_to be_nil
+        expect(error.response_body).to be_a(Hash)
+        expect(error.response_body[:errorCode]).to eq("DH-905")
+        expect(error.response_body[:errorMessage]).to include("Missing required fields")
+      end
+
+      it "includes a hint for DH-905 that the API does not return field-level details" do
+        expect { helper.send(:handle_error, response) }
+          .to raise_error(DhanHQ::InputExceptionError, /API does not return which field failed/)
+      end
+    end
+
+    context "when API returns extra error detail (errors array)" do
+      let(:status) { 400 }
+      let(:body) do
+        { errorCode: "DH-905", errorMessage: "Validation failed",
+          errors: ["securityId must be numeric", "price is required"] }
+      end
+
+      it "includes the extra detail in the message" do
+        expect { helper.send(:handle_error, response) }
+          .to raise_error(DhanHQ::InputExceptionError, /securityId must be numeric.*price is required/)
+      end
+    end
   end
 end

@@ -163,6 +163,7 @@ module DhanHQ
                   transactionType: scrip[:transaction_type] || scrip[:transactionType],
                   quantity: scrip[:quantity],
                   productType: scrip[:product_type] || scrip[:productType],
+                  orderType: scrip[:order_type] || scrip[:orderType],
                   securityId: scrip[:security_id] || scrip[:securityId],
                   price: scrip[:price],
                   triggerPrice: scrip[:trigger_price] || scrip[:triggerPrice]

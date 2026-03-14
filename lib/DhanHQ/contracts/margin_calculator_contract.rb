@@ -4,7 +4,8 @@ module DhanHQ
   module Contracts
     # Validates request for POST /v2/margincalculator (single order).
     # dhanClientId, exchangeSegment (NSE_EQ|NSE_FNO|BSE_EQ|BSE_FNO|MCX_COMM), transactionType, quantity,
-    # productType (CNC|INTRADAY|MARGIN|MTF), securityId, price (required); triggerPrice (optional, for SL-M/SL-L).
+    # productType (CNC|INTRADAY|MARGIN|MTF), securityId, price (required);
+    # orderType (optional, but required by some accounts); triggerPrice (optional, for SL-M/SL-L).
     class MarginCalculatorContract < BaseContract
       params do
         required(:dhanClientId).filled(:string)
@@ -12,6 +13,7 @@ module DhanHQ
         required(:transactionType).filled(:string, included_in?: TRANSACTION_TYPES)
         required(:quantity).filled(:integer, gt?: 0)
         required(:productType).filled(:string, included_in?: MARGIN_PRODUCT_TYPES)
+        optional(:orderType).maybe(:string, included_in?: ORDER_TYPES)
         required(:securityId).filled(:string)
         required(:price).filled(:float, gt?: 0)
         optional(:triggerPrice).maybe(:float)

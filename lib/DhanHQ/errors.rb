@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
 module DhanHQ
-  # Base error class for all DhanHQ API errors
-  class Error < StandardError; end
+  # Base error class for all DhanHQ API errors.
+  # When raised from API response handling, {#response_body} holds the parsed error payload.
+  class Error < StandardError
+    attr_reader :response_body
+
+    def initialize(message = nil, response_body: nil)
+      super(message)
+      @response_body = response_body
+    end
+  end
 
   # Authentication and access errors
   # Raised when access token cannot be resolved (missing config or provider returned nil).

@@ -164,7 +164,8 @@ if __FILE__ == $PROGRAM_NAME
     to_date: nil
   }.freeze
   MARGIN_PARAMS = { dhan_client_id: nil, exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ, transaction_type: DhanHQ::Constants::TransactionType::BUY, quantity: 1,
-                    product_type: DhanHQ::Constants::ProductType::CNC, security_id: "11536", price: 1.0, trigger_price: 0.0 }.freeze
+                    product_type: DhanHQ::Constants::ProductType::CNC, order_type: DhanHQ::Constants::OrderType::LIMIT,
+                    security_id: "11536", price: 1.0 }.freeze
 
   SKIP_UNAVAILABLE_PATHS = [
     "GET /v2/forever/orders/{id}", "GET /v2/ip/getIP", "GET /v2/edis/tpin",
@@ -173,15 +174,35 @@ if __FILE__ == $PROGRAM_NAME
   SKIP_UNAVAILABLE_WRITE_PATHS = [].freeze
 
   def endpoint_list(from_date:, to_date:, expiry_date:, order_id:, client_id:, correlation_id: nil, **opts)
-    sample_isin = opts[:sample_isin]
-    forever_order_id = opts[:forever_order_id]
-    alert_id = opts[:alert_id]
     h_params = HISTORICAL_PARAMS.merge(from_date: from_date, to_date: to_date)
     oc_params = OPTION_CHAIN_PARAMS.merge(expiry: expiry_date)
     eo_params = EXPIRED_OPTIONS_PARAMS.merge(from_date: from_date, to_date: to_date)
     margin_p = MARGIN_PARAMS.merge(dhan_client_id: client_id)
     oc_expiries = []
 
+    ctx = {
+      from_date: from_date, to_date: to_date, expiry_date: expiry_date,
+      order_id: order_id, correlation_id: correlation_id, alert_id: opts[:alert_id], sample_isin: opts[:sample_isin],
+      h_params: h_params, oc_params: oc_params, eo_params: eo_params, oc_expiries: oc_expiries
+    }
+    list = base_read_endpoints(ctx)
+    append_optional_read_endpoints(list, opts[:forever_order_id], client_id, margin_p)
+    list.reject! { |path, _| path.include?("orders/external") } if correlation_id.to_s.empty?
+    list
+  end
+
+  def base_read_endpoints(ctx)
+    from_date = ctx[:from_date]
+    to_date = ctx[:to_date]
+    order_id = ctx[:order_id]
+    correlation_id = ctx[:correlation_id]
+    alert_id = ctx[:alert_id]
+    sample_isin = ctx[:sample_isin]
+    h_params = ctx[:h_params]
+    oc_params = ctx[:oc_params]
+    eo_params = ctx[:eo_params]
+    oc_expiries = ctx[:oc_expiries]
+    expiry_date = ctx[:expiry_date]
     [
       ["GET /v2/profile", "Profile.fetch", false, -> { DhanHQ::Models::Profile.fetch }],
       ["GET /v2/fundlimit", "Funds.fetch", false, -> { DhanHQ::Models::Funds.fetch }],
@@ -195,14 +216,12 @@ if __FILE__ == $PROGRAM_NAME
       ["GET /v2/trades", "Trade.today", false, -> { DhanHQ::Models::Trade.today }],
       ["GET /v2/trades/{order_id}", "Trade.find_by_order_id", false, -> { DhanHQ::Models::Trade.find_by_order_id(order_id) }],
       ["GET /v2/forever/orders", "ForeverOrder.all", false, -> { DhanHQ::Models::ForeverOrder.all }],
-      ["GET /v2/forever/orders/{id}", "ForeverOrder.find", false, -> { DhanHQ::Models::ForeverOrder.find(forever_order_id || order_id) }],
       ["GET /v2/super/orders", "SuperOrder.all", false, -> { DhanHQ::Models::SuperOrder.all }],
       ["GET /v2/killswitch", "KillSwitch.status", false, -> { DhanHQ::Models::KillSwitch.status }],
       ["GET /v2/ip/getIP", "IPSetup.current", false, -> { DhanHQ::Resources::IPSetup.new.current }],
       ["GET /v2/edis/tpin", "Edis.generate_tpin", false, -> { DhanHQ::Models::Edis.generate_tpin }],
       ["GET /v2/alerts/orders", "AlertOrder.all", false, -> { DhanHQ::Models::AlertOrder.all }],
       ["GET /v2/alerts/orders/{id}", "AlertOrder.find", false, -> { DhanHQ::Models::AlertOrder.find(alert_id) }],
-      ["GET /v2/pnlExit", "PnlExit.status", false, -> { DhanHQ::Models::PnlExit.status }],
       ["POST /v2/marketfeed/ltp", "MarketFeed.ltp", false, -> { DhanHQ::Models::MarketFeed.ltp(LTP_PARAMS) }],
       ["POST /v2/marketfeed/ohlc", "MarketFeed.ohlc", false, -> { DhanHQ::Models::MarketFeed.ohlc(LTP_PARAMS) }],
       ["POST /v2/marketfeed/quote", "MarketFeed.quote", false, -> { DhanHQ::Models::MarketFeed.quote(LTP_PARAMS) }],
@@ -213,27 +232,56 @@ if __FILE__ == $PROGRAM_NAME
       ["POST /v2/charts/historical", "HistoricalData.daily", false, -> { DhanHQ::Models::HistoricalData.daily(h_params) }],
       ["POST /v2/charts/intraday", "HistoricalData.intraday", false, -> { DhanHQ::Models::HistoricalData.intraday(h_params.merge(interval: "5")) }],
       ["POST /v2/charts/rollingoption", "ExpiredOptionsData.fetch", false, -> { DhanHQ::Models::ExpiredOptionsData.fetch(eo_params) }],
-      ["POST /v2/margincalculator", "Margin.calculate", false, -> { DhanHQ::Models::Margin.calculate(margin_p) }],
-      ["POST /v2/margincalculator/multi", "Margin.calculate_multi", false, lambda {
-        scrip = {
-          exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
-          transaction_type: DhanHQ::Constants::TransactionType::BUY,
-          quantity: 1,
-          product_type: DhanHQ::Constants::ProductType::CNC,
-          security_id: "11536",
-          price: 1.0,
-          trigger_price: 0.0
-        }
-        DhanHQ::Models::Margin.calculate_multi(
-          dhan_client_id: client_id,
-          include_position: false,
-          include_order: false,
-          scrip_list: [scrip]
-        )
-      }],
       ["GET /v2/instrument/{segment}", "Instrument.by_segment", false, -> { DhanHQ::Models::Instrument.by_segment(DhanHQ::Constants::ExchangeSegment::NSE_EQ) }],
       ["GET /v2/edis/inquire/{isin}", "Edis.inquire", false, -> { sample_isin ? DhanHQ::Models::Edis.inquire(isin: sample_isin) : (raise "Set DHAN_TEST_ISIN") }]
-    ].tap { |list| list.reject! { |path, _| path.include?("orders/external") } if correlation_id.to_s.empty? }
+    ]
+  end
+
+  def append_optional_read_endpoints(list, forever_order_id, client_id, margin_p)
+    list << ["GET /v2/forever/orders/{id}", "ForeverOrder.find", false, -> { DhanHQ::Models::ForeverOrder.find(forever_order_id) }] if forever_order_id.to_s != ""
+    list << ["GET /v2/pnlExit", "PnlExit.status", false, -> { DhanHQ::Models::PnlExit.status }] if pnl_exit_test_enabled?
+    return unless margin_test_enabled?
+
+    margin_security_id = margin_p[:security_id].to_s
+    list << margin_calculate_entry(margin_security_id, margin_p)
+    list << margin_calculate_multi_entry(margin_security_id, client_id)
+  end
+
+  def pnl_exit_test_enabled?
+    ENV.fetch("DHAN_TEST_PNL_EXIT", "false").to_s.casecmp("true").zero?
+  end
+
+  def margin_test_enabled?
+    ENV.fetch("DHAN_TEST_MARGIN", "false").to_s.casecmp("true").zero?
+  end
+
+  def margin_calculate_entry(margin_security_id, margin_p)
+    ["POST /v2/margincalculator", "Margin.calculate", false, lambda {
+      ltp = DhanHQ::Models::MarketFeed.ltp("NSE_EQ" => [margin_security_id.to_i])
+      last_price = ltp.dig(:data, DhanHQ::Constants::ExchangeSegment::NSE_EQ, margin_security_id, :last_price)
+      DhanHQ::Models::Margin.calculate(margin_p.merge(price: last_price.to_f))
+    }]
+  end
+
+  def margin_calculate_multi_entry(margin_security_id, client_id)
+    ["POST /v2/margincalculator/multi", "Margin.calculate_multi", false, lambda {
+      scrip = margin_multi_scrip(margin_security_id)
+      ltp = DhanHQ::Models::MarketFeed.ltp("NSE_EQ" => [margin_security_id.to_i])
+      scrip[:price] = ltp.dig(:data, DhanHQ::Constants::ExchangeSegment::NSE_EQ, margin_security_id, :last_price).to_f
+      DhanHQ::Models::Margin.calculate_multi(dhan_client_id: client_id, include_position: false, include_order: false, scrip_list: [scrip])
+    }]
+  end
+
+  def margin_multi_scrip(margin_security_id)
+    {
+      exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+      transaction_type: DhanHQ::Constants::TransactionType::BUY,
+      quantity: 1,
+      product_type: DhanHQ::Constants::ProductType::CNC,
+      order_type: DhanHQ::Constants::OrderType::LIMIT,
+      security_id: margin_security_id,
+      price: nil
+    }
   end
 
   def write_endpoints(client_id:, security_id:, order_id:, forever_order_id:, super_order_id:, alert_id:, expiry_date:)
@@ -347,11 +395,12 @@ if __FILE__ == $PROGRAM_NAME
     end
   end
 
-  def run_endpoint(results, path, name, write:, progress: false, &)
+  def run_endpoint(results, path, name, write:, progress: false, &blk)
     print "  #{path} ... " if progress
     $stdout.flush if progress
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    Timeout.timeout(25, &)
+    # Timeout.timeout yields the duration to the block; endpoint lambdas are 0-arity, so invoke with no args.
+    Timeout.timeout(25) { blk.call } # rubocop:disable Performance/RedundantBlockCall -- must call with 0 args
     duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
     results << { path: path, name: name, write: write, status: "ok", duration_ms: duration_ms }
     puts "ok (#{duration_ms}ms)" if progress
