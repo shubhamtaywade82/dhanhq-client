@@ -1,13 +1,12 @@
 # API Verification (Dhan v2)
 
-This document records how the gem’s implementation aligns with the official Dhan API v2 docs.
+Path/behavior alignment with the official Dhan API v2 docs.
 
 **Sources:**
 
 - [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/) – main docs
 - [dhanhq.co/docs/v2/edis](https://dhanhq.co/docs/v2/edis/) – EDIS
 - [api.dhan.co/v2](https://api.dhan.co/v2/#/) – Developer Kit (when available)
-- In-repo: `CODE_REVIEW_ISSUES.md` (Alert Orders, IP Setup paths)
 
 ---
 
@@ -32,7 +31,7 @@ This document records how the gem’s implementation aligns with the official Dh
 
 | Doc path                  | Gem resource              | Path used        |
 |---------------------------|---------------------------|------------------|
-| `/alerts/orders`          | `Resources::AlertOrders`  | `HTTP_PATH = "/alerts/orders"` |
+| `/alerts/orders`          | `Resources::AlertOrders`  | `HTTP_PATH = "/v2/alerts/orders"` |
 | GET/POST `/alerts/orders` | `#all`, `#create`         | BaseResource     |
 | GET/PUT/DELETE `/alerts/orders/{trigger-id}` | `#find`, `#update`, `#delete` | `/{id}` |
 
@@ -46,7 +45,7 @@ Model: `Models::AlertOrder`. Condition must include `exchange_segment`, `exp_dat
 
 | Doc path        | Gem method     | Path / body |
 |-----------------|----------------|-------------|
-| GET /v2/ip/getIP   | `#current`     | `get("/getIP")` (HTTP_PATH = "/ip") |
+| GET /v2/ip/getIP   | `#current`     | `get("/getIP")` (HTTP_PATH = "/v2/ip") |
 | POST /v2/ip/setIP  | `#set(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `post("/setIP", params: { ip:, ip_flag:, dhan_client_id: })`; `dhan_client_id` defaults from config |
 | PUT /v2/ip/modifyIP| `#update(ip:, ip_flag: "PRIMARY", dhan_client_id: nil)` | `put("/modifyIP", params: { ip:, ip_flag:, dhan_client_id: })` |
 

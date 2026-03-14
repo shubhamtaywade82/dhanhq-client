@@ -370,8 +370,16 @@ module DhanHQ
       #
       # @raise [RuntimeError] If order ID is missing
       # @raise [DhanHQ::ValidationError] If validation fails for any parameter
+      # @raise [DhanHQ::ModificationLimitError] If this instance has already been modified 25 times (Dhan API cap)
+      # @note Count is per Order instance in this process; a fresh find() resets it.
       def modify(new_params)
         raise "Order ID is required to modify an order" unless id
+
+        count = @modification_count || 0
+        if count >= Constants::RateLimit::ORDER_MODIFICATIONS_PER_ORDER
+          raise ModificationLimitError,
+                "Order modification limit reached (#{Constants::RateLimit::ORDER_MODIFICATIONS_PER_ORDER} per order)"
+        end
 
         warn_invalid_state if order_status_invalid_for_modification?
 
@@ -384,6 +392,7 @@ module DhanHQ
 
         return DhanHQ::ErrorObject.new(response) unless success_response?(response)
 
+        @modification_count = count + 1
         @attributes.merge!(normalize_keys(response))
         assign_attributes
         self

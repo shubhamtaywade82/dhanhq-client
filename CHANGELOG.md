@@ -1,3 +1,22 @@
+## [2.6.3] - 2026-03-14
+
+### Added
+
+- **Constants::Urls**: All canonical Dhan API/auth/WebSocket URLs in one place (`REST_API_BASE`, `SANDBOX_API_BASE`, `AUTH_BASE`, `WS_MARKET_FEED`, `WS_ORDER_UPDATE`, `WS_DEPTH_20`, `WS_DEPTH_200`, `INSTRUMENT_CSV_*`, `DOCS`, `ORIGIN`). Configuration, Auth, and WS defaults now use these constants.
+- **Order modification limit enforcement**: `Order#modify` enforces Dhan’s 25-modifications-per-order cap per instance; the 26th modify raises `DhanHQ::ModificationLimitError` and does not call the API. Count is in-process only (fresh `find` resets it).
+- **DhanHQ::ModificationLimitError**: New error class for the 25-per-order limit (rescuable).
+
+### Changed
+
+- **SliceOrderContract**: Aligned with Dhan v2 orders doc — `amoTime` now allows `PRE_OPEN`; validity restricted to `DAY`/`IOC`; product type restricted to `CNC`/`INTRADAY`/`MARGIN`/`MTF`; `correlationId` max length 30 (was 25).
+- **Order#modify** YARD: Documented modification limit and `ModificationLimitError`.
+
+### Removed
+
+- **docs/DHAN_V2_GAPS.md**: Removed; path/behavior alignment remains in `docs/API_VERIFICATION.md`.
+
+---
+
 ## [2.6.2] - 2026-03-07
 
 ### Changed

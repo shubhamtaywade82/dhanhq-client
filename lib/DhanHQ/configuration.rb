@@ -9,13 +9,12 @@ module DhanHQ
   # @see https://dhanhq.co/docs/v2/ DhanHQ API Documentation
   class Configuration
     # Default REST API host used when the base URL is not overridden.
-    #
     # @return [String]
-    BASE_URL = "https://api.dhan.co/v2"
+    BASE_URL = Constants::Urls::REST_API_BASE
 
     # Default Sandbox API host.
     # @return [String]
-    SANDBOX_URL = "https://sandbox.dhan.co/v2"
+    SANDBOX_URL = Constants::Urls::SANDBOX_API_BASE
     # The client ID for API authentication.
     # @return [String, nil] The client ID or `nil` if not set.
     attr_accessor :client_id
@@ -58,21 +57,21 @@ module DhanHQ
     # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_order_url
-      @ws_order_url || "wss://api-order-update.dhan.co"
+      @ws_order_url || Constants::Urls::WS_ORDER_UPDATE
     end
 
     # Websocket market feed endpoint.
     # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_market_feed_url
-      @ws_market_feed_url || "wss://api-feed.dhan.co"
+      @ws_market_feed_url || Constants::Urls::WS_MARKET_FEED
     end
 
     # Websocket market depth endpoint.
     # Sandbox does not support WebSocket; always returns production URL unless overridden.
     # @return [String]
     def ws_market_depth_url
-      @ws_market_depth_url || "wss://depth-api-feed.dhan.co/twentydepth"
+      @ws_market_depth_url || Constants::Urls::WS_DEPTH_20
     end
 
     # Market depth level (20 or 200).

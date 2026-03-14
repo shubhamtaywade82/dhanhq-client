@@ -87,7 +87,7 @@ module DhanHQ
           depth_level = config.market_depth_level || 20 # Default to 20 level depth
 
           base = if depth_level == 200
-                   "wss://full-depth-api.dhan.co/twohundreddepth"
+                   Constants::Urls::WS_DEPTH_200
                  else
                    config.ws_market_depth_url
                  end

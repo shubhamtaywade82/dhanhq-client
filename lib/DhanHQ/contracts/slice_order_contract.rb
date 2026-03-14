@@ -31,7 +31,7 @@ module DhanHQ
       # Parameters and validation rules for the slicing order request.
       #
       # @!attribute [r] correlationId
-      #   @return [String] Optional. Identifier for tracking, max length 25 characters.
+      #   @return [String] Optional. Identifier for tracking, max length 30 characters (per orders doc).
       # @!attribute [r] transactionType
       #   @return [String] Required. BUY or SELL.
       # @!attribute [r] exchangeSegment
@@ -39,13 +39,13 @@ module DhanHQ
       #     Must be one of: NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, BSE_FNO, BSE_CURRENCY, MCX_COMM.
       # @!attribute [r] productType
       #   @return [String] Required. Product type for the order.
-      #     Must be one of: CNC, INTRADAY, MARGIN, MTF, CO, BO.
+      #     Must be one of: CNC, INTRADAY, MARGIN, MTF (per orders doc).
       # @!attribute [r] orderType
       #   @return [String] Required. Type of order.
       #     Must be one of: LIMIT, MARKET, STOP_LOSS, STOP_LOSS_MARKET.
       # @!attribute [r] validity
       #   @return [String] Required. Validity of the order.
-      #     Must be one of: DAY, IOC, GTC, GTD.
+      #     Must be one of: DAY, IOC (per orders doc).
       # @!attribute [r] securityId
       #   @return [String] Required. Security identifier for the order.
       # @!attribute [r] quantity
@@ -59,11 +59,11 @@ module DhanHQ
       # @!attribute [r] afterMarketOrder
       #   @return [Boolean] Optional. Indicates if this is an after-market order.
       # @!attribute [r] amoTime
-      #   @return [String] Optional. Time for after-market orders. Must be one of: OPEN, OPEN_30, OPEN_60.
+      #   @return [String] Optional. Time for after-market orders. Must be one of: PRE_OPEN, OPEN, OPEN_30, OPEN_60.
       # @!attribute [r] boProfitValue
-      #   @return [Float] Optional. Profit value for Bracket Orders, must be > 0 if provided.
+      #   @return [Float] Optional. Profit value for Bracket Orders (not used when productType is CNC/INTRADAY/MARGIN/MTF).
       # @!attribute [r] boStopLossValue
-      #   @return [Float] Optional. Stop-loss value for Bracket Orders, must be > 0 if provided.
+      #   @return [Float] Optional. Stop-loss value for Bracket Orders (not used when productType is CNC/INTRADAY/MARGIN/MTF).
       # @!attribute [r] drvExpiryDate
       #   @return [String] Optional. Expiry date for derivative contracts.
       # @!attribute [r] drvOptionType
@@ -71,21 +71,21 @@ module DhanHQ
       # @!attribute [r] drvStrikePrice
       #   @return [Float] Optional. Strike price for options, must be > 0 if provided.
       params do
-        optional(:correlationId).maybe(:string, max_size?: 25)
+        optional(:correlationId).maybe(:string, max_size?: 30)
         required(:transactionType).filled(:string, included_in?: %w[BUY SELL])
         required(:exchangeSegment).filled(:string,
                                           included_in?: %w[NSE_EQ NSE_FNO NSE_CURRENCY BSE_EQ BSE_FNO BSE_CURRENCY
                                                            MCX_COMM])
-        required(:productType).filled(:string, included_in?: %w[CNC INTRADAY MARGIN MTF CO BO])
+        required(:productType).filled(:string, included_in?: %w[CNC INTRADAY MARGIN MTF])
         required(:orderType).filled(:string, included_in?: %w[LIMIT MARKET STOP_LOSS STOP_LOSS_MARKET])
-        required(:validity).filled(:string, included_in?: %w[DAY IOC GTC GTD])
+        required(:validity).filled(:string, included_in?: %w[DAY IOC])
         required(:securityId).filled(:string)
         required(:quantity).filled(:integer, gt?: 0)
         optional(:disclosedQuantity).maybe(:integer, gteq?: 0)
         optional(:price).maybe(:float, gt?: 0)
         optional(:triggerPrice).maybe(:float, gt?: 0)
         optional(:afterMarketOrder).maybe(:bool)
-        optional(:amoTime).maybe(:string, included_in?: %w[OPEN OPEN_30 OPEN_60])
+        optional(:amoTime).maybe(:string, included_in?: %w[PRE_OPEN OPEN OPEN_30 OPEN_60])
         optional(:boProfitValue).maybe(:float, gt?: 0)
         optional(:boStopLossValue).maybe(:float, gt?: 0)
         optional(:drvExpiryDate).maybe(:string)

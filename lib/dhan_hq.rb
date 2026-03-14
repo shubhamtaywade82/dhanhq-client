@@ -13,6 +13,7 @@ require_relative "DhanHQ/helpers/attribute_helper"
 require_relative "DhanHQ/helpers/validation_helper"
 require_relative "DhanHQ/helpers/request_helper"
 require_relative "DhanHQ/errors"
+require_relative "DhanHQ/version"
 require_relative "DhanHQ/helpers/response_helper"
 require_relative "DhanHQ/core/base_api"
 require_relative "DhanHQ/core/base_model"
@@ -49,7 +50,7 @@ module DhanHQ
     # Default REST API host used when no custom base URL is provided.
     #
     # @return [String]
-    BASE_URL = "https://api.dhan.co/v2"
+    BASE_URL = Constants::Urls::REST_API_BASE
     # The current configuration instance.
     #
     # @return [DhanHQ::Configuration, nil] The current configuration or `nil` if not set.

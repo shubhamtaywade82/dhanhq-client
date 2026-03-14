@@ -98,6 +98,27 @@ RSpec.describe DhanHQ::Models::Order do
         hash_including("boProfitValue" => 172.0, "boStopLossValue" => 138.0)
       )
     end
+
+    context "when modification limit (25 per order) is reached" do
+      it "raises ModificationLimitError before the 26th modify and does not call the API" do
+        allow(resource_double).to receive(:update).and_return({ "status" => "success", "orderStatus" => "MODIFIED" })
+
+        25.times { order.modify(quantity: 1) }
+        expect(resource_double).to have_received(:update).exactly(25).times
+
+        expect { order.modify(quantity: 2) }.to raise_error(DhanHQ::ModificationLimitError, /25 per order/)
+        expect(resource_double).to have_received(:update).exactly(25).times
+      end
+
+      it "raises with a message including the limit" do
+        allow(resource_double).to receive(:update).and_return({ "status" => "success", "orderStatus" => "MODIFIED" })
+        25.times { order.modify(quantity: 1) }
+
+        expect { order.modify(quantity: 1) }.to raise_error(DhanHQ::ModificationLimitError) do |e|
+          expect(e.message).to include("25")
+        end
+      end
+    end
   end
 
   describe "#save" do

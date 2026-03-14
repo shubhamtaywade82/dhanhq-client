@@ -388,6 +388,23 @@ module DhanHQ
       ORDER_MODIFICATIONS_PER_ORDER = 25
     end
 
+    # Canonical Dhan API, auth, WebSocket and instrument URLs (see https://dhanhq.co/docs/v2/).
+    # Configuration and Auth use these as defaults; ENV overrides apply at runtime.
+    module Urls
+      REST_API_BASE = "https://api.dhan.co/v2"
+      SANDBOX_API_BASE = "https://sandbox.dhan.co/v2"
+      AUTH_BASE = "https://auth.dhan.co"
+      WS_MARKET_FEED = "wss://api-feed.dhan.co"
+      WS_ORDER_UPDATE = "wss://api-order-update.dhan.co"
+      WS_DEPTH_20 = "wss://depth-api-feed.dhan.co/twentydepth"
+      WS_DEPTH_200 = "wss://full-depth-api.dhan.co/twohundreddepth"
+      INSTRUMENT_CSV_COMPACT = "https://images.dhan.co/api-data/api-scrip-master.csv"
+      INSTRUMENT_CSV_DETAILED = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+      DOCS = "https://dhanhq.co/docs/v2"
+      # Origin header value for WebSocket connections (Dhan main site).
+      ORIGIN = "https://dhanhq.co"
+    end
+
     # Backward-compatible arrays used across existing validations.
     TRANSACTION_TYPES = TransactionType::ALL
     EXCHANGE_SEGMENTS = ExchangeSegment::ALL
@@ -441,9 +458,9 @@ module DhanHQ
     IOC = Validity::IOC
 
     # Download URL for the compact instrument master CSV.
-    COMPACT_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
+    COMPACT_CSV_URL = Urls::INSTRUMENT_CSV_COMPACT
     # Download URL for the detailed instrument master CSV.
-    DETAILED_CSV_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+    DETAILED_CSV_URL = Urls::INSTRUMENT_CSV_DETAILED
 
     # API route prefixes that require a `client-id` header in addition to the access token.
     DATA_API_PREFIXES = [

@@ -8,7 +8,7 @@ module DhanHQ
   # This class intentionally lives at the top-level namespace so it autoloads
   # cleanly from `lib/DhanHQ/core/auth_api.rb` with Zeitwerk `collapse`.
   class AuthAPI
-    BASE_URL = "https://auth.dhan.co"
+    BASE_URL = Constants::Urls::AUTH_BASE
 
     def connection
       @connection ||= Faraday.new(url: BASE_URL) do |faraday|
