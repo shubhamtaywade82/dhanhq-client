@@ -458,10 +458,7 @@ module DhanHQ
       "/v2/marketfeed/",
       "/v2/optionchain",
       "/v2/instrument/",
-      "/v2/charts",
-      "/v2/margincalculator",
-      "/v2/profile",
-      "/v2/fundlimit"
+      "/v2/charts"
     ].freeze
 
     # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.
@@ -475,6 +472,7 @@ module DhanHQ
       /v2/pnlExit
       /v2/margincalculator
       /v2/killswitch
+      /v2/ip
     ].freeze
 
     # Mapping of exchange and segment combinations to canonical exchange segment names.
