@@ -9,7 +9,7 @@ module DhanHQ
     class OptionChainContract < BaseContract
       params do
         required(:underlying_scrip).filled(:integer)
-        required(:underlying_seg).filled(:string, included_in?: OPTION_SEGMENTS)
+        required(:underlying_seg).filled(:string, included_in?: OPTION_CHAIN_UNDERLYING_SEGMENTS)
         required(:expiry).filled(:string)
       end
 
@@ -32,7 +32,7 @@ module DhanHQ
     class OptionChainExpiryListContract < BaseContract
       params do
         required(:underlying_scrip).filled(:integer)
-        required(:underlying_seg).filled(:string, included_in?: OPTION_SEGMENTS)
+        required(:underlying_seg).filled(:string, included_in?: OPTION_CHAIN_UNDERLYING_SEGMENTS)
       end
     end
   end

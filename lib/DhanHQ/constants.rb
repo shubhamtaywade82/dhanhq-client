@@ -418,16 +418,8 @@ module DhanHQ
     BSE_FNO = ExchangeSegment::BSE_FNO
     INDEX = ExchangeSegment::IDX_I
 
-    OPTION_SEGMENTS = [
-      ExchangeSegment::IDX_I,
-      ExchangeSegment::NSE_EQ,
-      ExchangeSegment::NSE_FNO,
-      ExchangeSegment::NSE_CURRENCY,
-      ExchangeSegment::BSE_EQ,
-      ExchangeSegment::MCX_COMM,
-      ExchangeSegment::BSE_CURRENCY,
-      ExchangeSegment::BSE_FNO
-    ].freeze
+    # Underlying segments accepted by POST /v2/optionchain and POST /v2/optionchain/expirylist.
+    OPTION_CHAIN_UNDERLYING_SEGMENTS = %w[IDX_I NSE_FNO BSE_FNO MCX_FO].freeze
 
     # Canonical labels kept for compatibility with previous SDK versions.
     BUY = TransactionType::BUY

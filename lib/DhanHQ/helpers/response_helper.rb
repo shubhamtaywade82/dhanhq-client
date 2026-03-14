@@ -3,6 +3,14 @@
 module DhanHQ
   # Helper mixin for normalising API responses and raising mapped errors.
   module ResponseHelper
+    STATUS_ERROR_FALLBACK = {
+      400 => DhanHQ::InputExceptionError,
+      401 => DhanHQ::InvalidAuthenticationError,
+      403 => DhanHQ::InvalidAccessError,
+      404 => DhanHQ::NotFoundError,
+      429 => DhanHQ::RateLimitError
+    }.freeze
+
     private
 
     # Determines if the API response indicates success.
@@ -62,18 +70,8 @@ module DhanHQ
     end
 
     def status_fallback_error_class(status)
-      status_error_fallback[status] ||
+      STATUS_ERROR_FALLBACK[status] ||
         (status.between?(500, 599) ? DhanHQ::InternalServerError : DhanHQ::OtherError)
-    end
-
-    def status_error_fallback
-      {
-        400 => DhanHQ::InputExceptionError,
-        401 => DhanHQ::InvalidAuthenticationError,
-        403 => DhanHQ::InvalidAccessError,
-        404 => DhanHQ::NotFoundError,
-        429 => DhanHQ::RateLimitError
-      }.freeze
     end
 
     def build_error_text(error_code, error_message)

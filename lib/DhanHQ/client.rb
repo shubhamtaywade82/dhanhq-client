@@ -89,27 +89,29 @@ module DhanHQ
 
     def with_transient_retry(retries:)
       attempt = 0
-      yield
-    rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
-      attempt += 1
-      raise if attempt > retries
+      begin
+        yield
+      rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
+        attempt += 1
+        raise if attempt > retries
 
-      backoff = calculate_backoff(attempt)
-      DhanHQ.logger&.warn(
-        "[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
-      )
-      sleep(backoff)
-      retry
-    rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
-      attempt += 1
-      raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
+        backoff = calculate_backoff(attempt)
+        DhanHQ.logger&.warn(
+          "[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+        )
+        sleep(backoff)
+        retry
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+        attempt += 1
+        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
 
-      backoff = calculate_backoff(attempt)
-      DhanHQ.logger&.warn(
-        "[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
-      )
-      sleep(backoff)
-      retry
+        backoff = calculate_backoff(attempt)
+        DhanHQ.logger&.warn(
+          "[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+        )
+        sleep(backoff)
+        retry
+      end
     end
 
     # Convenience wrapper for issuing a GET request.

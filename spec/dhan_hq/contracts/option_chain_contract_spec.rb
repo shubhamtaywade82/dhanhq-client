@@ -13,10 +13,18 @@ RSpec.describe DhanHQ::Contracts::OptionChainContract do
       expect(result.success?).to be true
     end
 
-    it "accepts all chart exchange segments" do
-      DhanHQ::Constants::CHART_EXCHANGE_SEGMENTS.each do |seg|
+    it "accepts only option-chain underlying segments (IDX_I, NSE_FNO, BSE_FNO, MCX_FO)" do
+      DhanHQ::Constants::OPTION_CHAIN_UNDERLYING_SEGMENTS.each do |seg|
         result = described_class.new.call(valid_params.merge(underlying_seg: seg))
         expect(result.success?).to be true
+      end
+    end
+
+    it "rejects non-option segments such as NSE_EQ and NSE_CURRENCY" do
+      %w[NSE_EQ BSE_EQ NSE_CURRENCY BSE_CURRENCY MCX_COMM].each do |seg|
+        result = described_class.new.call(valid_params.merge(underlying_seg: seg))
+        expect(result.failure?).to be true
+        expect(result.errors[:underlying_seg]).not_to be_empty
       end
     end
   end
