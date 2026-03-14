@@ -128,12 +128,13 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
       }
 
       allow(resource_double).to receive(:calculate_multi) do |arg|
-        expect(arg).to include("includePosition" => true, "includeOrder" => true)
+        expect(arg).to include(includePosition: true, includeOrder: true)
         { "total_margin" => "150000.00", "hedge_benefit" => "" }
       end
 
       result = described_class.calculate_multi(params)
-      expect(result).to include("total_margin" => "150000.00")
+      expect(result).to be_a(described_class)
+      expect(result.total_margin).to eq("150000.00")
       expect(resource_double).to have_received(:calculate_multi)
     end
   end

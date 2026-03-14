@@ -74,7 +74,7 @@ RSpec.describe DhanHQ::Models::HistoricalData do
       # This is a unit test since we don't have a VCR cassette for this specific call
       resource_double = instance_double(DhanHQ::Resources::HistoricalData)
       allow(described_class).to receive(:resource).and_return(resource_double)
-      
+
       full_params = {
         security_id: "1333",
         exchange_segment: "NSE_EQ",
@@ -84,9 +84,10 @@ RSpec.describe DhanHQ::Models::HistoricalData do
         from_date: "2024-09-11 09:30:00",
         to_date: "2024-09-15 13:00:00"
       }
-      
-      expect(resource_double).to receive(:intraday).with(full_params).and_return({})
+
+      allow(resource_double).to receive(:intraday).with(full_params).and_return({})
       described_class.intraday(full_params)
+      expect(resource_double).to have_received(:intraday).with(full_params)
     end
   end
 

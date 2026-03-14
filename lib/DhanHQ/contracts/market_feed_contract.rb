@@ -35,9 +35,7 @@ module DhanHQ
           end
         end
 
-        if total_instruments > 1000
-          base.failure("cannot fetch more than 1000 instruments in a single request (found #{total_instruments})")
-        end
+        base.failure("cannot fetch more than 1000 instruments in a single request (found #{total_instruments})") if total_instruments > 1000
       end
     end
   end

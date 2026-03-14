@@ -14,8 +14,9 @@ RSpec.describe DhanHQ::Resources::IPSetup do
 
   describe "#current" do
     it "calls GET /v2/ip/getIP" do
-      expect(client).to receive(:get).with("/v2/ip/getIP", {}).and_return({ status: "success", data: {} })
+      allow(client).to receive(:get).with("/v2/ip/getIP", {}).and_return({ status: "success", data: {} })
       ip_setup.current
+      expect(client).to have_received(:get).with("/v2/ip/getIP", {})
     end
   end
 
@@ -26,9 +27,10 @@ RSpec.describe DhanHQ::Resources::IPSetup do
         "ipFlag" => "SECONDARY",
         "dhanClientId" => "1234567890"
       }
-      expect(client).to receive(:post).with("/v2/ip/setIP", expected_params).and_return({ status: "success" })
-      
+      allow(client).to receive(:post).with("/v2/ip/setIP", expected_params).and_return({ status: "success" })
+
       ip_setup.set(ip: "1.2.3.4", ip_flag: "SECONDARY")
+      expect(client).to have_received(:post).with("/v2/ip/setIP", expected_params)
     end
 
     it "uses provided dhan_client_id" do
@@ -37,9 +39,10 @@ RSpec.describe DhanHQ::Resources::IPSetup do
         "ipFlag" => "SECONDARY",
         "dhanClientId" => "9999999999"
       }
-      expect(client).to receive(:post).with("/v2/ip/setIP", expected_params).and_return({ status: "success" })
-      
+      allow(client).to receive(:post).with("/v2/ip/setIP", expected_params).and_return({ status: "success" })
+
       ip_setup.set(ip: "1.2.3.4", ip_flag: "SECONDARY", dhan_client_id: "9999999999")
+      expect(client).to have_received(:post).with("/v2/ip/setIP", expected_params)
     end
   end
 
@@ -50,9 +53,10 @@ RSpec.describe DhanHQ::Resources::IPSetup do
         "ipFlag" => "SECONDARY",
         "dhanClientId" => "1234567890"
       }
-      expect(client).to receive(:put).with("/v2/ip/modifyIP", expected_params).and_return({ status: "success" })
-      
+      allow(client).to receive(:put).with("/v2/ip/modifyIP", expected_params).and_return({ status: "success" })
+
       ip_setup.update(ip: "5.6.7.8", ip_flag: "SECONDARY")
+      expect(client).to have_received(:put).with("/v2/ip/modifyIP", expected_params)
     end
   end
 end

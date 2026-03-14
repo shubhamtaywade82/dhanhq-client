@@ -31,7 +31,7 @@ module DhanHQ
       end
 
       rule(:from_date, :to_date) do
-        next unless values[:from_date].match?(/\A\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?\z/) && 
+        next unless values[:from_date].match?(/\A\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?\z/) &&
                     values[:to_date].match?(/\A\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?\z/)
 
         from_date = DateTime.parse(values[:from_date])

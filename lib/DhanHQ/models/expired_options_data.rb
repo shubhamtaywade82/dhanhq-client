@@ -46,6 +46,8 @@ module DhanHQ
     #   candles = data.to_candles
     #
     class ExpiredOptionsData < BaseModel
+      OHLC_FIELDS = %i[open high low close iv volume strike spot oi open_interest].freeze
+
       # All expired options data attributes
       attributes :exchange_segment, :interval, :security_id, :instrument,
                  :expiry_flag, :expiry_code, :strike, :drv_option_type,
@@ -103,7 +105,7 @@ module DhanHQ
 
           return if validation_result.success?
 
-          raise DhanHQ::Error, "Validation Error: #{validation_result.errors.to_h}"
+          raise DhanHQ::ValidationError, "Invalid parameters: #{validation_result.errors.to_h}"
         end
 
         # Best-effort normalization: coerce convertible values into expected shapes.
@@ -176,7 +178,7 @@ module DhanHQ
           }
 
           # Map requested fields
-          %i[open high low close iv volume strike spot oi open_interest].each do |field|
+          OHLC_FIELDS.each do |field|
             val_arr = opt_data[field]
             next unless val_arr.is_a?(Array)
 

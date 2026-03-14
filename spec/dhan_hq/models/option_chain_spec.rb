@@ -20,17 +20,14 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
 
     expect(response).to be_a(Hash)
     expect(response[:last_price]).to be > 0
-
-    # Ensure strike prices retain their original format (strings)
-    expect(response[:oc].keys).to all(be_a(String))
-
-    # Ensure only valid strikes with last_price > 0 are included
-    response[:oc].each_value do |strike_data|
-      ce_last_price = strike_data.dig("ce", "last_price")
-      pe_last_price = strike_data.dig("pe", "last_price")
-      expect(ce_last_price).to be > 0 if strike_data.key?("ce")
-      expect(pe_last_price).to be > 0 if strike_data.key?("pe")
-    end
+    expect(response[:strikes]).to be_an(Array)
+    expect(response[:strikes]).to all(include(:strike, :call, :put))
+    expect(
+      response[:strikes].all? do |s|
+        (s[:call].nil? || s.dig(:call, "last_price").to_f.positive?) &&
+          (s[:put].nil? || s.dig(:put, "last_price").to_f.positive?)
+      end
+    ).to be true
   end
 
   context "with stubbed resource" do
@@ -52,6 +49,7 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
       payload = {
         status: "success",
         data: {
+          last_price: 24_500.0,
           oc: {
             "100" => { "ce" => { "last_price" => "0" }, "pe" => { "last_price" => "0" } },
             "200" => { "ce" => { "last_price" => "5" }, "pe" => { "last_price" => "0" } }
@@ -61,7 +59,7 @@ RSpec.describe DhanHQ::Models::OptionChain, vcr: { cassette_name: "models/option
       allow(resource_double).to receive(:fetch).with(params).and_return(payload)
 
       result = described_class.fetch(params)
-      expect(result[:oc].keys).to eq(["200"])
+      expect(result[:strikes].map { |s| s[:strike] }).to eq([200.0])
     end
 
     it "returns an empty hash when status is not success" do

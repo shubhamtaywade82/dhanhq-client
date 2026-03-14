@@ -50,6 +50,10 @@ module DhanHQ
     #   puts "Delta: #{ce_greeks[:delta]}"
     #
     class OptionChain < BaseModel
+      def validation_contract
+        self.class.validation_contract
+      end
+
       class << self
         ##
         # Provides a shared instance of the OptionChain resource.
@@ -57,6 +61,10 @@ module DhanHQ
         # @return [DhanHQ::Resources::OptionChain] The OptionChain resource client instance
         def resource
           @resource ||= DhanHQ::Resources::OptionChain.new
+        end
+
+        def validation_contract
+          @validation_contract ||= DhanHQ::Contracts::OptionChainContract.new
         end
 
         ##
@@ -121,18 +129,18 @@ module DhanHQ
         def normalize_chain(data)
           return {} unless data.is_a?(Hash) && data.key?(:oc)
 
-          strikes = data[:oc].map do |strike_price, strike_data|
+          strikes = data[:oc].filter_map do |strike_price, strike_data|
             ce = strike_data["ce"] || strike_data[:ce]
             pe = strike_data["pe"] || strike_data[:pe]
 
-            next if ce.dig("last_price").to_f.zero? && pe.dig("last_price").to_f.zero?
+            next if ce["last_price"].to_f.zero? && pe["last_price"].to_f.zero?
 
             {
               strike: strike_price.to_f,
               call: ce,
               put: pe
             }
-          end.compact
+          end
 
           {
             last_price: data[:last_price],
