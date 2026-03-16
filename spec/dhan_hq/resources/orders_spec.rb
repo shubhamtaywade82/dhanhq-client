@@ -63,6 +63,28 @@ RSpec.describe DhanHQ::Resources::Orders do
     end
   end
 
+  describe "#update — live trading guard" do
+    context "when LIVE_TRADING is not 'true'" do
+      before { stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "false")) }
+
+      it "raises LiveTradingDisabledError" do
+        expect { resource.update("ORDER123", valid_modify_params.except("orderId")) }
+          .to raise_error(DhanHQ::LiveTradingDisabledError)
+      end
+    end
+  end
+
+  describe "#cancel — live trading guard" do
+    context "when LIVE_TRADING is not 'true'" do
+      before { stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "false")) }
+
+      it "raises LiveTradingDisabledError" do
+        expect { resource.cancel("ORDER123") }
+          .to raise_error(DhanHQ::LiveTradingDisabledError)
+      end
+    end
+  end
+
   describe "#slicing — live trading guard" do
     context "when LIVE_TRADING is not 'true'" do
       before { stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "false")) }
@@ -121,6 +143,8 @@ RSpec.describe DhanHQ::Resources::Orders do
   end
 
   describe "#update — order audit log" do
+    before { stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true")) }
+
     it "logs a DHAN_ORDER_MODIFY_ATTEMPT JSON line at WARN level" do
       stub_request(:put, %r{/v2/orders/ORDER123}).to_return(
         status: 200,
