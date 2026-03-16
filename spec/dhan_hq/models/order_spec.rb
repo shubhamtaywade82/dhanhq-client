@@ -21,6 +21,8 @@ RSpec.describe DhanHQ::Models::Order do
   end
 
   describe ".create" do
+    before { stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true")) }
+
     let(:valid_order_params) do
       {
         correlationId: "correl-amo-test",

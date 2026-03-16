@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../utils/network_inspector"
+
 module DhanHQ
   module Resources
     # Handles order placement, modification, and cancellation
@@ -12,16 +14,21 @@ module DhanHQ
       # --------------------------------------------------
 
       def create(params)
+        ensure_live_trading!
+        log_order_context("DHAN_ORDER_ATTEMPT", params)
         validate_place_order!(params)
         post("", params: params)
       end
 
       def update(order_id, params)
+        log_order_context("DHAN_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         validate_modify_order!(params.merge(order_id: order_id))
         put("/#{order_id}", params: params)
       end
 
       def slicing(params)
+        ensure_live_trading!
+        log_order_context("DHAN_ORDER_SLICING_ATTEMPT", params)
         validate_place_order!(params)
         post("/slicing", params: params)
       end
@@ -64,6 +71,45 @@ module DhanHQ
 
       def raise_validation_error!(result)
         raise DhanHQ::ValidationError, "Invalid parameters: #{result.errors.to_h}"
+      end
+
+      # --------------------------------------------------
+      # LIVE TRADING GUARD
+      # --------------------------------------------------
+
+      # Raises an error if LIVE_TRADING is not explicitly enabled.
+      # Set ENV["LIVE_TRADING"]="true" in production to allow order submission.
+      def ensure_live_trading!
+        return if ENV["LIVE_TRADING"] == "true"
+
+        raise DhanHQ::LiveTradingDisabledError,
+              "Live trading is disabled. Set ENV[\"LIVE_TRADING\"]=\"true\" to enable order placement."
+      end
+
+      # --------------------------------------------------
+      # ORDER AUDIT LOGGING
+      # --------------------------------------------------
+
+      # Emits a structured JSON log line with machine/network/correlation context.
+      # Uses WARN level so it appears even when INFO is silenced.
+      def log_order_context(event, params)
+        inspector = DhanHQ::Utils::NetworkInspector
+        entry = {
+          event: event,
+          hostname: inspector.hostname,
+          env: inspector.environment,
+          ipv4: inspector.public_ipv4,
+          ipv6: inspector.public_ipv6,
+          security_id: params[:securityId] || params["securityId"] ||
+                       params[:security_id] || params["security_id"],
+          correlation_id: params[:correlationId] || params["correlationId"] ||
+                          params[:correlation_id] || params["correlation_id"],
+          order_id: params[:orderId] || params["orderId"] ||
+                    params[:order_id] || params["order_id"],
+          timestamp: Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }.compact
+
+        DhanHQ.logger&.warn(JSON.generate(entry))
       end
     end
   end

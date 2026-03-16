@@ -48,6 +48,8 @@ module DhanHQ
   # Raised when the 25-modifications-per-order API cap would be exceeded.
   # Count is tracked per Order instance in this process only (see Order#modify).
   class ModificationLimitError < Error; end
+  # Raised when an order placement is attempted but ENV["LIVE_TRADING"] != "true".
+  class LiveTradingDisabledError < Error; end
   # Raised when the API signals an issue with the requested data payload.
   class DataError < Error; end
 
