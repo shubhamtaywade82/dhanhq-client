@@ -2,22 +2,32 @@
 
 ### Added
 
-- **Order audit logging**: Every order submission (`create`, `update`, `slicing`) now emits a WARN-level structured JSON log line capturing: event type, public IPv4/IPv6, hostname, runtime environment, `security_id`, `correlation_id`, and UTC timestamp. Log output example:
+- **Order audit logging across all order types**: Every order submission (regular, super, forever/GTT, and alert orders) now emits a WARN-level structured JSON log line capturing: event type, public IPv4/IPv6, hostname, runtime environment, `security_id`, `correlation_id`, and UTC timestamp. Log output example:
   ```json
   {"event":"DHAN_ORDER_ATTEMPT","hostname":"DESKTOP-SHUBHAM","env":"production","ipv4":"122.171.22.40","ipv6":"2401:4900:...","security_id":"11536","correlation_id":"SCALPER_7af1","timestamp":"2026-03-17T06:45:22Z"}
   ```
+  Events logged: `DHAN_ORDER_ATTEMPT`, `DHAN_ORDER_MODIFY_ATTEMPT`, `DHAN_ORDER_SLICING_ATTEMPT`, `DHAN_SUPER_ORDER_ATTEMPT`, `DHAN_SUPER_ORDER_MODIFY_ATTEMPT`, `DHAN_SUPER_ORDER_CANCEL_ATTEMPT`, `DHAN_FOREVER_ORDER_ATTEMPT`, `DHAN_FOREVER_ORDER_MODIFY_ATTEMPT`, `DHAN_FOREVER_ORDER_CANCEL_ATTEMPT`, `DHAN_ALERT_ORDER_ATTEMPT`, `DHAN_ALERT_ORDER_MODIFY_ATTEMPT`.
+- **`DhanHQ::Concerns::OrderAudit`**: Shared concern module providing `log_order_context` and `ensure_live_trading!` — included in `Resources::Orders`, `Resources::SuperOrders`, `Resources::ForeverOrders`, and `Resources::AlertOrders`.
 - **`DhanHQ::Utils::NetworkInspector`**: New utility class that resolves the machine's public IPv4 (via api.ipify.org), IPv6 (via api64.ipify.org), hostname (`Socket.gethostname`), and runtime environment (`RAILS_ENV` / `RACK_ENV` / `APP_ENV`). IP lookups are memoized for the process lifetime; call `NetworkInspector.reset_cache!` to refresh.
-- **Live trading guard**: `Resources::Orders#create` and `#slicing` now raise `DhanHQ::LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"`. This prevents accidental order placement from development machines. Modify and cancel are not guarded.
+- **Live trading guard**: Order creation is blocked unless `ENV["LIVE_TRADING"]="true"`. Guarded methods:
+  - `Resources::Orders#create`, `#slicing`
+  - `Resources::SuperOrders#create`
+  - `Resources::ForeverOrders#create`
+  - `Resources::AlertOrders#create`
+  Modify and cancel calls are **not** guarded (safe to modify/cancel existing orders without the env var).
 - **`DhanHQ::LiveTradingDisabledError`**: New error class raised when the live trading guard fires.
 - **Correlation ID prefix convention**: Recommended per-app correlation ID prefixes for instant source identification in the Dhan orderbook (e.g. `SCALPER_7af1`, `TRADER_3bc9`). See README.
 
 ### Changed
 
-- **`Resources::Orders`**: `#create`, `#update`, and `#slicing` now log order context before executing. `#create` and `#slicing` check the live trading guard before logging and validation.
+- **`Resources::Orders`**: `#create`, `#update`, and `#slicing` now log order context before executing. `#create` and `#slicing` check the live trading guard.
+- **`Resources::SuperOrders`**: `#create`, `#update`, and `#cancel` now log order context. `#create` checks the live trading guard.
+- **`Resources::ForeverOrders`**: `#create`, `#update`, and `#cancel` now log order context. `#create` checks the live trading guard.
+- **`Resources::AlertOrders`**: `#create` and `#update` now log order context. `#create` checks the live trading guard.
 
 ### Breaking
 
-- **`ENV["LIVE_TRADING"]` required for order placement**: Existing code that places orders via `Resources::Orders#create` or `#slicing` (including `Models::Order.place`, `.create`, `#save`) will now raise `LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"` is set. Add this to your production environment and set `LIVE_TRADING=false` (or omit) in development/test.
+- **`ENV["LIVE_TRADING"]` required for order placement**: Existing code that places orders via any of the order resources' `#create` methods (including `Models::Order.place`, `.create`, `#save`, `Models::SuperOrder.create`, `Models::ForeverOrder.create`, `Models::AlertOrder.create`, `#save`) will now raise `LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"` is set. Add this to your production environment and set `LIVE_TRADING=false` (or omit) in development/test.
 
 ---
 

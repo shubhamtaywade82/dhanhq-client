@@ -48,6 +48,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 | `resources/` | REST wrappers | One class per API surface (Orders, Positions, MarketFeed, OptionChain, …). Set `HTTP_PATH`, `API_TYPE`; implement get/post/put/delete via BaseAPI. |
 | `contracts/` | Request/response validation | Dry::Validation contracts (PlaceOrderContract, ModifyOrderContract, OptionChainContract, etc.). BaseContract provides shared macros (e.g. lot_size, tick_size). |
 | `auth/` | Token lifecycle | Token generator/renewal/manager for dynamic tokens. |
+| `concerns/` | Shared behavior | Modules included across layers (e.g. `OrderAudit` for live trading guard + audit logging, included in all order resources). |
 | `utils/` | Utilities | Cross-cutting utilities not tied to a single layer (e.g. `NetworkInspector` for IP/hostname/env lookup used by order audit logging). |
 | `ws/` | WebSocket | Connection, packets, decoder, market depth, orders client — isolated from REST. |
 

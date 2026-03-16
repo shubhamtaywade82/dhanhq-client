@@ -34,6 +34,7 @@ lib/DhanHQ/
   models/        # Typed AR-like model classes (Order, Position, Holding, etc.)
   resources/     # REST resource wrappers
   contracts/     # Request/response contract validators
+  concerns/      # Shared behavior modules (OrderAudit)
   auth/          # Auth flow
   utils/         # Cross-cutting utilities (NetworkInspector)
   ws/            # WebSocket client and feed
