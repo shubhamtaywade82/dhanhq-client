@@ -41,7 +41,7 @@ module DhanHQ
 
       # Emits a structured JSON log line with machine/network/correlation context.
       # Uses WARN level so it appears even when INFO is silenced.
-      def log_order_context(event, params)
+      def log_order_context(event, params = {})
         inspector = DhanHQ::Utils::NetworkInspector
         entry = {
           event: event,
@@ -61,8 +61,8 @@ module DhanHQ
       # Extracts a value from params trying both camelCase and snake_case keys,
       # as well as both symbol and string key types.
       def extract_param(params, camel_key, snake_key)
-        params[camel_key] || params[camel_key.to_s] ||
-          params[snake_key] || params[snake_key.to_s]
+        p = params || {}
+        p[camel_key] || p[camel_key.to_s] || p[snake_key] || p[snake_key.to_s]
       end
     end
   end

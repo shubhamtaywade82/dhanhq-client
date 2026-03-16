@@ -38,6 +38,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash]
       def update(order_id, params)
+        ensure_live_trading!
         log_order_context("DHAN_SUPER_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         put("/#{order_id}", params: params)
       end
@@ -55,7 +56,8 @@ module DhanHQ
                 "leg_name must be one of: #{SUPER_ORDER_LEGS.join(", ")}"
         end
 
-        log_order_context("DHAN_SUPER_ORDER_CANCEL_ATTEMPT", order_id: order_id, leg_name: normalized)
+        ensure_live_trading!
+        log_order_context("DHAN_SUPER_ORDER_CANCEL_ATTEMPT", { order_id: order_id, leg_name: normalized })
         delete("/#{order_id}/#{normalized}")
       end
     end

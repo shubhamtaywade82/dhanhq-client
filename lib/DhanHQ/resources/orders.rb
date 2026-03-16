@@ -23,6 +23,7 @@ module DhanHQ
       end
 
       def update(order_id, params)
+        ensure_live_trading!
         log_order_context("DHAN_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         validate_modify_order!(params.merge(order_id: order_id))
         put("/#{order_id}", params: params)
@@ -36,6 +37,8 @@ module DhanHQ
       end
 
       def cancel(order_id)
+        ensure_live_trading!
+        log_order_context("DHAN_ORDER_CANCEL_ATTEMPT", { order_id: order_id })
         delete("/#{order_id}")
       end
 

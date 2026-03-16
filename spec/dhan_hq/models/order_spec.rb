@@ -59,6 +59,7 @@ RSpec.describe DhanHQ::Models::Order do
 
   describe "#update" do
     it "raises on TRADED order modification attempt", vcr: "models/orders/update" do
+      stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
       found_order = described_class.find(order_id)
       expect(found_order).to be_a(described_class),
                              "Expected an Order, got #{found_order.inspect}"

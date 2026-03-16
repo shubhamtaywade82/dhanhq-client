@@ -44,6 +44,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash]
       def update(order_id, params)
+        ensure_live_trading!
         log_order_context("DHAN_FOREVER_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         put("/orders/#{order_id}", params: params)
       end
@@ -53,7 +54,8 @@ module DhanHQ
       # @param order_id [String]
       # @return [Hash]
       def cancel(order_id)
-        log_order_context("DHAN_FOREVER_ORDER_CANCEL_ATTEMPT", order_id: order_id)
+        ensure_live_trading!
+        log_order_context("DHAN_FOREVER_ORDER_CANCEL_ATTEMPT", { order_id: order_id })
         delete("/orders/#{order_id}")
       end
     end
