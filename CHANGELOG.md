@@ -6,28 +6,29 @@
   ```json
   {"event":"DHAN_ORDER_ATTEMPT","hostname":"DESKTOP-SHUBHAM","env":"production","ipv4":"122.171.22.40","ipv6":"2401:4900:...","security_id":"11536","correlation_id":"SCALPER_7af1","timestamp":"2026-03-17T06:45:22Z"}
   ```
-  Events logged: `DHAN_ORDER_ATTEMPT`, `DHAN_ORDER_MODIFY_ATTEMPT`, `DHAN_ORDER_SLICING_ATTEMPT`, `DHAN_SUPER_ORDER_ATTEMPT`, `DHAN_SUPER_ORDER_MODIFY_ATTEMPT`, `DHAN_SUPER_ORDER_CANCEL_ATTEMPT`, `DHAN_FOREVER_ORDER_ATTEMPT`, `DHAN_FOREVER_ORDER_MODIFY_ATTEMPT`, `DHAN_FOREVER_ORDER_CANCEL_ATTEMPT`, `DHAN_ALERT_ORDER_ATTEMPT`, `DHAN_ALERT_ORDER_MODIFY_ATTEMPT`.
-- **`DhanHQ::Concerns::OrderAudit`**: Shared concern module providing `log_order_context` and `ensure_live_trading!` — included in `Resources::Orders`, `Resources::SuperOrders`, `Resources::ForeverOrders`, and `Resources::AlertOrders`.
+  Events logged: `DHAN_ORDER_ATTEMPT`, `DHAN_ORDER_MODIFY_ATTEMPT`, `DHAN_ORDER_SLICING_ATTEMPT`, `DHAN_SUPER_ORDER_ATTEMPT`, `DHAN_SUPER_ORDER_MODIFY_ATTEMPT`, `DHAN_SUPER_ORDER_CANCEL_ATTEMPT`, `DHAN_FOREVER_ORDER_ATTEMPT`, `DHAN_FOREVER_ORDER_MODIFY_ATTEMPT`, `DHAN_FOREVER_ORDER_CANCEL_ATTEMPT`, `DHAN_ALERT_ORDER_ATTEMPT`, `DHAN_ALERT_ORDER_MODIFY_ATTEMPT`, `DHAN_ALERT_ORDER_DELETE_ATTEMPT`, `DHAN_PNL_EXIT_CONFIGURE_ATTEMPT`, `DHAN_PNL_EXIT_STOP_ATTEMPT`.
+- **`DhanHQ::Concerns::OrderAudit`**: Shared concern providing `log_order_context` and `ensure_live_trading!` — included in `Resources::Orders`, `Resources::SuperOrders`, `Resources::ForeverOrders`, `Resources::AlertOrders`, and `Resources::PnlExit`.
 - **`DhanHQ::Utils::NetworkInspector`**: New utility class that resolves the machine's public IPv4 (via api.ipify.org), IPv6 (via api64.ipify.org), hostname (`Socket.gethostname`), and runtime environment (`RAILS_ENV` / `RACK_ENV` / `APP_ENV`). IP lookups are memoized for the process lifetime; call `NetworkInspector.reset_cache!` to refresh.
-- **Live trading guard**: Order creation is blocked unless `ENV["LIVE_TRADING"]="true"`. Guarded methods:
-  - `Resources::Orders#create`, `#slicing`
-  - `Resources::SuperOrders#create`
-  - `Resources::ForeverOrders#create`
-  - `Resources::AlertOrders#create`
-  Modify and cancel calls are **not** guarded (safe to modify/cancel existing orders without the env var).
+- **Live trading guard**: All mutating order/trader-control calls require `ENV["LIVE_TRADING"]="true"`. Guarded methods:
+  - `Resources::Orders#create`, `#update`, `#slicing`, `#cancel`
+  - `Resources::SuperOrders#create`, `#update`, `#cancel`
+  - `Resources::ForeverOrders#create`, `#update`, `#cancel`
+  - `Resources::AlertOrders#create`, `#update`, `#delete`
+  - `Resources::PnlExit#configure`, `#stop`
 - **`DhanHQ::LiveTradingDisabledError`**: New error class raised when the live trading guard fires.
 - **Correlation ID prefix convention**: Recommended per-app correlation ID prefixes for instant source identification in the Dhan orderbook (e.g. `SCALPER_7af1`, `TRADER_3bc9`). See README.
 
 ### Changed
 
-- **`Resources::Orders`**: `#create`, `#update`, and `#slicing` now log order context before executing. `#create` and `#slicing` check the live trading guard.
-- **`Resources::SuperOrders`**: `#create`, `#update`, and `#cancel` now log order context. `#create` checks the live trading guard.
-- **`Resources::ForeverOrders`**: `#create`, `#update`, and `#cancel` now log order context. `#create` checks the live trading guard.
-- **`Resources::AlertOrders`**: `#create` and `#update` now log order context. `#create` checks the live trading guard.
+- **`Resources::Orders`**: `#create`, `#update`, `#slicing`, `#cancel` log order context and enforce the live trading guard.
+- **`Resources::SuperOrders`**: `#create`, `#update`, `#cancel` log order context and enforce the live trading guard.
+- **`Resources::ForeverOrders`**: `#create`, `#update`, `#cancel` log order context and enforce the live trading guard.
+- **`Resources::AlertOrders`**: `#create`, `#update`, `#delete` log order context and enforce the live trading guard; `#delete` added.
+- **`Resources::PnlExit`**: `#configure` and `#stop` use `OrderAudit` (guard + audit log).
 
 ### Breaking
 
-- **`ENV["LIVE_TRADING"]` required for order placement**: Existing code that places orders via any of the order resources' `#create` methods (including `Models::Order.place`, `.create`, `#save`, `Models::SuperOrder.create`, `Models::ForeverOrder.create`, `Models::AlertOrder.create`, `#save`) will now raise `LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"` is set. Add this to your production environment and set `LIVE_TRADING=false` (or omit) in development/test.
+- **`ENV["LIVE_TRADING"]` required for all order/trader-control mutations**: Any call that creates, updates, cancels, or deletes orders (or configures/stops PnL exit) now raises `LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"`. Affects `Resources::Orders`, `Resources::SuperOrders`, `Resources::ForeverOrders`, `Resources::AlertOrders`, `Resources::PnlExit`, and the corresponding model wrappers. Set `LIVE_TRADING=true` in production and `LIVE_TRADING=false` (or omit) in development/test.
 
 ---
 
