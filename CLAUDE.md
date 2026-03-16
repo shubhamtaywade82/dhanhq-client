@@ -35,6 +35,7 @@ lib/DhanHQ/
   resources/     # REST resource wrappers
   contracts/     # Request/response contract validators
   auth/          # Auth flow
+  utils/         # Cross-cutting utilities (NetworkInspector)
   ws/            # WebSocket client and feed
 ```
 
@@ -49,6 +50,7 @@ Entry point: `lib/dhan_hq.rb` — sets up Zeitwerk loader, eager-requires core f
 | `DhanHQ::RateLimiter` | Enforces DhanHQ rate limits |
 | `DhanHQ::WS` | WebSocket feed client |
 | `DhanHQ::Configuration` | Client ID, access token, env setup |
+| `DhanHQ::Utils::NetworkInspector` | Public IP, hostname, env for order audit logging |
 
 ## Configuration
 
@@ -68,3 +70,4 @@ Never hardcode credentials. Always use env vars.
 - DhanHQ order IDs are **not sequential** — never sort by them or use them as primary ordering.
 - All specs use WebMock — never hit the real API in tests.
 - `spec/spec_helper.rb` loads SimpleCov when `COVERAGE=true`.
+- **`ENV["LIVE_TRADING"]="true"` required** to place orders. Tests that call `Resources::Orders#create` or `#slicing` must set this in a `before` block.

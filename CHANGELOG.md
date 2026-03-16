@@ -1,3 +1,26 @@
+## [2.7.0] - 2026-03-17
+
+### Added
+
+- **Order audit logging**: Every order submission (`create`, `update`, `slicing`) now emits a WARN-level structured JSON log line capturing: event type, public IPv4/IPv6, hostname, runtime environment, `security_id`, `correlation_id`, and UTC timestamp. Log output example:
+  ```json
+  {"event":"DHAN_ORDER_ATTEMPT","hostname":"DESKTOP-SHUBHAM","env":"production","ipv4":"122.171.22.40","ipv6":"2401:4900:...","security_id":"11536","correlation_id":"SCALPER_7af1","timestamp":"2026-03-17T06:45:22Z"}
+  ```
+- **`DhanHQ::Utils::NetworkInspector`**: New utility class that resolves the machine's public IPv4 (via api.ipify.org), IPv6 (via api64.ipify.org), hostname (`Socket.gethostname`), and runtime environment (`RAILS_ENV` / `RACK_ENV` / `APP_ENV`). IP lookups are memoized for the process lifetime; call `NetworkInspector.reset_cache!` to refresh.
+- **Live trading guard**: `Resources::Orders#create` and `#slicing` now raise `DhanHQ::LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"`. This prevents accidental order placement from development machines. Modify and cancel are not guarded.
+- **`DhanHQ::LiveTradingDisabledError`**: New error class raised when the live trading guard fires.
+- **Correlation ID prefix convention**: Recommended per-app correlation ID prefixes for instant source identification in the Dhan orderbook (e.g. `SCALPER_7af1`, `TRADER_3bc9`). See README.
+
+### Changed
+
+- **`Resources::Orders`**: `#create`, `#update`, and `#slicing` now log order context before executing. `#create` and `#slicing` check the live trading guard before logging and validation.
+
+### Breaking
+
+- **`ENV["LIVE_TRADING"]` required for order placement**: Existing code that places orders via `Resources::Orders#create` or `#slicing` (including `Models::Order.place`, `.create`, `#save`) will now raise `LiveTradingDisabledError` unless `ENV["LIVE_TRADING"]="true"` is set. Add this to your production environment and set `LIVE_TRADING=false` (or omit) in development/test.
+
+---
+
 ## [2.6.3] - 2026-03-14
 
 ### Added
