@@ -53,6 +53,8 @@ You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
 - **Secure logging** — automatic token sanitization in all log output
 - **Super Orders** — entry + stop-loss + target + trailing jump in one request
 - **Instrument convenience methods** — `.ltp`, `.ohlc`, `.option_chain` directly on instruments
+- **Order audit logging** — every order attempt logs machine, IP, environment, and correlation ID as structured JSON
+- **Live trading guard** — prevents accidental order placement unless `ENV["LIVE_TRADING"]="true"`
 - **Full REST coverage** — Orders, Trades, Forever Orders, Super Orders, Positions, Holdings, Funds, HistoricalData, OptionChain, MarketFeed, EDIS, Kill Switch, P&L Exit, Alert Orders, Margin Calculator
 - **P&L Based Exit** — automatic position exit on profit/loss thresholds
 - **Postback parser** — parse Dhan webhook payloads with `Postback.parse` and status predicates
@@ -117,6 +119,57 @@ end
 When the API returns 401, the client retries **once** with a fresh token from your provider.
 
 > **Full details**: TOTP flows, partner mode, token endpoint bootstrap, auto-management — see [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
+
+---
+
+## Order Safety
+
+### Live Trading Guard
+
+Order placement (`create`, `slicing`) is blocked unless you explicitly enable it:
+
+```bash
+# Production (Render, VPS, etc.)
+LIVE_TRADING=true
+
+# Development / Test (default — orders are blocked)
+LIVE_TRADING=false   # or simply omit
+```
+
+Attempting to place an order without `LIVE_TRADING=true` raises `DhanHQ::LiveTradingDisabledError`.
+
+### Order Audit Logging
+
+Every order attempt (place, modify, slice) automatically logs a structured JSON line at WARN level:
+
+```json
+{
+  "event": "DHAN_ORDER_ATTEMPT",
+  "hostname": "DESKTOP-SHUBHAM",
+  "env": "production",
+  "ipv4": "122.171.22.40",
+  "ipv6": "2401:4900:894c:8448:1da9:27f1:48e7:61be",
+  "security_id": "11536",
+  "correlation_id": "SCALPER_7af1",
+  "timestamp": "2026-03-17T06:45:22Z"
+}
+```
+
+This tells you instantly which machine, app, IP, and environment placed the order.
+
+### Correlation ID Prefixes
+
+Use per-app prefixes for instant source identification in the Dhan orderbook:
+
+```ruby
+# algo_scalper_api
+correlation_id: "SCALPER_#{SecureRandom.hex(4)}"
+
+# algo_trader_api
+correlation_id: "TRADER_#{SecureRandom.hex(4)}"
+```
+
+The Dhan orderbook will show `SCALPER_7af1` or `TRADER_3bc9`, making the source obvious.
 
 ---
 
