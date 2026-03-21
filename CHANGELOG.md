@@ -1,3 +1,27 @@
+## [2.8.0] - 2026-03-21
+
+### Added
+
+- **Complete SDK Documentation Overhaul**: Added high-level guides and structured learning paths for Ruby developers:
+  - `BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md`: Strategic advice for Ruby-centric integration.
+  - `BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md`: Step-by-step tutorial for algo trading.
+  - `HOW_TO_USE_DHAN_API_WITH_RUBY.md`: Foundational guide for REST and WebSocket.
+  - `DHAN_API_RUBY_EXAMPLES.md`: Curated collection of common API patterns.
+  - `DHAN_WEBSOCKET_RUBY_GUIDE.md`: Deep dive into real-time market data and order updates.
+  - `DHAN_RUBY_QA.md`: Troubleshooting and frequently asked questions.
+- **Production-Ready Examples**:
+  - `examples/basic_trading_bot.rb`: Skeleton for a strategy-based bot.
+  - `examples/options_watchlist.rb`: Script for monitoring specific option strikes.
+  - `examples/portfolio_monitor.rb`: Live tracker for PnL and position status.
+- **Architectural Visualization**: New `docs/architecture-overview.svg` illustrating the SDK's layered design (Models, Resources, Contracts, WebSocket).
+
+### Changed
+
+- **SDK Positioning**: Updated `README.md` and `DhanHQ.gemspec` to reflect the SDK's status as a "production-grade Ruby SDK for Dhan API v2" with an emphasis on algo trading, portfolio monitoring, and resilient streaming.
+- **Documentation Refinement**: Improved clarity and navigation in `CONFIGURATION.md`, `LIVE_ORDER_UPDATES.md`, `RAILS_INTEGRATION.md`, `TESTING_GUIDE.md`, `TROUBLESHOOTING.md`, and `WEBSOCKET_INTEGRATION.md`.
+
+---
+
 ## [2.7.0] - 2026-03-17
 
 ### Added

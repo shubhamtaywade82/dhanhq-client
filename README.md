@@ -1,13 +1,31 @@
-# DhanHQ — Ruby Client for Dhan API v2
+# DhanHQ — The Ruby SDK for Dhan API v2
 
 [![Gem Version](https://badge.fury.io/rb/DhanHQ.svg)](https://rubygems.org/gems/DhanHQ)
 [![CI](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml/badge.svg)](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml)
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/) — ORM-like models, WebSocket market feeds, and battle-tested reliability for real trading.
+Build trading systems in Ruby without fighting raw HTTP, fragile auth flows, or unreliable market streams.
 
-## 🚀 60-Second Quick Start
+DhanHQ is a production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), designed for:
+
+- trading bots
+- real-time market data streaming
+- portfolio and order management
+- Rails or standalone trading systems
+
+If you're looking for a Ruby SDK for Dhan API, this is built to be the default choice.
+
+Unlike thin wrappers, DhanHQ gives you:
+
+- typed models for orders, positions, holdings, and more
+- WebSocket clients with auto-reconnect and backoff
+- token lifecycle management with retry-on-401
+- safety rails for live trading
+
+This is closer to trading infrastructure than a simple API client.
+
+## Install and Run in 60 Seconds
 
 ```ruby
 # Gemfile
@@ -22,25 +40,69 @@ DhanHQ.configure do |c|
   c.access_token = ENV["DHAN_ACCESS_TOKEN"]
 end
 
-# You're live
+# You're live — no manual HTTP, no JSON parsing
 positions = DhanHQ::Models::Position.all
-holdings  = DhanHQ::Models::Holding.all
 ```
 
 ---
 
-## Why DhanHQ?
+## Who This Is For
 
-You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
+- Ruby developers building trading bots
+- Rails apps integrating the Dhan API
+- Algo trading systems that need clean abstractions over raw HTTP
+- Long-running processes that rely on WebSocket market data
 
-| You get                        | Instead of                                    |
-| ------------------------------ | --------------------------------------------- |
-| ActiveModel-style `find`, `all`, `save`, `cancel` | Manual HTTP + JSON wrangling          |
-| Typed models with validations  | Hash soup and runtime surprises               |
-| Auto token refresh + retry-on-401 | Silent auth failures at 3 AM               |
-| WebSocket reconnection with backoff | Dropped connections during volatile moves |
-| 429 rate-limit cool-off        | Getting banned by the exchange                |
-| Thread-safe, secure logging    | Leaked tokens in production logs              |
+## Who This Is Not For
+
+- One-off scripts where raw HTTP is enough
+- Non-Ruby stacks
+
+---
+
+## Start Here (Pick Your Use Case)
+
+Pick the path that matches what you want to build:
+
+- **Get live prices fast** → [Market Feed WebSocket](#market-feed-ticker--quote--full)
+- **Place orders safely** → [Order Safety](#order-safety)
+- **Build a trading strategy** → [WebSockets](#websockets)
+- **Build a trading bot** → [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb)
+- **Use with Rails** → [docs/RAILS_INTEGRATION.md](docs/RAILS_INTEGRATION.md)
+
+---
+
+## Trust Signals
+
+- **CI on supported Rubies** — GitHub Actions runs RSpec on Ruby 3.2.0 and 3.3.4, plus RuboCop on every push and pull request
+- **Typed domain models** — Orders, Positions, Holdings, Funds, MarketFeed, OptionChain, Super Orders, and more expose a Ruby-first API instead of raw hashes
+- **No real API calls in the default test suite** — WebMock blocks outbound HTTP and VCR covers cassette-backed integration paths
+- **Auth lifecycle support** — static tokens, dynamic token providers, 401 retry with refresh hooks, and token sanitization in logs
+- **WebSocket resilience** — reconnect, backoff, 429 cool-off, local connection cleanup, and dedicated market/order stream clients
+- **Live trading guardrails** — order placement is blocked unless `LIVE_TRADING=true`, and order attempts emit structured audit logs
+
+---
+
+## Why Not a Thin Wrapper?
+
+Most API clients give you HTTP access. DhanHQ gives you a working Ruby system.
+
+| Instead of | You get |
+| ---------- | -------- |
+| JSON parsing and manual field mapping | Typed models |
+| Manual auth refresh | Built-in token lifecycle |
+| Fragile WebSocket code | Auto-reconnect, backoff, and 429 handling |
+| Risky order scripts | Live trading guardrails and audit logs |
+
+---
+
+## Architecture At A Glance
+
+![DhanHQ architecture overview](docs/architecture-overview.svg)
+
+Models own the Ruby API. Resources own HTTP calls. Contracts validate inputs. The transport layer handles auth, retries, rate limiting, and error mapping. WebSockets are a separate subsystem that shares configuration but not the REST stack.
+
+For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -59,6 +121,18 @@ You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
 - **P&L Based Exit** — automatic position exit on profit/loss thresholds
 - **Postback parser** — parse Dhan webhook payloads with `Postback.parse` and status predicates
 - **EDIS model** — ORM-style T-PIN, form, and status inquiry for delivery instruction slips
+
+---
+
+## Reliability & Safety
+
+- retry-on-401 with token refresh
+- WebSocket auto-reconnect and backoff
+- 429 rate-limit protection
+- live trading guard via `LIVE_TRADING=true`
+- structured order audit logs
+
+See [ARCHITECTURE.md](ARCHITECTURE.md), [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md), and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the deeper implementation details.
 
 ---
 
@@ -336,23 +410,56 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 
 ---
 
+## Real-World Examples
+
+These scripts are designed around user goals rather than API surfaces:
+
+| Example | Use case |
+| ------- | -------- |
+| [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb) | Pull historical data, evaluate a simple signal, and place a guarded order |
+| [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb) | Snapshot funds, holdings, and positions for a monitoring script |
+| [examples/options_watchlist.rb](examples/options_watchlist.rb) | Build a live options watchlist with index quotes and option-chain context |
+| [examples/market_feed_example.rb](examples/market_feed_example.rb) | Subscribe to major market indices over WebSocket |
+| [examples/live_order_updates.rb](examples/live_order_updates.rb) | Track order lifecycle events in real time |
+
+For search-driven discovery and onboarding content, see:
+
+- [docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md)
+- [docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md)
+
+## Use Case Guides
+
+- [docs/DHAN_API_RUBY_EXAMPLES.md](docs/DHAN_API_RUBY_EXAMPLES.md)
+- [docs/DHAN_WEBSOCKET_RUBY_GUIDE.md](docs/DHAN_WEBSOCKET_RUBY_GUIDE.md)
+- [docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md](docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md)
+- [docs/DHAN_RUBY_QA.md](docs/DHAN_RUBY_QA.md)
+
+---
+
 ## 📚 Documentation
 
 | Guide | What it covers |
 | ----- | -------------- |
+| [Architecture](ARCHITECTURE.md) | Layering, dependency flow, design patterns, extension points |
 | [Authentication](docs/AUTHENTICATION.md) | Token flows, TOTP, OAuth, auto-management |
 | [Configuration Reference](docs/CONFIGURATION.md) | Full ENV matrix, logging, timeouts, available resources |
 | [WebSocket Integration](docs/WEBSOCKET_INTEGRATION.md) | All WS types, architecture, best practices |
 | [WebSocket Protocol](docs/WEBSOCKET_PROTOCOL.md) | Packet parsing, request codes, tick schema, exchange enums |
 | [Rails WebSocket Guide](docs/RAILS_WEBSOCKET_INTEGRATION.md) | Rails-specific patterns, ActionCable |
 | [Rails Integration](docs/RAILS_INTEGRATION.md) | Initializers, service objects, workers |
-| [Standalone Ruby Guide](docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md) | Scripts, daemons, CLI tools |
+| [Standalone Ruby Guide](docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md) | Scripts, daemons, and long-running Ruby processes |
 | [Super Orders API](docs/SUPER_ORDERS.md) | Full REST reference for super orders |
 | [API Constants Reference](docs/CONSTANTS_REFERENCE.md) | All valid enums, exchange segments, and order parameters |
 | [Data API Parameters](docs/DATA_API_PARAMETERS.md) | Historical data, option chain parameters |
 | [Testing Guide](docs/TESTING_GUIDE.md) | WebSocket testing, model testing, console helpers |
 | [Technical Analysis](docs/TECHNICAL_ANALYSIS.md) | Indicators, multi-timeframe aggregation |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | 429 errors, reconnect, auth issues, debug logging |
+| [How To Use Dhan API With Ruby](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md) | Search-friendly onboarding guide for Ruby users |
+| [Build A Trading Bot With Ruby And Dhan](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md) | End-to-end tutorial framing for strategy builders |
+| [Dhan API Ruby Examples](docs/DHAN_API_RUBY_EXAMPLES.md) | Small answer-style snippets for common Ruby + Dhan tasks |
+| [Dhan WebSocket Ruby Guide](docs/DHAN_WEBSOCKET_RUBY_GUIDE.md) | Query-shaped guide for Dhan market data streaming in Ruby |
+| [Best Way To Use Dhan API In Ruby](docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md) | Comparison-focused guide for SDK vs raw HTTP |
+| [Dhan Ruby Q&A](docs/DHAN_RUBY_QA.md) | Publish-ready answers for common Dhan + Ruby questions |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
 
 ---
@@ -364,6 +471,7 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 - Don't exceed **100 instruments per subscribe frame** (auto-chunked by the client)
 - Call `DhanHQ::WS.disconnect_all_local!` on shutdown
 - Avoid rapid connect/disconnect loops — the client already backs off on 429
+- Use dynamic token providers in long-running systems instead of hardcoding expiring tokens
 
 ---
 
