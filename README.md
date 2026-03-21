@@ -1,11 +1,13 @@
-# DhanHQ — Ruby Client for Dhan API v2
+# DhanHQ — Production-Grade Ruby SDK for Dhan API v2
 
 [![Gem Version](https://badge.fury.io/rb/DhanHQ.svg)](https://rubygems.org/gems/DhanHQ)
 [![CI](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml/badge.svg)](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml)
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/) — ORM-like models, WebSocket market feeds, and battle-tested reliability for real trading.
+A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), built for trading systems that need more than raw HTTP wrappers. It gives you typed models, token lifecycle management, resilient WebSocket feeds, and operational safeguards that hold up in real automation.
+
+This gem sits closer to trading infrastructure than a thin API client: model-centric REST access, WebSocket runtime behavior, retry and auth handling, and safety rails for live order placement.
 
 ## 🚀 60-Second Quick Start
 
@@ -29,6 +31,24 @@ holdings  = DhanHQ::Models::Holding.all
 
 ---
 
+## Trust Signals
+
+- **CI on supported Rubies** — GitHub Actions runs RSpec on Ruby 3.2.0 and 3.3.4, plus RuboCop on every push and pull request
+- **Typed domain models** — Orders, Positions, Holdings, Funds, MarketFeed, OptionChain, Super Orders, and more expose a Ruby-first API instead of raw hashes
+- **No real API calls in the default test suite** — WebMock blocks outbound HTTP and VCR covers cassette-backed integration paths
+- **Auth lifecycle support** — static tokens, dynamic token providers, 401 retry with refresh hooks, and token sanitization in logs
+- **WebSocket resilience** — reconnect, backoff, 429 cool-off, local connection cleanup, and dedicated market/order stream clients
+- **Live trading guardrails** — order placement is blocked unless `LIVE_TRADING=true`, and order attempts emit structured audit logs
+
+## Good Fit
+
+- Trading bots that need typed order and portfolio workflows
+- Rails or plain-Ruby apps that consume live market data
+- Signal engines that combine historical bars with streaming ticks
+- Backoffice or monitoring tools that need positions, holdings, funds, and order updates in one SDK
+
+---
+
 ## Why DhanHQ?
 
 You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
@@ -41,6 +61,25 @@ You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
 | WebSocket reconnection with backoff | Dropped connections during volatile moves |
 | 429 rate-limit cool-off        | Getting banned by the exchange                |
 | Thread-safe, secure logging    | Leaked tokens in production logs              |
+
+---
+
+## Architecture At A Glance
+
+```mermaid
+flowchart TD
+  A[Configuration and Entry Point] --> B[Models / Facade Layer]
+  B --> C[Resources / REST Layer]
+  B --> D[Contracts / Validation]
+  C --> E[Client / Transport]
+  E --> F[Rate Limiter + Request/Response Helpers]
+  A --> G[WebSocket Subsystem]
+  G --> H[Orders / Market Feed / Market Depth]
+```
+
+Models own the Ruby API. Resources own HTTP calls. Contracts validate inputs. The transport layer handles auth, retries, rate limiting, and error mapping. WebSockets are a separate subsystem that shares configuration but not the REST stack.
+
+For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -59,6 +98,18 @@ You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
 - **P&L Based Exit** — automatic position exit on profit/loss thresholds
 - **Postback parser** — parse Dhan webhook payloads with `Postback.parse` and status predicates
 - **EDIS model** — ORM-style T-PIN, form, and status inquiry for delivery instruction slips
+
+---
+
+## Operational Characteristics
+
+- **`retry-on-401`** means one retry with a fresh token from your configured provider after the API rejects the current token
+- **`429 cool-off`** means the client backs off instead of hammering the API when Dhan rate limits you
+- **`auto-reconnect`** means WS clients try to recover dropped connections without forcing application code to rebuild subscriptions manually
+- **`thread-safe`** means concurrent access is handled inside the WebSocket/client internals so multiple streams and callbacks do not race through shared mutable state casually
+- **`secure logging`** means access tokens are sanitized from logs and order actions can be audited with structured metadata
+
+These are reliability guarantees about behavior, not latency benchmarks. The gem is optimized for correctness and operational safety first.
 
 ---
 
@@ -336,10 +387,24 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 
 ---
 
+## Testing Philosophy
+
+The test suite is designed to prove SDK behavior without depending on live Dhan credentials or unstable network calls.
+
+- **Default mode is offline** — WebMock blocks real outbound HTTP in the suite
+- **Recorded API flows use VCR** — cassette-backed specs cover request/response handling without turning the test suite into live API smoke tests
+- **Coverage support exists locally** — run `COVERAGE=true bundle exec rspec` to generate SimpleCov coverage for model code
+- **Live trading stays off by default** — specs that exercise order placement must explicitly opt into `LIVE_TRADING=true`
+
+See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for console-based exploration and [spec/spec_helper.rb](spec/spec_helper.rb) for the enforced test boundaries.
+
+---
+
 ## 📚 Documentation
 
 | Guide | What it covers |
 | ----- | -------------- |
+| [Architecture](ARCHITECTURE.md) | Layering, dependency flow, design patterns, extension points |
 | [Authentication](docs/AUTHENTICATION.md) | Token flows, TOTP, OAuth, auto-management |
 | [Configuration Reference](docs/CONFIGURATION.md) | Full ENV matrix, logging, timeouts, available resources |
 | [WebSocket Integration](docs/WEBSOCKET_INTEGRATION.md) | All WS types, architecture, best practices |
@@ -364,6 +429,7 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 - Don't exceed **100 instruments per subscribe frame** (auto-chunked by the client)
 - Call `DhanHQ::WS.disconnect_all_local!` on shutdown
 - Avoid rapid connect/disconnect loops — the client already backs off on 429
+- Use dynamic token providers in long-running systems instead of hardcoding expiring tokens
 
 ---
 
