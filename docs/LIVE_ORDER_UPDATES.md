@@ -1,6 +1,6 @@
 # Live Order Updates - Comprehensive Guide
 
-The DhanHQ Ruby client provides comprehensive real-time order update functionality via WebSocket, covering all order states as per the [DhanHQ API documentation](https://dhanhq.co/docs/v2).
+The DhanHQ Ruby SDK provides comprehensive real-time order update functionality via WebSocket, covering all order states as per the [DhanHQ API documentation](https://dhanhq.co/docs/v2).
 
 ## Features
 

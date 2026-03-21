@@ -1,11 +1,11 @@
-# DhanHQ — Production-Grade Ruby SDK for Dhan API v2
+# DhanHQ — The Ruby SDK for Dhan API v2
 
 [![Gem Version](https://badge.fury.io/rb/DhanHQ.svg)](https://rubygems.org/gems/DhanHQ)
 [![CI](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml/badge.svg)](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml)
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), built for trading systems that need more than raw HTTP wrappers. It gives you typed models, token lifecycle management, resilient WebSocket feeds, and operational safeguards that hold up in real automation.
+A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), built for trading systems that need more than raw HTTP wrappers. If you are looking for a Ruby SDK for Dhan API, a Dhan trading SDK for Ruby, or a practical way to build algo trading systems with Dhan in Ruby, this gem is designed to be the default choice.
 
 This gem sits closer to trading infrastructure than a thin API client: model-centric REST access, WebSocket runtime behavior, retry and auth handling, and safety rails for live order placement.
 
@@ -31,6 +31,18 @@ holdings  = DhanHQ::Models::Holding.all
 
 ---
 
+## Start Here
+
+Pick the path that matches what you want to build:
+
+- **I want prices and quotes fast** — start with [Market Feed WebSocket](#market-feed-ticker--quote--full) and [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb)
+- **I want to place orders safely** — start with [Order Safety](#order-safety) and [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb)
+- **I want streaming for a strategy** — start with [WebSockets](#websockets) and [examples/options_watchlist.rb](examples/options_watchlist.rb)
+- **I want Rails integration** — jump to [docs/RAILS_INTEGRATION.md](docs/RAILS_INTEGRATION.md)
+- **I want auth and token refresh** — jump to [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)
+
+---
+
 ## Trust Signals
 
 - **CI on supported Rubies** — GitHub Actions runs RSpec on Ruby 3.2.0 and 3.3.4, plus RuboCop on every push and pull request
@@ -46,6 +58,20 @@ holdings  = DhanHQ::Models::Holding.all
 - Rails or plain-Ruby apps that consume live market data
 - Signal engines that combine historical bars with streaming ticks
 - Backoffice or monitoring tools that need positions, holdings, funds, and order updates in one SDK
+
+---
+
+## Why This Over Thin Wrappers?
+
+Official docs and thin SDKs can get you to raw requests quickly. This gem aims to get you to a maintainable Ruby trading system faster.
+
+| Instead of | You get with DhanHQ |
+| ---------- | ------------------- |
+| JSON hashes and manual field mapping | Typed models with Ruby-first methods like `find`, `all`, `save`, and `cancel` |
+| Rebuilding auth refresh in app code | Token providers, refresh hooks, and one-shot retry on 401 |
+| Hand-rolled WS reconnect loops | Reconnect, backoff, 429 cool-off, and local cleanup helpers |
+| Ad-hoc scripts with hidden risks | Live-trading guardrails and structured order audit logs |
+| A generic HTTP client | A Dhan-focused Ruby SDK with examples for bots, monitors, and Rails apps |
 
 ---
 
@@ -387,6 +413,25 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 
 ---
 
+## Real-World Examples
+
+These scripts are designed around user goals rather than API surfaces:
+
+| Example | Use case |
+| ------- | -------- |
+| [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb) | Pull historical data, evaluate a simple signal, and place a guarded order |
+| [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb) | Snapshot funds, holdings, and positions for a monitoring script |
+| [examples/options_watchlist.rb](examples/options_watchlist.rb) | Build a live options watchlist with index quotes and option-chain context |
+| [examples/market_feed_example.rb](examples/market_feed_example.rb) | Subscribe to major market indices over WebSocket |
+| [examples/live_order_updates.rb](examples/live_order_updates.rb) | Track order lifecycle events in real time |
+
+For search-driven discovery and onboarding content, see:
+
+- [docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md)
+- [docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md)
+
+---
+
 ## Testing Philosophy
 
 The test suite is designed to prove SDK behavior without depending on live Dhan credentials or unstable network calls.
@@ -411,13 +456,15 @@ See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for console-based exploration
 | [WebSocket Protocol](docs/WEBSOCKET_PROTOCOL.md) | Packet parsing, request codes, tick schema, exchange enums |
 | [Rails WebSocket Guide](docs/RAILS_WEBSOCKET_INTEGRATION.md) | Rails-specific patterns, ActionCable |
 | [Rails Integration](docs/RAILS_INTEGRATION.md) | Initializers, service objects, workers |
-| [Standalone Ruby Guide](docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md) | Scripts, daemons, CLI tools |
+| [Standalone Ruby Guide](docs/STANDALONE_RUBY_WEBSOCKET_INTEGRATION.md) | Scripts, daemons, and long-running Ruby processes |
 | [Super Orders API](docs/SUPER_ORDERS.md) | Full REST reference for super orders |
 | [API Constants Reference](docs/CONSTANTS_REFERENCE.md) | All valid enums, exchange segments, and order parameters |
 | [Data API Parameters](docs/DATA_API_PARAMETERS.md) | Historical data, option chain parameters |
 | [Testing Guide](docs/TESTING_GUIDE.md) | WebSocket testing, model testing, console helpers |
 | [Technical Analysis](docs/TECHNICAL_ANALYSIS.md) | Indicators, multi-timeframe aggregation |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | 429 errors, reconnect, auth issues, debug logging |
+| [How To Use Dhan API With Ruby](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md) | Search-friendly onboarding guide for Ruby users |
+| [Build A Trading Bot With Ruby And Dhan](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md) | End-to-end tutorial framing for strategy builders |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
 
 ---

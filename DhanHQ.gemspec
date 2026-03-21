@@ -8,10 +8,11 @@ Gem::Specification.new do |spec|
   spec.authors = ["Shubham Taywade"]
   spec.email = ["shubhamtaywade82@gmail.com"]
 
-  spec.summary = "Ruby client for the DhanHQ v2 REST and WebSocket API (NSE/BSE)."
-  spec.description = "A pure-Ruby client wrapping the DhanHQ v2 REST and WebSocket API. " \
-                     "Provides typed model classes, dry-validation contracts, a token-bucket " \
-                     "rate limiter, and WebSocket streaming for live market data and order updates."
+  spec.summary = "The Ruby SDK for Dhan API v2 with REST, WebSocket, and trading workflows."
+  spec.description = "A production-grade Ruby SDK for Dhan API v2 built for algo trading, " \
+                     "portfolio monitoring, and live trading systems. Provides typed models, " \
+                     "token lifecycle management, dry-validation contracts, resilient WebSocket " \
+                     "streaming, and safety-focused order workflows for Ruby applications."
   spec.homepage = "https://github.com/shubhamtaywade82/dhanhq-client"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"

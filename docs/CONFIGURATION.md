@@ -1,6 +1,6 @@
 # Configuration Reference
 
-This document covers all configuration options for the DhanHQ Ruby client.
+This document covers all configuration options for the DhanHQ Ruby SDK.
 
 ## Quick Setup
 

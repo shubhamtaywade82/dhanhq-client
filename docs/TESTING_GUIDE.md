@@ -1,6 +1,6 @@
 # DhanHQ Client Gem - Comprehensive Testing Guide
 
-This guide provides interactive testing examples for all features of the DhanHQ client gem. You can use these examples in `bin/console` to test and explore the gem's functionality.
+This guide provides interactive testing examples for all features of the DhanHQ Ruby SDK. You can use these examples in `bin/console` to test and explore the gem's functionality.
 
 ## Table of Contents
 
@@ -1513,4 +1513,4 @@ end
 
 ---
 
-This guide provides comprehensive examples for testing all features of the DhanHQ client gem. Use these examples in `bin/console` to explore and test the gem's functionality.
+This guide provides comprehensive examples for testing all features of the DhanHQ Ruby SDK. Use these examples in `bin/console` to explore and test the gem's functionality.
