@@ -5,6 +5,7 @@ require "dhan_hq"
 
 DhanHQ.configure_with_env
 
+# Example: Fetch funds, holdings, and positions using Dhan API in Ruby
 funds = DhanHQ::Models::Fund.balance
 holdings = DhanHQ::Models::Holding.all
 positions = DhanHQ::Models::Position.all

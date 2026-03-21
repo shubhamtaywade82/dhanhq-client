@@ -5,6 +5,7 @@ require "dhan_hq"
 
 DhanHQ.configure_with_env
 
+# Example: Find an index instrument and option-chain context using Dhan API in Ruby
 nifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "NIFTY")
 expiry = ENV.fetch("DHAN_OPTION_EXPIRY", "2025-02-27")
 
@@ -23,6 +24,7 @@ rescue StandardError
   puts "Option-chain payload received."
 end
 
+# Example: Subscribe to live market data using Dhan API WebSocket in Ruby
 client = DhanHQ::WS.connect(mode: :quote) do |tick|
   puts "[#{Time.now.strftime("%H:%M:%S")}] #{tick[:security_id]} -> #{tick[:ltp]}"
 end

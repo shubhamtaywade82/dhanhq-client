@@ -427,6 +427,13 @@ For search-driven discovery and onboarding content, see:
 - [docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md)
 - [docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md)
 
+## Use Case Guides
+
+- [docs/DHAN_API_RUBY_EXAMPLES.md](docs/DHAN_API_RUBY_EXAMPLES.md)
+- [docs/DHAN_WEBSOCKET_RUBY_GUIDE.md](docs/DHAN_WEBSOCKET_RUBY_GUIDE.md)
+- [docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md](docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md)
+- [docs/DHAN_RUBY_QA.md](docs/DHAN_RUBY_QA.md)
+
 ---
 
 ## 📚 Documentation
@@ -449,6 +456,10 @@ For search-driven discovery and onboarding content, see:
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | 429 errors, reconnect, auth issues, debug logging |
 | [How To Use Dhan API With Ruby](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md) | Search-friendly onboarding guide for Ruby users |
 | [Build A Trading Bot With Ruby And Dhan](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md) | End-to-end tutorial framing for strategy builders |
+| [Dhan API Ruby Examples](docs/DHAN_API_RUBY_EXAMPLES.md) | Small answer-style snippets for common Ruby + Dhan tasks |
+| [Dhan WebSocket Ruby Guide](docs/DHAN_WEBSOCKET_RUBY_GUIDE.md) | Query-shaped guide for Dhan market data streaming in Ruby |
+| [Best Way To Use Dhan API In Ruby](docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md) | Comparison-focused guide for SDK vs raw HTTP |
+| [Dhan Ruby Q&A](docs/DHAN_RUBY_QA.md) | Publish-ready answers for common Dhan + Ruby questions |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
 
 ---

@@ -7,6 +7,7 @@ require "dhan_hq"
 
 DhanHQ.configure_with_env
 
+# Example: Fetch historical market data using Dhan API in Ruby
 bars = DhanHQ::Models::HistoricalData.intraday(
   security_id: "13",
   exchange_segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
@@ -33,6 +34,7 @@ puts "Signal: #{signal}"
 if signal == :bullish
   puts "Bullish setup detected. Example order payload:"
 
+  # Example: Build a guarded order payload using the Ruby SDK for Dhan API
   order = DhanHQ::Models::Order.new(
     transaction_type: DhanHQ::Constants::TransactionType::BUY,
     exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,

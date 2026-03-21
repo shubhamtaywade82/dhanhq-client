@@ -1,27 +1,23 @@
 # How To Use Dhan API With Ruby
 
-This document is a repo-owned draft for a search-focused guide. Its job is to capture the questions users actually search for and route them into maintained project assets instead of ad-hoc snippets.
+If you are looking for the best way to use Dhan API with Ruby, the shortest answer is: use `DhanHQ`, the Ruby SDK for Dhan API v2. It gives you typed models, WebSocket clients, token lifecycle management, and safety rails for live trading, so you do not have to build a Ruby trading system from raw HTTP calls and JSON parsing.
 
-## Target Search Intent
+This guide is the practical path for:
 
-- Dhan API Ruby
-- Ruby SDK for Dhan API
-- Dhan trading SDK for Ruby
-- How to use Dhan API with Ruby
+- Dhan API Ruby integrations
+- Ruby SDK for Dhan API lookups
+- Dhan trading SDK for Ruby workflows
+- algo trading with Dhan in Ruby
 
-## Outline
+## Install The Ruby SDK For Dhan API
 
-### 1. What this gem is
+Add the gem:
 
-Open with the category statement:
+```ruby
+gem "DhanHQ"
+```
 
-`DhanHQ is the Ruby SDK for Dhan API v2.`
-
-Explain in one paragraph that it covers REST, WebSocket feeds, token refresh, and trading workflows for Ruby apps.
-
-### 2. Install and configure
-
-Use the shortest path:
+Then configure it from environment variables:
 
 ```ruby
 require "dhan_hq"
@@ -29,41 +25,107 @@ require "dhan_hq"
 DhanHQ.configure_with_env
 ```
 
-List required env vars:
+Required environment variables:
 
 - `DHAN_CLIENT_ID`
 - `DHAN_ACCESS_TOKEN`
 
-### 3. Common tasks
+If you are running a long-lived Ruby process, prefer a token provider. The SDK supports `access_token_provider` and retry-on-401 so your app can recover from token expiry without hand-rolled auth plumbing.
 
-- Get positions and holdings
-- Fetch historical data
-- Stream live quotes
-- Place orders safely with `LIVE_TRADING=true`
+## Common Dhan API Tasks In Ruby
 
-Link each task to the matching section in [README.md](../README.md) and to a concrete example in `examples/`.
+### Fetch Positions And Holdings
 
-### 4. Why use this over a thin wrapper
+```ruby
+require "dhan_hq"
 
-Keep the comparison factual:
+DhanHQ.configure_with_env
 
-- typed models
-- auth lifecycle management
-- WS reconnect and rate-limit handling
-- Rails and standalone Ruby docs
+# Example: Fetch positions using Dhan API in Ruby
+positions = DhanHQ::Models::Position.all
 
-### 5. Next steps
+# Example: Fetch holdings using Dhan API in Ruby
+holdings = DhanHQ::Models::Holding.all
+```
 
-Route users to:
+For a complete monitoring-oriented example, see [examples/portfolio_monitor.rb](../examples/portfolio_monitor.rb).
 
-- [README.md](../README.md)
-- [examples/basic_trading_bot.rb](../examples/basic_trading_bot.rb)
-- [examples/portfolio_monitor.rb](../examples/portfolio_monitor.rb)
-- [docs/AUTHENTICATION.md](AUTHENTICATION.md)
-- [docs/RAILS_INTEGRATION.md](RAILS_INTEGRATION.md)
+### Fetch Historical Data
 
-## Publishing Notes
+```ruby
+bars = DhanHQ::Models::HistoricalData.intraday(
+  security_id: "13",
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
+  instrument: DhanHQ::Constants::InstrumentType::INDEX,
+  interval: "5",
+  from_date: Date.today.to_s,
+  to_date: Date.today.to_s
+)
+```
 
-- Publish on the project site, Dev.to, Hashnode, or a personal engineering blog.
-- Keep the canonical code snippets identical to the repo README so external content does not drift.
-- Every external post should link back to the repo and one runnable example.
+That is the foundation for a Ruby trading bot or any signal engine using Dhan market data.
+
+### Stream Live Market Data
+
+```ruby
+# Example: Subscribe to live market data using Dhan API WebSocket in Ruby
+client = DhanHQ::WS.connect(mode: :quote) do |tick|
+  puts "#{tick[:security_id]} -> #{tick[:ltp]}"
+end
+
+client.subscribe_one(
+  segment: DhanHQ::Constants::ExchangeSegment::IDX_I,
+  security_id: "13"
+)
+```
+
+For a fuller watchlist example, see [examples/options_watchlist.rb](../examples/options_watchlist.rb).
+
+### Place Orders Safely
+
+```ruby
+order = DhanHQ::Models::Order.new(
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::CNC,
+  order_type: DhanHQ::Constants::OrderType::MARKET,
+  validity: DhanHQ::Constants::Validity::DAY,
+  security_id: "11536",
+  quantity: 1
+)
+
+# Set LIVE_TRADING=true only when you intentionally want live order placement.
+# order.save
+```
+
+`DhanHQ` blocks live order placement unless `LIVE_TRADING=true`, which makes the Ruby SDK safer than ad-hoc scripts that can accidentally submit orders in production.
+
+## Why Use A Ruby SDK Instead Of Raw HTTP?
+
+You can call the Dhan API with Faraday or Net::HTTP directly. The tradeoff is that you have to rebuild the integration behavior yourself.
+
+With `DhanHQ`, you get:
+
+- typed models instead of manual field mapping
+- token lifecycle management instead of custom auth refresh code
+- WebSocket reconnect and 429 handling instead of fragile event loops
+- order safety controls and audit logs instead of risky trading scripts
+
+That is why the SDK is positioned as the Ruby SDK for Dhan API, not just another wrapper around endpoints.
+
+## Next Steps
+
+- Start with the main [README.md](../README.md)
+- Use [examples/basic_trading_bot.rb](../examples/basic_trading_bot.rb) for a trading-bot workflow
+- Use [examples/portfolio_monitor.rb](../examples/portfolio_monitor.rb) for account state and monitoring
+- Use [examples/options_watchlist.rb](../examples/options_watchlist.rb) for live market data with option-chain context
+- Read [AUTHENTICATION.md](AUTHENTICATION.md) for token providers and refresh flows
+- Read [RAILS_INTEGRATION.md](RAILS_INTEGRATION.md) if you are wiring Dhan into a Rails app
+
+## Canonical Publishing Notes
+
+If you publish this externally on Dev.to, Hashnode, or Medium:
+
+- keep the title exactly `How to Use Dhan API with Ruby`
+- link back to the repo root and at least one runnable example
+- preserve the phrase `The Ruby SDK for Dhan API` in the intro
