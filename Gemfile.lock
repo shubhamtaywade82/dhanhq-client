@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    DhanHQ (2.7.0)
+    DhanHQ (2.8.0)
       activesupport
       base64
       bindata
@@ -316,7 +316,7 @@ DEPENDENCIES
   yard (~> 0.9.37)
 
 CHECKSUMS
-  DhanHQ (2.7.0)
+  DhanHQ (2.8.0)
   activesupport (8.1.2) sha256=88842578ccd0d40f658289b0e8c842acfe9af751afee2e0744a7873f50b6fdae
   addressable (2.8.9) sha256=cc154fcbe689711808a43601dee7b980238ce54368d23e127421753e46895485
   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
