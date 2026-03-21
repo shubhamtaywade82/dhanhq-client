@@ -23,11 +23,11 @@ end
 
 closes = bars.map { |bar| bar[:close].to_f }
 last_close = closes.last
-sma_20 = closes.last(20).sum / 20.0
-signal = last_close > sma_20 ? :bullish : :bearish
+sma20 = closes.last(20).sum / 20.0
+signal = last_close > sma20 ? :bullish : :bearish
 
 puts "NIFTY last close: #{last_close.round(2)}"
-puts "NIFTY SMA20: #{sma_20.round(2)}"
+puts "NIFTY SMA20: #{sma20.round(2)}"
 puts "Signal: #{signal}"
 
 if signal == :bullish

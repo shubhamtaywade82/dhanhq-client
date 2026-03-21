@@ -5,11 +5,27 @@
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-A production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), built for trading systems that need more than raw HTTP wrappers. If you are looking for a Ruby SDK for Dhan API, a Dhan trading SDK for Ruby, or a practical way to build algo trading systems with Dhan in Ruby, this gem is designed to be the default choice.
+Build trading systems in Ruby without fighting raw HTTP, fragile auth flows, or unreliable market streams.
 
-This gem sits closer to trading infrastructure than a thin API client: model-centric REST access, WebSocket runtime behavior, retry and auth handling, and safety rails for live order placement.
+DhanHQ is a production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), designed for:
 
-## 🚀 60-Second Quick Start
+- trading bots
+- real-time market data streaming
+- portfolio and order management
+- Rails or standalone trading systems
+
+If you're looking for a Ruby SDK for Dhan API, this is built to be the default choice.
+
+Unlike thin wrappers, DhanHQ gives you:
+
+- typed models for orders, positions, holdings, and more
+- WebSocket clients with auto-reconnect and backoff
+- token lifecycle management with retry-on-401
+- safety rails for live trading
+
+This is closer to trading infrastructure than a simple API client.
+
+## Install and Run in 60 Seconds
 
 ```ruby
 # Gemfile
@@ -24,22 +40,35 @@ DhanHQ.configure do |c|
   c.access_token = ENV["DHAN_ACCESS_TOKEN"]
 end
 
-# You're live
+# You're live — no manual HTTP, no JSON parsing
 positions = DhanHQ::Models::Position.all
-holdings  = DhanHQ::Models::Holding.all
 ```
 
 ---
 
-## Start Here
+## Who This Is For
+
+- Ruby developers building trading bots
+- Rails apps integrating the Dhan API
+- Algo trading systems that need clean abstractions over raw HTTP
+- Long-running processes that rely on WebSocket market data
+
+## Who This Is Not For
+
+- One-off scripts where raw HTTP is enough
+- Non-Ruby stacks
+
+---
+
+## Start Here (Pick Your Use Case)
 
 Pick the path that matches what you want to build:
 
-- **I want prices and quotes fast** — start with [Market Feed WebSocket](#market-feed-ticker--quote--full) and [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb)
-- **I want to place orders safely** — start with [Order Safety](#order-safety) and [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb)
-- **I want streaming for a strategy** — start with [WebSockets](#websockets) and [examples/options_watchlist.rb](examples/options_watchlist.rb)
-- **I want Rails integration** — jump to [docs/RAILS_INTEGRATION.md](docs/RAILS_INTEGRATION.md)
-- **I want auth and token refresh** — jump to [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)
+- **Get live prices fast** → [Market Feed WebSocket](#market-feed-ticker--quote--full)
+- **Place orders safely** → [Order Safety](#order-safety)
+- **Build a trading strategy** → [WebSockets](#websockets)
+- **Build a trading bot** → [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb)
+- **Use with Rails** → [docs/RAILS_INTEGRATION.md](docs/RAILS_INTEGRATION.md)
 
 ---
 
@@ -52,56 +81,24 @@ Pick the path that matches what you want to build:
 - **WebSocket resilience** — reconnect, backoff, 429 cool-off, local connection cleanup, and dedicated market/order stream clients
 - **Live trading guardrails** — order placement is blocked unless `LIVE_TRADING=true`, and order attempts emit structured audit logs
 
-## Good Fit
-
-- Trading bots that need typed order and portfolio workflows
-- Rails or plain-Ruby apps that consume live market data
-- Signal engines that combine historical bars with streaming ticks
-- Backoffice or monitoring tools that need positions, holdings, funds, and order updates in one SDK
-
 ---
 
-## Why This Over Thin Wrappers?
+## Why Not a Thin Wrapper?
 
-Official docs and thin SDKs can get you to raw requests quickly. This gem aims to get you to a maintainable Ruby trading system faster.
+Most API clients give you HTTP access. DhanHQ gives you a working Ruby system.
 
-| Instead of | You get with DhanHQ |
-| ---------- | ------------------- |
-| JSON hashes and manual field mapping | Typed models with Ruby-first methods like `find`, `all`, `save`, and `cancel` |
-| Rebuilding auth refresh in app code | Token providers, refresh hooks, and one-shot retry on 401 |
-| Hand-rolled WS reconnect loops | Reconnect, backoff, 429 cool-off, and local cleanup helpers |
-| Ad-hoc scripts with hidden risks | Live-trading guardrails and structured order audit logs |
-| A generic HTTP client | A Dhan-focused Ruby SDK with examples for bots, monitors, and Rails apps |
-
----
-
-## Why DhanHQ?
-
-You could wire up Faraday and parse JSON yourself. Here's why you shouldn't:
-
-| You get                        | Instead of                                    |
-| ------------------------------ | --------------------------------------------- |
-| ActiveModel-style `find`, `all`, `save`, `cancel` | Manual HTTP + JSON wrangling          |
-| Typed models with validations  | Hash soup and runtime surprises               |
-| Auto token refresh + retry-on-401 | Silent auth failures at 3 AM               |
-| WebSocket reconnection with backoff | Dropped connections during volatile moves |
-| 429 rate-limit cool-off        | Getting banned by the exchange                |
-| Thread-safe, secure logging    | Leaked tokens in production logs              |
+| Instead of | You get |
+| ---------- | -------- |
+| JSON parsing and manual field mapping | Typed models |
+| Manual auth refresh | Built-in token lifecycle |
+| Fragile WebSocket code | Auto-reconnect, backoff, and 429 handling |
+| Risky order scripts | Live trading guardrails and audit logs |
 
 ---
 
 ## Architecture At A Glance
 
-```mermaid
-flowchart TD
-  A[Configuration and Entry Point] --> B[Models / Facade Layer]
-  B --> C[Resources / REST Layer]
-  B --> D[Contracts / Validation]
-  C --> E[Client / Transport]
-  E --> F[Rate Limiter + Request/Response Helpers]
-  A --> G[WebSocket Subsystem]
-  G --> H[Orders / Market Feed / Market Depth]
-```
+![DhanHQ architecture overview](docs/architecture-overview.svg)
 
 Models own the Ruby API. Resources own HTTP calls. Contracts validate inputs. The transport layer handles auth, retries, rate limiting, and error mapping. WebSockets are a separate subsystem that shares configuration but not the REST stack.
 
@@ -127,15 +124,15 @@ For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHIT
 
 ---
 
-## Operational Characteristics
+## Reliability & Safety
 
-- **`retry-on-401`** means one retry with a fresh token from your configured provider after the API rejects the current token
-- **`429 cool-off`** means the client backs off instead of hammering the API when Dhan rate limits you
-- **`auto-reconnect`** means WS clients try to recover dropped connections without forcing application code to rebuild subscriptions manually
-- **`thread-safe`** means concurrent access is handled inside the WebSocket/client internals so multiple streams and callbacks do not race through shared mutable state casually
-- **`secure logging`** means access tokens are sanitized from logs and order actions can be audited with structured metadata
+- retry-on-401 with token refresh
+- WebSocket auto-reconnect and backoff
+- 429 rate-limit protection
+- live trading guard via `LIVE_TRADING=true`
+- structured order audit logs
 
-These are reliability guarantees about behavior, not latency benchmarks. The gem is optimized for correctness and operational safety first.
+See [ARCHITECTURE.md](ARCHITECTURE.md), [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md), and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the deeper implementation details.
 
 ---
 
@@ -429,19 +426,6 @@ For search-driven discovery and onboarding content, see:
 
 - [docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md](docs/HOW_TO_USE_DHAN_API_WITH_RUBY.md)
 - [docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md](docs/BUILD_A_TRADING_BOT_WITH_RUBY_AND_DHAN.md)
-
----
-
-## Testing Philosophy
-
-The test suite is designed to prove SDK behavior without depending on live Dhan credentials or unstable network calls.
-
-- **Default mode is offline** — WebMock blocks real outbound HTTP in the suite
-- **Recorded API flows use VCR** — cassette-backed specs cover request/response handling without turning the test suite into live API smoke tests
-- **Coverage support exists locally** — run `COVERAGE=true bundle exec rspec` to generate SimpleCov coverage for model code
-- **Live trading stays off by default** — specs that exercise order placement must explicitly opt into `LIVE_TRADING=true`
-
-See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for console-based exploration and [spec/spec_helper.rb](spec/spec_helper.rb) for the enforced test boundaries.
 
 ---
 

@@ -5,7 +5,7 @@ require "dhan_hq"
 
 DhanHQ.configure_with_env
 
-nifty = DhanHQ::Models::Instrument.find("IDX_I", "NIFTY")
+nifty = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, "NIFTY")
 expiry = ENV.fetch("DHAN_OPTION_EXPIRY", "2025-02-27")
 
 puts "Options Watchlist"
@@ -24,7 +24,7 @@ rescue StandardError
 end
 
 client = DhanHQ::WS.connect(mode: :quote) do |tick|
-  puts "[#{Time.now.strftime('%H:%M:%S')}] #{tick[:security_id]} -> #{tick[:ltp]}"
+  puts "[#{Time.now.strftime("%H:%M:%S")}] #{tick[:security_id]} -> #{tick[:ltp]}"
 end
 
 client.subscribe_one(
