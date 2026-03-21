@@ -1,6 +1,6 @@
 # Rails Integration Guide for DhanHQ
 
-This guide demonstrates how to wire the `DhanHQ` Ruby client into a Rails
+This guide demonstrates how to wire the `DhanHQ` Ruby SDK into a Rails
 application so you can automate trading flows, fetch data, and stream market
 updates via WebSockets. The examples assume Rails 7+, but the concepts apply to
 older versions as well.

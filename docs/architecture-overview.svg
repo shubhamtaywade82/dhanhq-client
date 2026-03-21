@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" role="img" aria-labelledby="title desc">
+  <title id="title">DhanHQ Architecture Overview</title>
+  <desc id="desc">High-level architecture diagram showing configuration, models, resources, contracts, client transport, rate limiting helpers, and the WebSocket subsystem.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 12; ry: 12; }
+      .primary { fill: #e0f2fe; }
+      .secondary { fill: #ecfccb; }
+      .accent { fill: #fef3c7; }
+      .text { fill: #111827; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 700; }
+      .subtext { fill: #111827; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 700; }
+      .arrow { stroke: #334155; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#334155" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1040" height="420" />
+
+  <rect class="box primary" x="40" y="40" width="260" height="70" />
+  <text class="text" x="170" y="83" text-anchor="middle">Configuration and Entry Point</text>
+
+  <rect class="box primary" x="370" y="40" width="260" height="70" />
+  <text class="text" x="500" y="83" text-anchor="middle">Models / Facade Layer</text>
+
+  <rect class="box secondary" x="370" y="170" width="260" height="70" />
+  <text class="text" x="500" y="213" text-anchor="middle">Resources / REST Layer</text>
+
+  <rect class="box accent" x="710" y="170" width="270" height="70" />
+  <text class="text" x="845" y="213" text-anchor="middle">Contracts / Validation</text>
+
+  <rect class="box secondary" x="370" y="300" width="260" height="70" />
+  <text class="text" x="500" y="343" text-anchor="middle">Client / Transport</text>
+
+  <rect class="box accent" x="710" y="300" width="270" height="70" />
+  <text class="subtext" x="845" y="333" text-anchor="middle">Rate Limiter +</text>
+  <text class="subtext" x="845" y="357" text-anchor="middle">Request/Response Helpers</text>
+
+  <rect class="box primary" x="710" y="40" width="270" height="70" />
+  <text class="text" x="845" y="83" text-anchor="middle">WebSocket Subsystem</text>
+
+  <rect class="box secondary" x="710" y="105" width="270" height="40" />
+  <text class="subtext" x="845" y="131" text-anchor="middle">Orders / Market Feed / Market Depth</text>
+
+  <path class="arrow" d="M300 75 L370 75" />
+  <path class="arrow" d="M500 110 L500 170" />
+  <path class="arrow" d="M630 75 L710 75" />
+  <path class="arrow" d="M630 75 L775 170" />
+  <path class="arrow" d="M500 240 L500 300" />
+  <path class="arrow" d="M630 335 L710 335" />
+  <path class="arrow" d="M845 105 L845 145" />
+</svg>

@@ -1,6 +1,6 @@
 # WebSocket Integration Guide
 
-This guide covers the comprehensive WebSocket integration provided by the DhanHQ Ruby client gem. The gem provides three types of WebSocket connections for real-time data streaming with improved architecture, security, and reliability.
+This guide covers the comprehensive WebSocket integration provided by the DhanHQ Ruby SDK. The gem provides three types of WebSocket connections for real-time data streaming with improved architecture, security, and reliability.
 
 ## Overview
 

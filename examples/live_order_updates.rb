@@ -4,7 +4,7 @@
 # Live Order Updates Example
 # Demonstrates comprehensive order state tracking via WebSocket
 
-require_relative "lib/dhan_hq"
+require "dhan_hq"
 
 # Configure DhanHQ
 DhanHQ.configure_with_env

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and solutions when working with the DhanHQ Ruby client.
+Common issues and solutions when working with the DhanHQ Ruby SDK.
 
 ---
 
