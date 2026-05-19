@@ -34,10 +34,8 @@ module DhanHQ
     "ws" => "WS"
   )
   LOADER.push_dir(File.join(__dir__, "DhanHQ"), namespace: self)
-  LOADER.push_dir(File.join(__dir__, "dhanhq"), namespace: self)
   LOADER.collapse(File.join(__dir__, "DhanHQ", "core"))
   LOADER.collapse(File.join(__dir__, "DhanHQ", "helpers"))
-  LOADER.collapse(File.join(__dir__, "dhanhq", "analysis", "helpers"))
   LOADER.ignore(
     File.join(__dir__, "DhanHQ", "errors.rb"),
     File.join(__dir__, "DhanHQ", "version.rb")

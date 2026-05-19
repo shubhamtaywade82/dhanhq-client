@@ -65,7 +65,7 @@ indicators = TA::TechnicalAnalysis.new.compute_from_file(
 ## Analyze Multi-Timeframe Bias
 
 ```ruby
-require "DhanHQ"
+require "dhan_hq/analysis"
 
 analyzer = DhanHQ::Analysis::MultiTimeframeAnalyzer.new(data: indicators)
 summary = analyzer.call

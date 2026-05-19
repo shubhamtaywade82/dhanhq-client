@@ -153,16 +153,23 @@ gem install DhanHQ
 
 **`bundle update` / `bundle install` warnings** — If you see "Local specification for rexml-3.2.8 has different dependencies" or "Unresolved or ambiguous specs during Gem::Specification.reset: psych", the bundle still completes successfully. To clear the rexml warning once, run: `gem cleanup rexml`. The psych message is a known Bundler quirk and can be ignored.
 
-### ⚠️ Breaking Change (v2.1.5+)
+### Gem name vs require path
 
-The require statement changed:
+RubyGems normalizes names, so `DhanHQ` and `dhan_hq` refer to the same slot — the published name stays `DhanHQ` and will never change. The require path has used snake_case since v2.1.5:
 
 ```ruby
-# Before         # Now
-require 'DhanHQ'  →  require 'dhan_hq'
+# Gemfile              # Ruby file
+gem 'DhanHQ'           require 'dhan_hq'
 ```
 
-The gem name in your Gemfile stays `DhanHQ` — only the `require` changes.
+### Optional features
+
+The core SDK (`require 'dhan_hq'`) only loads the API client. Technical analysis and the options advisor are opt-in:
+
+```ruby
+require 'dhan_hq/analysis'  # DhanHQ::Analysis::OptionsBuyingAdvisor, MultiTimeframeAnalyzer
+require 'dhan_hq/ta'        # TA::TechnicalAnalysis, TA::Fetcher, TA::Candles
+```
 
 ---
 
@@ -484,6 +491,10 @@ bundle exec rake          # run tests
 bundle exec rubocop       # lint
 bin/console               # interactive console
 ```
+
+## Disclaimer
+
+This gem is an independent, community-maintained project and is **not officially affiliated with, endorsed by, or supported by Dhan (Mirae Asset Capital Markets)**. Trading in financial instruments carries significant risk. Use this SDK at your own risk and always verify order placement in a sandbox environment before going live.
 
 ## License
 

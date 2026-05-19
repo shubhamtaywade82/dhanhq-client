@@ -18,7 +18,7 @@ This guide provides comprehensive instructions for integrating DhanHQ WebSocket 
 ### 1. Install the Gem
 
 ```bash
-gem install dhan_hq
+gem install DhanHQ
 ```
 
 ### 2. Basic Configuration
