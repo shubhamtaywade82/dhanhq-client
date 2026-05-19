@@ -211,7 +211,7 @@ def highs(candles)  = candles.map { |c| c[:h] }
 def lows(candles)   = candles.map { |c| c[:l] }
 
 # Technical Analysis adapters for computing indicators
-module TAAdapters
+module TAAdapters # rubocop:disable Style/OneClassPerFile
   module_function
 
   def rsi(series, period)

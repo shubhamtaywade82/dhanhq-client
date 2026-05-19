@@ -59,7 +59,6 @@ module DhanHQ
                         else
                           0.5
                         end
-
         macd_component = if hist.nil?
                            0.5
                          else
