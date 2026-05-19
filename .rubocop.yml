@@ -55,3 +55,9 @@ Naming/FileName:
 RSpec/SpecFilePathFormat:
   Enabled: false
 
+
+Naming/PredicateMethod:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false
