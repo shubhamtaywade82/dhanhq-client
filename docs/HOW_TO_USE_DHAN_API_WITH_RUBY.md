@@ -14,13 +14,13 @@ This guide is the practical path for:
 Add the gem:
 
 ```ruby
-gem "dhan_hq"
+gem "DhanHQ"
 ```
 
 Then configure it from environment variables:
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 ```
@@ -37,7 +37,7 @@ If you are running a long-lived Ruby process, prefer a token provider. The SDK s
 ### Fetch Positions And Holdings
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 

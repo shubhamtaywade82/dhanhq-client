@@ -7,7 +7,7 @@ If you are searching for `Dhan WebSocket Ruby`, `Dhan API WebSocket in Ruby`, or
 ## Basic Market Feed Example
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 

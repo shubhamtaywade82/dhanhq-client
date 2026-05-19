@@ -4,7 +4,7 @@ module DhanHQ
   # Base wrapper exposing RESTful helpers used by resource classes.
   class BaseResource < BaseAPI
     def initialize(api_type: self.class::API_TYPE)
-      super(api_type: api_type) # rubocop:disable Style/SuperArguments
+      super(api_type: api_type)
     end
 
     # Fetches all records for the resource.

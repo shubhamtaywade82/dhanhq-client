@@ -4,7 +4,7 @@
 # Test script for the new DhanHQ::Models::Instrument.find method
 # This script demonstrates how to use the new .find and .find_anywhere methods
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

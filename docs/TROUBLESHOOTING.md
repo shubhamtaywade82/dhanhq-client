@@ -113,5 +113,5 @@ This logs HTTP requests/responses, WebSocket frames, and internal state transiti
 
 ## Getting Help
 
-- [DhanHQ GitHub Issues](https://github.com/shubhamtaywade82/dhanhq-client/issues)
+- [DhanHQ GitHub Issues](https://github.com/shubhamtaywade82/DhanHQ/issues)
 - [Dhan API Documentation](https://dhanhq.co/docs/v2/)

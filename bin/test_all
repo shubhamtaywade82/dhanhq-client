@@ -26,7 +26,7 @@ require "json"
 require "date"
 require "logger"
 require "timeout"
-require_relative "../lib/dhan_hq"
+require_relative "../lib/DhanHQ"
 
 def load_dotenv(path = ".env")
   return unless File.exist?(path)

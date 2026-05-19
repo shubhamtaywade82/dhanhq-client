@@ -22,7 +22,7 @@ Use this guide as the companion to the official Dhan API v2 documentation. It ma
 
 ```ruby
 # Gemfile
-gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
+gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/DhanHQ.git', branch: 'main'
 ```
 
 ```bash
@@ -32,7 +32,7 @@ bundle install
 Bootstrap from environment variables:
 
 ```ruby
-require 'dhan_hq'
+require 'DhanHQ'
 
 DhanHQ.configure_with_env
 DhanHQ.logger.level = (ENV["DHAN_LOG_LEVEL"] || "INFO").upcase.then { |level| Logger.const_get(level) }

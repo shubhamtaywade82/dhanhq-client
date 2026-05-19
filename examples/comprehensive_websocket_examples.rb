@@ -8,7 +8,7 @@
 # 3. Market Depth WebSocket - Real-time market depth
 # NOTE: Uses sequential connections to avoid rate limiting
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

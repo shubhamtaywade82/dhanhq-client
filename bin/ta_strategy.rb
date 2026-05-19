@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 # Standalone script: MarketCalendar and TAAdapters are intentionally in one file.
-# rubocop:disable Style/OneClassPerFile
 
 require "bundler/setup"
 require "optparse"
@@ -29,7 +28,7 @@ rescue LoadError => e
   warn "technical-analysis not available: #{e.message}"
 end
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Simple market calendar to choose valid trading days (no Rails/Time.zone)
 module MarketCalendar

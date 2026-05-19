@@ -3,7 +3,7 @@
 
 require "date"
 require "securerandom"
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 

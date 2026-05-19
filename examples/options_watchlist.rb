@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 

@@ -16,7 +16,7 @@ The DhanHQ Ruby SDK provides comprehensive real-time order update functionality 
 ### Basic Usage
 
 ```ruby
-require 'dhan_hq'
+require 'DhanHQ'
 
 # Configure credentials. For dynamic token use config.access_token_provider; for web tokens refresh with DhanHQ::Auth.renew_token. API key/Partner: implement in app. See docs/AUTHENTICATION.md.
 DhanHQ.configure do |config|
@@ -221,7 +221,7 @@ end
 ## Complete Example
 
 ```ruby
-require 'dhan_hq'
+require 'DhanHQ'
 
 # Configure
 DhanHQ.configure_with_env

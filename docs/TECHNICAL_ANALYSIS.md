@@ -19,7 +19,7 @@ This guide explains how to use the technical analysis modules bundled with this 
 ## Quick Start: Compute Indicators
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 require "ta"
 
 DhanHQ.configure_with_env
@@ -65,7 +65,7 @@ indicators = TA::TechnicalAnalysis.new.compute_from_file(
 ## Analyze Multi-Timeframe Bias
 
 ```ruby
-require "dhan_hq/analysis"
+require "DhanHQ/analysis"
 
 analyzer = DhanHQ::Analysis::MultiTimeframeAnalyzer.new(data: indicators)
 summary = analyzer.call

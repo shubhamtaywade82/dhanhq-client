@@ -93,7 +93,7 @@ module DhanHQ
         handle_api_response(response, success_key: new_record? ? "alertId" : nil)
       end
 
-      def destroy # rubocop:disable Naming/PredicateMethod
+      def destroy
         return false if new_record?
 
         response = self.class.resource.delete(id)

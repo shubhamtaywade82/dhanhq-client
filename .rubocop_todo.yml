@@ -24,7 +24,7 @@ Lint/EmptyBlock:
 # This cop supports safe autocorrection (--autocorrect).
 Lint/RedundantCopDisableDirective:
   Exclude:
-    - 'spec/dhan_hq/models/order_spec.rb'
+    - 'spec/DhanHQ/models/order_spec.rb'
 
 # Offense count: 3
 # Configuration parameters: AllowComments, AllowNil.
@@ -124,27 +124,27 @@ RSpec/BeforeAfterAll:
     - '**/spec/spec_helper.rb'
     - '**/spec/rails_helper.rb'
     - '**/spec/support/**/*.rb'
-    - 'spec/dhan_hq/configuration_spec.rb'
+    - 'spec/DhanHQ/configuration_spec.rb'
 
 # Offense count: 4
 # Configuration parameters: AssignmentOnly.
 RSpec/InstanceVariable:
   Exclude:
-    - 'spec/dhan_hq/configuration_spec.rb'
+    - 'spec/DhanHQ/configuration_spec.rb'
 
 # Offense count: 6
 # Configuration parameters: EnforcedStyle.
 # SupportedStyles: have_received, receive
 RSpec/MessageSpies:
   Exclude:
-    - 'spec/dhan_hq/base_model_spec.rb'
-    - 'spec/dhan_hq/helpers/response_helper_spec.rb'
-    - 'spec/dhan_hq/ws/orders/client_spec.rb'
+    - 'spec/DhanHQ/base_model_spec.rb'
+    - 'spec/DhanHQ/helpers/response_helper_spec.rb'
+    - 'spec/DhanHQ/ws/orders/client_spec.rb'
 
 # Offense count: 2
 RSpec/RepeatedExample:
   Exclude:
-    - 'spec/dhan_hq/contracts/expired_options_data_contract_spec.rb'
+    - 'spec/DhanHQ/contracts/expired_options_data_contract_spec.rb'
 
 # Offense count: 1
 # Configuration parameters: CustomTransform, IgnoreMethods, IgnoreMetadata, InflectorPath, EnforcedInflector.
@@ -152,13 +152,13 @@ RSpec/RepeatedExample:
 RSpec/SpecFilePathFormat:
   Exclude:
     - '**/spec/routing/**/*'
-    - 'spec/dhan_hq/helpers/response_helper_spec.rb'
+    - 'spec/DhanHQ/helpers/response_helper_spec.rb'
 
 # Offense count: 1
 # Configuration parameters: IgnoreNameless, IgnoreSymbolicNames.
 RSpec/VerifiedDoubles:
   Exclude:
-    - 'spec/dhan_hq/ws/orders/client_spec.rb'
+    - 'spec/DhanHQ/ws/orders/client_spec.rb'
 
 # Offense count: 3
 # Configuration parameters: AllowedConstants.

@@ -18,7 +18,7 @@ This guide provides comprehensive instructions for integrating DhanHQ WebSocket 
 ### 1. Install the Gem
 
 ```bash
-gem install dhan_hq
+gem install DhanHQ
 ```
 
 ### 2. Basic Configuration
@@ -27,7 +27,7 @@ gem install dhan_hq
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
@@ -127,7 +127,7 @@ end
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 
 # Configure DhanHQ
@@ -259,7 +259,7 @@ script.start
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 
 # Configure DhanHQ
@@ -389,7 +389,7 @@ script.start
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 
 # Configure DhanHQ
@@ -556,7 +556,7 @@ WantedBy=multi-user.target
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 require 'fileutils'
 
@@ -773,7 +773,7 @@ end
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'optparse'
 require 'json'
 
@@ -1056,7 +1056,7 @@ ruby market_data_cli.rb -h
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 
 # Configure DhanHQ
@@ -1246,7 +1246,7 @@ client.start
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'logger'
 require 'json'
 
@@ -1378,7 +1378,7 @@ client.start
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'dhan_hq'
+require 'DhanHQ'
 require 'json'
 
 # Configure DhanHQ

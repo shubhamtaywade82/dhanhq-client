@@ -12,7 +12,7 @@ rescue StandardError => e
   warn ".env not loaded: #{e.message}"
 end
 
-require "dhan_hq"
+require "DhanHQ"
 require "ta"
 
 opts = {
