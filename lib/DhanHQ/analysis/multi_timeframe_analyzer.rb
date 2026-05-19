@@ -170,8 +170,10 @@ module DhanHQ
       end
 
       def rsi_rationale(per_tf)
-        ups = per_tf.count { |_tf, s| %i[bullish overbought].include?(s[:momentum]) }
-        downs = per_tf.count { |_tf, s| %i[bearish oversold].include?(s[:momentum]) }
+        bullish_states = %i[bullish overbought]
+        ups = per_tf.count { |_tf, s| bullish_states.include?(s[:momentum]) }
+        bearish_states = %i[bearish oversold]
+        downs = per_tf.count { |_tf, s| bearish_states.include?(s[:momentum]) }
         if ups > downs
           "Upward momentum across #{ups} TFs"
         elsif downs > ups

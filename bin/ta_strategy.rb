@@ -485,4 +485,3 @@ out = {
 }
 
 puts JSON.pretty_generate(out)
-# rubocop:enable Style/OneClassPerFile

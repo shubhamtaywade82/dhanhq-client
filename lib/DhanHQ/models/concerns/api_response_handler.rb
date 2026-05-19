@@ -14,7 +14,7 @@ module DhanHQ
         # @param context [String] Context for logging (e.g., "[DhanHQ::Models::Order] Placement")
         # @param error_target [Symbol] Where to store errors (defaults to :@errors)
         # @return [Boolean] True if successful
-        def handle_api_response(response, success_key: nil, context: nil)
+        def handle_api_response!(response, success_key: nil, context: nil)
           response = response.with_indifferent_access if response.respond_to?(:with_indifferent_access)
           is_hash = response.is_a?(Hash)
           is_success = success_response?(response) || (is_hash && success_key && response[success_key])

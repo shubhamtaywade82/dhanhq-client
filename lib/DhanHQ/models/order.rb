@@ -555,14 +555,14 @@ module DhanHQ
         slice_attrs = attributes.slice(:transaction_type, :exchange_segment, :security_id, :quantity, :price)
         DhanHQ.logger&.info("[DhanHQ::Models::Order] Placing order: #{slice_attrs.inspect}")
         response = self.class.resource.create(to_request_params)
-        handle_api_response(response, success_key: "orderId", context: "[DhanHQ::Models::Order] Order placement")
+        handle_api_response!(response, success_key: "orderId", context: "[DhanHQ::Models::Order] Order placement")
       end
 
       def modify_existing_order
         slice_attrs = attributes.slice(:price, :quantity, :order_type)
         DhanHQ.logger&.info("[DhanHQ::Models::Order] Modifying order #{id}: #{slice_attrs.inspect}")
         response = self.class.resource.update(id, to_request_params)
-        handle_api_response(response, success_key: "orderStatus", context: "[DhanHQ::Models::Order] Order modification")
+        handle_api_response!(response, success_key: "orderStatus", context: "[DhanHQ::Models::Order] Order modification")
       end
 
       def order_status_invalid_for_modification?
