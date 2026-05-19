@@ -5,12 +5,9 @@ if ENV["SIMPLECOV"] == "true" || ENV["COVERAGE"] == "true"
 
   SimpleCov.start do
     enable_coverage :branch
-    track_files "lib/DhanHQ/models/**/*.rb"
+    track_files "lib/**/*.rb"
     add_filter "/spec/"
     add_filter "/tmp/"
-    add_filter do |source_file|
-      !source_file.filename.include?("/lib/DhanHQ/models/")
-    end
   end
 end
 

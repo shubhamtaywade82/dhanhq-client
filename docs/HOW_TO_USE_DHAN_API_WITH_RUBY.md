@@ -14,7 +14,7 @@ This guide is the practical path for:
 Add the gem:
 
 ```ruby
-gem "DhanHQ"
+gem "dhan_hq"
 ```
 
 Then configure it from environment variables:

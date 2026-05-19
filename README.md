@@ -1,6 +1,6 @@
 # DhanHQ — The Ruby SDK for Dhan API v2
 
-[![Gem Version](https://badge.fury.io/rb/DhanHQ.svg)](https://rubygems.org/gems/DhanHQ)
+[![Gem Version](https://badge.fury.io/rb/dhan_hq.svg)](https://rubygems.org/gems/dhan_hq)
 [![CI](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml/badge.svg)](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml)
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
@@ -29,7 +29,7 @@ This is closer to trading infrastructure than a simple API client.
 
 ```ruby
 # Gemfile
-gem 'DhanHQ'
+gem 'dhan_hq'
 ```
 
 ```ruby
@@ -140,29 +140,36 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [docs/TESTING_GUIDE.md](docs/TESTING_GUI
 
 ```ruby
 # Gemfile (recommended)
-gem 'DhanHQ'
+gem 'dhan_hq'
 ```
 
 ```bash
 bundle install
 # or
-gem install DhanHQ
+gem install dhan_hq
 ```
 
-> **Bleeding edge?** Use `gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'` only if you need unreleased features.
+> **Bleeding edge?** Use `gem 'dhan_hq', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'` only if you need unreleased features.
 
 **`bundle update` / `bundle install` warnings** — If you see "Local specification for rexml-3.2.8 has different dependencies" or "Unresolved or ambiguous specs during Gem::Specification.reset: psych", the bundle still completes successfully. To clear the rexml warning once, run: `gem cleanup rexml`. The psych message is a known Bundler quirk and can be ignored.
 
-### ⚠️ Breaking Change (v2.1.5+)
+### ⚠️ Breaking Change (v3.0.0)
 
-The require statement changed:
+The gem name changed on RubyGems:
 
 ```ruby
-# Before         # Now
-require 'DhanHQ'  →  require 'dhan_hq'
+# Before (≤ 2.x)   # Now (3.0+)
+gem 'DhanHQ'     →  gem 'dhan_hq'
 ```
 
-The gem name in your Gemfile stays `DhanHQ` — only the `require` changes.
+### Optional features
+
+The core SDK (`require 'dhan_hq'`) only loads the API client. Technical analysis and the options advisor are opt-in:
+
+```ruby
+require 'dhan_hq/analysis'  # DhanHQ::Analysis::OptionsBuyingAdvisor, MultiTimeframeAnalyzer
+require 'dhan_hq/ta'        # TA::TechnicalAnalysis, TA::Fetcher, TA::Candles
+```
 
 ---
 
@@ -484,6 +491,10 @@ bundle exec rake          # run tests
 bundle exec rubocop       # lint
 bin/console               # interactive console
 ```
+
+## Disclaimer
+
+This gem is an independent, community-maintained project and is **not officially affiliated with, endorsed by, or supported by Dhan (Mirae Asset Capital Markets)**. Trading in financial instruments carries significant risk. Use this SDK at your own risk and always verify order placement in a sandbox environment before going live.
 
 ## License
 
