@@ -38,7 +38,7 @@ jobs:
           echo "Building gem from gemspec..."
           gem build dhan_hq.gemspec
           echo "Build completed. Verifying gem file:"
-          ls -lh dhan_hq-*.gem
+          ls -lh DhanHQ-*.gem
       - name: Publish gem with OTP
         env:
           GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
@@ -54,7 +54,7 @@ jobs:
           # Get gem version and file
           gem_version=$(ruby -e "require_relative 'lib/DhanHQ/version'; puts DhanHQ::VERSION")
           echo "Gem version detected: ${gem_version}"
-          gem_file="dhan_hq-${gem_version}.gem"
+          gem_file="DhanHQ-${gem_version}.gem"
           echo "Looking for gem file: ${gem_file}"
 
           # Verify gem file exists
