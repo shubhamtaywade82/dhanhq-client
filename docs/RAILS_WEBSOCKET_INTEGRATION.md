@@ -19,7 +19,7 @@ This guide provides comprehensive instructions for integrating DhanHQ WebSocket 
 
 ```ruby
 # Gemfile
-gem 'dhan_hq'
+gem 'DhanHQ'
 ```
 
 ### 2. Configure DhanHQ

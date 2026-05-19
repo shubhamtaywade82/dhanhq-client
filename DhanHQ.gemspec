@@ -3,7 +3,7 @@
 require_relative "lib/DhanHQ/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "dhan_hq"
+  spec.name = "DhanHQ"
   spec.version = DhanHQ::VERSION
   spec.authors = ["Shubham Taywade"]
   spec.email = ["shubhamtaywade82@gmail.com"]
