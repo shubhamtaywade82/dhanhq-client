@@ -2,6 +2,7 @@
 
 ### Breaking Changes
 
+- **Gem renamed on RubyGems**: `DhanHQ` → `dhan_hq`. Update your Gemfile: `gem 'dhan_hq'`.
 - **TA and analysis modules are now opt-in**. `require 'dhan_hq'` no longer auto-loads `DhanHQ::Analysis::*` or `TA::*`. Explicitly require what you need:
   ```ruby
   require 'dhan_hq/analysis'  # OptionsBuyingAdvisor, MultiTimeframeAnalyzer
@@ -10,9 +11,8 @@
 
 ### Changed
 
-- `exe/DhanHQ` now correctly uses `require "dhan_hq"` (was the old `require "DhanHQ"`).
-- Gemspec file renamed from `DhanHQ.gemspec` to `dhan_hq.gemspec` (local convention; published gem name on RubyGems remains `DhanHQ`).
-- SimpleCov now tracks all `lib/**/*.rb` files (was models-only).
+- `exe/DhanHQ` now correctly uses `require "dhan_hq"`.
+- SimpleCov tracks all `lib/**/*.rb` files (was models-only).
 
 ---
 
