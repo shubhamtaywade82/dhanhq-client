@@ -11,7 +11,8 @@
 ### Changed
 
 - `exe/DhanHQ` now correctly uses `require "dhan_hq"` (was the old `require "DhanHQ"`).
-- Gemspec file renamed from `DhanHQ.gemspec` to `dhan_hq.gemspec` (local convention; published gem name on RubyGems remains `DhanHQ`).
+- Gemspec file renamed back to `DhanHQ.gemspec` (was `dhan_hq.gemspec`) to resolve RubyGems "too similar" name collision and ensure successful push of the `DhanHQ` gem.
+- Updated all `Gemfile` references and installation docs to use `DhanHQ` while maintaining `require 'dhan_hq'` for standard Ruby conventions.
 - SimpleCov now tracks all `lib/**/*.rb` files (was models-only).
 
 ---
