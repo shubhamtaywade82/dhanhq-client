@@ -153,13 +153,13 @@ gem install dhan_hq
 
 **`bundle update` / `bundle install` warnings** — If you see "Local specification for rexml-3.2.8 has different dependencies" or "Unresolved or ambiguous specs during Gem::Specification.reset: psych", the bundle still completes successfully. To clear the rexml warning once, run: `gem cleanup rexml`. The psych message is a known Bundler quirk and can be ignored.
 
-### ⚠️ Breaking Change (v3.0.0)
+### Gem name vs require path
 
-The gem name changed on RubyGems:
+RubyGems normalizes names, so `DhanHQ` and `dhan_hq` refer to the same slot — the published name stays `DhanHQ` and will never change. The require path has used snake_case since v2.1.5:
 
 ```ruby
-# Before (≤ 2.x)   # Now (3.0+)
-gem 'DhanHQ'     →  gem 'dhan_hq'
+# Gemfile              # Ruby file
+gem 'DhanHQ'           require 'dhan_hq'
 ```
 
 ### Optional features
