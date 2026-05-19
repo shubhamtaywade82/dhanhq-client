@@ -15,7 +15,9 @@ module DhanHQ
         @path = File.expand_path("tmp/dhanhq_ws_#{key}.lock", Dir.pwd)
         FileUtils.mkdir_p(File.dirname(@path))
         # Lock file must stay open until release!; block form would close it and release the lock.
-        @fh = File.open(@path, File::RDWR | File::CREAT, 0o644) # rubocop:disable Style/FileOpen
+        # rubocop:disable Style/FileOpen
+        @fh = File.open(@path, File::RDWR | File::CREAT, 0o644)
+        # rubocop:enable Style/FileOpen
       end
 
       # Attempts to acquire the lock for the current process.

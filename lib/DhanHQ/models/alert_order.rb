@@ -90,16 +90,16 @@ module DhanHQ
                      self.class.resource.update(id, payload)
                    end
 
-        handle_api_response(response, success_key: new_record? ? "alertId" : nil)
+        handle_api_response!(response, success_key: new_record? ? "alertId" : nil)
       end
 
-      def destroy # rubocop:disable Naming/PredicateMethod
+      def destroy!
         return false if new_record?
 
         response = self.class.resource.delete(id)
         success_response?(response)
       end
-      alias delete destroy
+      alias delete destroy!
     end
   end
 end

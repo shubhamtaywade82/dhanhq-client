@@ -1,8 +1,8 @@
-# DhanHQ v2 API docs vs dhanhq-client — gaps and fixes
+# DhanHQ v2 API docs vs DhanHQ — gaps and fixes
 
 Reference: [dhanhq.co/docs/v2](https://dhanhq.co/docs/v2/)
 
-This document lists mismatches between the official DhanHQ v2 API documentation and the dhanhq-client gem, and suggested fixes.
+This document lists mismatches between the official DhanHQ v2 API documentation and the DhanHQ gem, and suggested fixes.
 
 ---
 

@@ -24,7 +24,7 @@ The DhanHQ WebSocket integration provides three distinct WebSocket types:
 ### 1. Configuration
 
 ```ruby
-require 'dhan_hq'
+require 'DhanHQ'
 
 # Configure DhanHQ
 DhanHQ.configure do |config|
@@ -564,7 +564,7 @@ All methods automatically extract `security_id`, `exchange_segment`, and `instru
 ### Basic Rails Integration
 
 ```ruby
-# config/initializers/dhan_hq.rb
+# config/initializers/DhanHQ.rb
 DhanHQ.configure do |config|
   config.client_id = Rails.application.credentials.dhanhq[:client_id]
   config.access_token = Rails.application.credentials.dhanhq[:access_token]

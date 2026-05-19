@@ -7,7 +7,7 @@ All examples use `DhanHQ`, the Ruby SDK for Dhan API v2.
 ## Setup
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 ```

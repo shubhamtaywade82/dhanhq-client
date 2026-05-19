@@ -1,4 +1,4 @@
-# dhanhq-client Architecture
+# DhanHQ Client Architecture
 
 This document describes the architecture of the DhanHQ v2 API client gem: layers, dependencies, and design patterns in use.
 
@@ -15,7 +15,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Entry & configuration (lib/dhan_hq.rb, Configuration)          │
+│  Entry & configuration (lib/DhanHQ.rb, Configuration)          │
 ├─────────────────────────────────────────────────────────────────┤
 │  Domain / facade layer (Models)                                 │
 │  Order, Position, MarketFeed, OptionChain, ExpiredOptionsData…  │
@@ -41,7 +41,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 
 | Path | Role | Responsibility |
 |------|------|----------------|
-| `lib/dhan_hq.rb` | Entry point | Zeitwerk setup, eager load of core/helpers/errors, `DhanHQ.configure` |
+| `lib/DhanHQ.rb` | Entry point | Zeitwerk setup, eager load of core/helpers/errors, `DhanHQ.configure` |
 | `core/` | Base abstractions | BaseAPI (HTTP verbs, path building, param formatting), BaseModel (attributes, resource, validation, CRUD helpers), BaseResource (CRUD on BaseAPI), AuthAPI, ErrorHandler |
 | `helpers/` | Cross-cutting | APIHelper, AttributeHelper (keys, normalization), ValidationHelper (validate_params!, validate!), RequestHelper (headers, payload, build_from_response), ResponseHelper (parse_json, handle_response, error mapping) |
 | `models/` | Domain / facade | Typed wrappers (Order, Position, Holding, etc.). Define `resource`, optional `validation_contract`, and domain methods. Validate then delegate to resource. |

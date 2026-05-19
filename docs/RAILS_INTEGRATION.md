@@ -11,7 +11,7 @@ Add the gem to your Rails application's `Gemfile` and bundle:
 
 ```ruby
 # Gemfile
-gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/dhanhq-client.git', branch: 'main'
+gem 'DhanHQ', git: 'https://github.com/shubhamtaywade82/DhanHQ.git', branch: 'main'
 ```
 
 ```bash
@@ -58,7 +58,7 @@ environment variables (Rails credentials can be copied into ENV on boot):
 
 ```ruby
 # config/initializers/dhanhq.rb
-require 'dhan_hq'
+require 'DhanHQ'
 
 if (creds = Rails.application.credentials.dig(:dhanhq))
   ENV['DHAN_CLIENT_ID']        ||= creds[:client_id]

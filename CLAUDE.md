@@ -1,4 +1,4 @@
-# dhanhq-client
+# DhanHQ
 
 Ruby gem — the canonical DhanHQ v2 API client for this workspace. All other trading repos depend on this gem.
 
@@ -40,7 +40,7 @@ lib/DhanHQ/
   ws/            # WebSocket client and feed
 ```
 
-Entry point: `lib/dhan_hq.rb` — sets up Zeitwerk loader, eager-requires core files.
+Entry point: `lib/DhanHQ.rb` — sets up Zeitwerk loader, eager-requires core files.
 
 ## Key classes
 

@@ -9,6 +9,8 @@ require:
   - ./lib/rubocop/cop/dhanhq/use_constants.rb
 
 AllCops:
+  Exclude:
+    - 'spec/**/*'
   TargetRubyVersion: 3.2
   NewCops: enable
 
@@ -46,3 +48,16 @@ DhanHQ/UseConstants:
     - "lib/DhanHQ/constants.rb"
     - "lib/DhanHQ/ws/segments.rb"
     - "spec/**/*"
+Naming/FileName:
+  Exclude:
+    - 'lib/DhanHQ.rb'
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+
+Naming/PredicateMethod:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false

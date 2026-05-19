@@ -16,7 +16,7 @@ rescue LoadError => e
   warn "technical-analysis not available: #{e.message}"
 end
 
-require "dhan_hq"
+require "DhanHQ"
 require_relative "market_calendar"
 require_relative "candles"
 require_relative "indicators"

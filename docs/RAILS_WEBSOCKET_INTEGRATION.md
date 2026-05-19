@@ -19,13 +19,13 @@ This guide provides comprehensive instructions for integrating DhanHQ WebSocket 
 
 ```ruby
 # Gemfile
-gem 'dhan_hq'
+gem 'DhanHQ'
 ```
 
 ### 2. Configure DhanHQ
 
 ```ruby
-# config/initializers/dhan_hq.rb
+# config/initializers/DhanHQ.rb
 DhanHQ.configure do |config|
   config.client_id = Rails.application.credentials.dhanhq[:client_id]
   config.access_token = Rails.application.credentials.dhanhq[:access_token]
@@ -104,7 +104,7 @@ For dynamic token use `config.access_token_provider`. For web-generated tokens r
 ### Environment-Specific Configuration
 
 ```ruby
-# config/initializers/dhan_hq.rb
+# config/initializers/DhanHQ.rb
 DhanHQ.configure do |config|
   if Rails.env.production?
     config.client_id = Rails.application.credentials.dhanhq[:client_id]

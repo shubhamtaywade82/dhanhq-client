@@ -14,7 +14,7 @@ begin
 rescue StandardError
   nil
 end
-require "dhan_hq"
+require "DhanHQ"
 
 # ---- Config & CLI ----
 opts = {

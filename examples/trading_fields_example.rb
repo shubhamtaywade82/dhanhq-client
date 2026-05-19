@@ -5,7 +5,7 @@
 # This script demonstrates how to use the new trading fields in the Instrument model
 # for practical trading operations and risk management
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

@@ -6,7 +6,7 @@
 # Receives real-time order status updates and execution notifications
 # NOTE: Uses a SINGLE connection to avoid rate limiting
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

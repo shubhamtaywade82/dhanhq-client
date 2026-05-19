@@ -5,7 +5,7 @@ This document covers all configuration options for the DhanHQ Ruby SDK.
 ## Quick Setup
 
 ```ruby
-require 'dhan_hq'
+require 'DhanHQ'
 DhanHQ.configure_with_env
 ```
 
@@ -51,7 +51,7 @@ DHAN_CONNECT_TIMEOUT=15
 DHAN_READ_TIMEOUT=60
 ```
 
-The gem requires `dotenv/load`, so these variables are loaded automatically when you require `dhan_hq`.
+The gem requires `dotenv/load`, so these variables are loaded automatically when you require `DhanHQ`.
 
 ## Block-Style Configuration
 

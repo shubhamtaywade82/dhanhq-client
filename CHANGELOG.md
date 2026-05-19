@@ -2,16 +2,16 @@
 
 ### Breaking Changes
 
-- **Gem renamed on RubyGems**: `DhanHQ` → `dhan_hq`. Update your Gemfile: `gem 'dhan_hq'`.
-- **TA and analysis modules are now opt-in**. `require 'dhan_hq'` no longer auto-loads `DhanHQ::Analysis::*` or `TA::*`. Explicitly require what you need:
+- **Gem renamed on RubyGems**: `DhanHQ` → `DhanHQ`. Update your Gemfile: `gem 'DhanHQ'`.
+- **TA and analysis modules are now opt-in**. `require 'DhanHQ'` no longer auto-loads `DhanHQ::Analysis::*` or `TA::*`. Explicitly require what you need:
   ```ruby
-  require 'dhan_hq/analysis'  # OptionsBuyingAdvisor, MultiTimeframeAnalyzer
-  require 'dhan_hq/ta'        # TA::TechnicalAnalysis, TA::Fetcher, TA::Candles
+  require 'DhanHQ/analysis'  # OptionsBuyingAdvisor, MultiTimeframeAnalyzer
+  require 'DhanHQ/ta'        # TA::TechnicalAnalysis, TA::Fetcher, TA::Candles
   ```
 
 ### Changed
 
-- `exe/DhanHQ` now correctly uses `require "dhan_hq"`.
+- `exe/DhanHQ` now correctly uses `require "DhanHQ"`.
 - SimpleCov tracks all `lib/**/*.rb` files (was models-only).
 
 ---
@@ -222,9 +222,9 @@ AlertOrderContract.new.call(
 
 #### Tests
 - **28 new specs** across 7 files (442 total, 0 failures):
-  - `spec/dhan_hq/models/pnl_exit_spec.rb` — configure, stop, status, defaults, nil handling
-  - `spec/dhan_hq/models/edis_spec.rb` — generate_tpin, generate_form, bulk_form, inquire
-  - `spec/dhan_hq/models/postback_spec.rb` — JSON/Hash parsing, snake_case support, status predicates
+  - `spec/DhanHQ/models/pnl_exit_spec.rb` — configure, stop, status, defaults, nil handling
+  - `spec/DhanHQ/models/edis_spec.rb` — generate_tpin, generate_form, bulk_form, inquire
+  - `spec/DhanHQ/models/postback_spec.rb` — JSON/Hash parsing, snake_case support, status predicates
   - Updated: `kill_switch_spec.rb`, `positions_spec.rb`, `margin_spec.rb`, `alert_order_spec.rb`
 
 ### Changed
@@ -338,8 +338,8 @@ AlertOrderContract.new.call(
 
 ### Tests
 
-- **WebMock specs for auth failures**: `spec/dhan_hq/client_spec.rb` — contexts for 401, 403, 807, retry-on-401 with provider, retry then raise when 401 persists, and `on_token_expired` hook.
-- **Response helper**: Spec for 807 → TokenExpiredError in `spec/dhan_hq/helpers/response_helper_spec.rb`.
+- **WebMock specs for auth failures**: `spec/DhanHQ/client_spec.rb` — contexts for 401, 403, 807, retry-on-401 with provider, retry then raise when 401 persists, and `on_token_expired` hook.
+- **Response helper**: Spec for 807 → TokenExpiredError in `spec/DhanHQ/helpers/response_helper_spec.rb`.
 
 ### Documentation
 
@@ -419,9 +419,9 @@ This release includes comprehensive bug fixes, security improvements, and reliab
   - `DHAN_WS_MAX_ORDER_AGE` - Maximum order age in seconds (default: 604,800 = 7 days)
 
 #### Test Coverage
-- `spec/dhan_hq/contracts/place_order_contract_spec.rb` - Comprehensive price validation tests
-- `spec/dhan_hq/helpers/response_helper_spec.rb` - JSON parsing and error handling tests
-- `spec/dhan_hq/ws/orders/client_spec.rb` - Order tracker cleanup and thread safety tests
+- `spec/DhanHQ/contracts/place_order_contract_spec.rb` - Comprehensive price validation tests
+- `spec/DhanHQ/helpers/response_helper_spec.rb` - JSON parsing and error handling tests
+- `spec/DhanHQ/ws/orders/client_spec.rb` - Order tracker cleanup and thread safety tests
 - Updated existing specs to cover new functionality and improvements
 
 ### 🔄 Changed
@@ -521,9 +521,9 @@ This release includes comprehensive bug fixes, security improvements, and reliab
 ## [2.1.5] - 2025-01-27
 
 ### ⚠️ BREAKING CHANGES
-- **Changed require statement**: `require 'DhanHQ'` → `require 'dhan_hq'`
+- **Changed require statement**: `require 'DhanHQ'` → `require 'DhanHQ'`
   - This affects all Ruby files that require the gem
-  - Update all `require 'DhanHQ'` statements to `require 'dhan_hq'` in your codebase
+  - Update all `require 'DhanHQ'` statements to `require 'DhanHQ'` in your codebase
   - The gem name remains `DhanHQ` in your Gemfile, only the require statement changes
 
 ### Added
@@ -535,14 +535,14 @@ This release includes comprehensive bug fixes, security improvements, and reliab
 
 ### Fixed
 - **RuboCop compliance**: Fixed all RuboCop offenses (179 → 0 offenses)
-- **Documentation**: Updated all documentation examples to use `require 'dhan_hq'`
+- **Documentation**: Updated all documentation examples to use `require 'DhanHQ'`
 - **Documentation**: Correct Super Order examples to use snake_case parameters for `DhanHQ::Models` helpers
 - **Documentation**: Normalise Super Order path placeholders and response fields to snake_case for consistency
 - **Documentation**: Clarified that model helpers auto-inject `dhan_client_id`, removing the need to add it manually in Ruby payloads
 - **Code quality**: Added comprehensive validation tests for OptionChain methods
 
 ### Changed
-- **File structure**: Renamed main library file from `lib/DhanHQ.rb` to `lib/dhan_hq.rb` for better Ruby conventions
+- **File structure**: Renamed main library file from `lib/DhanHQ.rb` to `lib/DhanHQ.rb` for better Ruby conventions
 - **Require paths**: Updated all internal require statements to use snake_case naming
 
 ## [2.1.0] - 2025-09-20

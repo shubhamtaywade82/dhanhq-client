@@ -7,7 +7,7 @@ This guide shows the minimal path from market data to signal to guarded executio
 ## 1. Configure The SDK
 
 ```ruby
-require "dhan_hq"
+require "DhanHQ"
 
 DhanHQ.configure_with_env
 ```

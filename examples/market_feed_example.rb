@@ -6,7 +6,7 @@
 # Subscribes to major Indian indices (NIFTY, BANKNIFTY, NIFTYIT, SENSEX)
 # NOTE: Uses a SINGLE connection to avoid rate limiting
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 # Standalone script: MarketCalendar and TAAdapters are intentionally in one file.
-# rubocop:disable Style/OneClassPerFile
 
 require "bundler/setup"
 require "optparse"
@@ -29,7 +28,7 @@ rescue LoadError => e
   warn "technical-analysis not available: #{e.message}"
 end
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Simple market calendar to choose valid trading days (no Rails/Time.zone)
 module MarketCalendar
@@ -212,7 +211,7 @@ def highs(candles)  = candles.map { |c| c[:h] }
 def lows(candles)   = candles.map { |c| c[:l] }
 
 # Technical Analysis adapters for computing indicators
-module TAAdapters
+module TAAdapters # rubocop:disable Style/OneClassPerFile
   module_function
 
   def rsi(series, period)
@@ -486,4 +485,3 @@ out = {
 }
 
 puts JSON.pretty_generate(out)
-# rubocop:enable Style/OneClassPerFile

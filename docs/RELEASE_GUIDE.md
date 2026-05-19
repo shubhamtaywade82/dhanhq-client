@@ -33,7 +33,7 @@ git push origin v2.1.12
 # 4. Done! GitHub Actions will automatically release to RubyGems
 ```
 
-Check progress: https://github.com/shubhamtaywade82/dhanhq-client/actions
+Check progress: https://github.com/shubhamtaywade82/DhanHQ/actions
 
 ---
 
@@ -94,7 +94,7 @@ This should output a 6-digit number matching your authenticator app.
 
 ### Step 3: Add Secrets to GitHub
 
-1. Go to: https://github.com/shubhamtaywade82/dhanhq-client/settings/secrets/actions
+1. Go to: https://github.com/shubhamtaywade82/DhanHQ/settings/secrets/actions
 2. Click **New repository secret**
 3. Add **first secret**:
    - Name: `RUBYGEMS_API_KEY`
@@ -137,7 +137,7 @@ git push origin main
 git push origin v2.1.12
 
 # 5. Monitor release
-# Visit: https://github.com/shubhamtaywade82/dhanhq-client/actions
+# Visit: https://github.com/shubhamtaywade82/DhanHQ/actions
 ```
 
 ### What Happens Automatically
@@ -155,7 +155,7 @@ Tests run on push/PR via the main CI workflow; the release job does not run test
 
 ### Checking Release Status
 
-- **GitHub Actions:** https://github.com/shubhamtaywade82/dhanhq-client/actions
+- **GitHub Actions:** https://github.com/shubhamtaywade82/DhanHQ/actions
 - **RubyGems:** https://rubygems.org/gems/DhanHQ
 
 ---
@@ -227,7 +227,7 @@ Valid secret format:
 **Check:**
 1. Tag format is correct: `v2.1.12` (with `v` prefix)
 2. Workflow file exists: `.github/workflows/release.yml`
-3. Check Actions tab for errors: https://github.com/shubhamtaywade82/dhanhq-client/actions
+3. Check Actions tab for errors: https://github.com/shubhamtaywade82/DhanHQ/actions
 
 ### Tests Failing
 
@@ -413,8 +413,8 @@ git push origin main v2.1.12
 
 ### Important Links
 
-- **GitHub Actions:** https://github.com/shubhamtaywade82/dhanhq-client/actions
-- **GitHub Secrets:** https://github.com/shubhamtaywade82/dhanhq-client/settings/secrets/actions
+- **GitHub Actions:** https://github.com/shubhamtaywade82/DhanHQ/actions
+- **GitHub Secrets:** https://github.com/shubhamtaywade82/DhanHQ/settings/secrets/actions
 - **RubyGems Gem:** https://rubygems.org/gems/DhanHQ
 - **RubyGems API Keys:** https://rubygems.org/profile/api_keys (use value as `RUBYGEMS_API_KEY`; workflow exposes it as `GEM_HOST_API_KEY`)
 - **RubyGems MFA:** https://rubygems.org/profile/edit (Multi-factor Authentication section)
@@ -425,7 +425,7 @@ git push origin main v2.1.12
 - **Current Version:** Check `lib/DhanHQ/version.rb`
 - **Required Ruby:** >= 3.1.0
 - **License:** MIT
-- **Homepage:** https://github.com/shubhamtaywade82/dhanhq-client
+- **Homepage:** https://github.com/shubhamtaywade82/DhanHQ
 
 ---
 
@@ -463,7 +463,7 @@ The old workflow (`.github/workflows/main.yml`):
    ```
 
 4. **Monitor first release**
-   - Check GitHub Actions: https://github.com/shubhamtaywade82/dhanhq-client/actions
+   - Check GitHub Actions: https://github.com/shubhamtaywade82/DhanHQ/actions
    - Verify gem appears on RubyGems: https://rubygems.org/gems/DhanHQ
 
 ---

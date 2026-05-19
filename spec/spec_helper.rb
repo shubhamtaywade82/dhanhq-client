@@ -13,7 +13,7 @@ end
 
 require "debug"
 require "dotenv/load"
-require "dhan_hq"
+require "DhanHQ"
 require "webmock/rspec"
 
 require_relative "support/vcr"

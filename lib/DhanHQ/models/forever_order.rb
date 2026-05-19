@@ -303,7 +303,7 @@ module DhanHQ
         formatted = camelize_keys(full_params)
         response = self.class.resource.update(order_id, formatted)
         ctx = "[DhanHQ::Models::ForeverOrder] Modification"
-        success = handle_api_response(response, success_key: "orderId", context: ctx)
+        success = handle_api_response!(response, success_key: "orderId", context: ctx)
         return self.class.find(order_id) if success
 
         nil

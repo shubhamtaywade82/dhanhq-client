@@ -6,7 +6,7 @@
 # Receives real-time market depth data (bid/ask levels) for specific symbols
 # NOTE: Uses a SINGLE connection to avoid rate limiting
 
-require "dhan_hq"
+require "DhanHQ"
 
 # Configure DhanHQ
 DhanHQ.configure do |config|

@@ -1,6 +1,6 @@
 # DhanHQ API v2 Constants Reference
 
-Complete reference of all constants available in the DhanHQ API v2. These constants should be defined in your `dhanhq-client` Ruby gem.
+Complete reference of all constants available in the DhanHQ API v2. These constants should be defined in your `DhanHQ` Ruby gem.
 
 **Source:** [DhanHQ API v2 Documentation](https://dhanhq.co/docs/v2/)  
 **Reference:** [Annexure](https://dhanhq.co/docs/v2/annexure/)
