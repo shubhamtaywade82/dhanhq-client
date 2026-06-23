@@ -131,7 +131,7 @@ module DhanHQ
 
       url = "#{base_url.to_s.chomp("/")}/auth/dhan/token"
       conn = ::Faraday.new(url: url) do |c|
-        c.response :json, content_type: /\bjson$/
+        c.request :url_encoded
         c.adapter ::Faraday.default_adapter
       end
 
