@@ -107,6 +107,11 @@ Naming/VariableNumber:
     - 'lib/DhanHQ/ws/market_depth/client.rb'
     - 'lib/DhanHQ/ws/orders/connection.rb'
 
+# Offense count: 1
+Naming/FileName:
+  Exclude:
+    - 'lib/DhanHQ.rb'
+
 # Offense count: 4
 # Configuration parameters: MinSize.
 Performance/CollectionLiteralInLoop:
