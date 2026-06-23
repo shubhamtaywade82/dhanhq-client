@@ -90,8 +90,10 @@ Naming/MethodParameterName:
 Naming/PredicateMethod:
   Exclude:
     - 'lib/DhanHQ/models/forever_order.rb'
+    - 'lib/DhanHQ/models/iceberg_order.rb'
     - 'lib/DhanHQ/models/order.rb'
     - 'lib/DhanHQ/models/super_order.rb'
+    - 'lib/DhanHQ/models/twap_order.rb'
     - 'lib/DhanHQ/ws/singleton_lock.rb'
 
 # Offense count: 13
