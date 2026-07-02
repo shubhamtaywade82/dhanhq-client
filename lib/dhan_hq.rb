@@ -55,6 +55,14 @@ module DhanHQ
   require_relative "DhanHQ/risk/checks/options"
   require_relative "DhanHQ/risk/pipeline"
 
+  # Skills layer: multi-step trading workflows
+  require_relative "DhanHQ/skills"
+  require_relative "DhanHQ/skills/base"
+  require_relative "DhanHQ/skills/registry"
+  require_relative "DhanHQ/skills/workflow"
+  require_relative "DhanHQ/skills/builtin/buy_atm_call"
+  require_relative "DhanHQ/skills/builtin/square_off_all"
+
   class Error < StandardError; end
 
   class << self
