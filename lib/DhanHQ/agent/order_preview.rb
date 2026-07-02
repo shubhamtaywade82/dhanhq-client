@@ -31,7 +31,7 @@ module DhanHQ
       private
 
       def validate
-        result = DhanHQ::Contracts::PlaceOrderContract.call(params)
+        result = DhanHQ::Contracts::PlaceOrderContract.new.call(params)
         @errors << result.errors.to_h if result.failure?
         @errors << "correlation_id is recommended for agent-originated orders" if params[:correlation_id].to_s.empty?
       end
