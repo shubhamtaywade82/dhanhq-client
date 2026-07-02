@@ -53,6 +53,10 @@ module DhanHQ
             lvl = md[0]
             out[:bid] = lvl.respond_to?(:bid_price) ? lvl.bid_price.to_f : nil
             out[:ask] = lvl.respond_to?(:ask_price) ? lvl.ask_price.to_f : nil
+            if lvl.respond_to?(:bid_quantity) && lvl.respond_to?(:ask_quantity)
+              out[:bid_qty] = lvl.bid_quantity.to_i
+              out[:ask_qty] = lvl.ask_quantity.to_i
+            end
           end
           out
         when :oi
