@@ -2,6 +2,7 @@
 
 require_relative "../contracts/instrument_list_contract"
 require_relative "instrument_helpers"
+require_relative "search_result"
 
 module DhanHQ
   module Models
@@ -112,6 +113,42 @@ module DhanHQ
           end
 
           nil
+        end
+
+
+        # Search instruments across segments and return agent-friendly search results.
+        # @param query [String] symbol/company/index text
+        # @param options [Hash] :segments, :limit, :exact_match, :case_sensitive
+        # @return [Array<DhanHQ::Models::SearchResult>]
+        def search(query, options = {})
+          raise ArgumentError, "query is required" if query.to_s.strip.empty?
+
+          limit = Integer(options.fetch(:limit, 20))
+          segments = options[:segments] || %w[NSE_EQ BSE_EQ IDX_I NSE_FNO BSE_FNO NSE_CURRENCY BSE_CURRENCY MCX_COMM]
+          exact_match = options.fetch(:exact_match, false)
+          case_sensitive = options.fetch(:case_sensitive, false)
+          needle = case_sensitive ? query.to_s : query.to_s.upcase
+
+          results = []
+          segments.each do |segment|
+            by_segment(segment).each do |instrument|
+              haystacks = [
+                instrument.symbol_name,
+                instrument.display_name,
+                instrument.underlying_symbol,
+                instrument.isin
+              ].compact
+              matched = haystacks.any? do |value|
+                comparable = case_sensitive ? value.to_s : value.to_s.upcase
+                exact_match ? comparable == needle : comparable.include?(needle)
+              end
+              next unless matched
+
+              results << DhanHQ::Models::SearchResult.new(instrument.attributes, skip_validation: true)
+              return results if results.length >= limit
+            end
+          end
+          results
         end
 
         def normalize_csv_row(row)

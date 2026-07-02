@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "dhan_hq"
+require "dhan_hq/mcp"
+
+DhanHQ.configure_with_env
+DhanHQ::MCP::Server.new.run
