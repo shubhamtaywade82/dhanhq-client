@@ -124,6 +124,36 @@ For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHIT
 
 ---
 
+## AI agents, MCP, and skills
+
+Dhan now documents first-party MCP and Agent Skills surfaces alongside API v2. This gem is still a Ruby SDK first, but its models, resources, contracts, WebSocket clients, live-trading guard, and audit logging make it a strong foundation for Ruby-native agent tooling.
+
+This gem now includes foundational agent support:
+
+- `DhanHQ::Models::Instrument.search` for agent-friendly security resolution
+- `DhanHQ::Agent::OrderPreview` for dry-run order validation and human confirmation summaries
+- `DhanHQ::Agent::Policy` and `DhanHQ::Agent::ToolRegistry` for scoped, machine-readable tools
+- `dhanhq-mcp`, a lightweight stdio MCP server exposing read-only tools by default and write tools only behind `DHANHQ_MCP_ENABLE_WRITES=true` plus `LIVE_TRADING=true`
+- `skills/dhanhq-ruby/SKILL.md`, a Ruby-specific agent skill with safety rules and examples
+
+```ruby
+require "dhan_hq"
+require "dhan_hq/agent"
+
+DhanHQ.configure_with_env
+results = DhanHQ::Models::Instrument.search("RELIANCE", segments: ["NSE_EQ"], limit: 5)
+preview = DhanHQ::Agent::OrderPreview.new(
+  transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY",
+  order_type: "MARKET", validity: "DAY", security_id: results.first.security_id,
+  quantity: 1, correlation_id: "agent-001"
+)
+puts preview.to_h
+```
+
+See [docs/AI_AGENT_GAP_ANALYSIS.md](docs/AI_AGENT_GAP_ANALYSIS.md) for the remaining roadmap, including ScanX/scanner support if Dhan publishes public endpoints.
+
+---
+
 ## Reliability & Safety
 
 - retry-on-401 with token refresh

@@ -31,6 +31,7 @@ module DhanHQ
     "base_api" => "BaseAPI",
     "ip_setup" => "IPSetup",
     "json_loader" => "JSONLoader",
+    "mcp" => "MCP",
     "ws" => "WS"
   )
   LOADER.push_dir(File.join(__dir__, "DhanHQ"), namespace: self)
