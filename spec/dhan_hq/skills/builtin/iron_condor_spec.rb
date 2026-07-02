@@ -9,7 +9,7 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
       { strike: 24_500, option_type: "PE", security_id: "PE04" },
       { strike: 24_600, option_type: "CE", security_id: "CE01" },
       { strike: 24_800, option_type: "CE", security_id: "CE02" },
-      { strike: 25_000, option_type: "CE", security_id: "CE03" },
+      { strike: 25_000, option_type: "CE", security_id: "CE03" }
     ]
   end
 
@@ -72,8 +72,8 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
 
     it "raises when chain has insufficient strikes" do
       allow(instrument).to receive(:option_chain).and_return([
-        { strike: 24_500, option_type: "CE", security_id: "CE01" },
-      ])
+                                                               { strike: 24_500, option_type: "CE", security_id: "CE01" }
+                                                             ])
 
       expect do
         described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")

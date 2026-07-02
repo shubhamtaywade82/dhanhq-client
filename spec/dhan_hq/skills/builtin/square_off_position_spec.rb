@@ -18,8 +18,7 @@ RSpec.describe DhanHQ::Skills::Builtin::SquareOffPosition do
   # rubocop:enable RSpec/VerifiedDoubles
 
   before do
-    allow(DhanHQ::Models::Position).to receive(:all).and_return([position])
-    allow(DhanHQ::Models::Position).to receive(:exit_all!).and_return({ status: "OK" })
+    allow(DhanHQ::Models::Position).to receive_messages(all: [position], exit_all!: { status: "OK" })
   end
 
   describe "parameter definitions" do

@@ -72,4 +72,29 @@ RSpec.describe DhanHQ::Skills::Registry do
       expect(described_class.names).to be_empty
     end
   end
+
+  describe ".load_builtins" do
+    before do
+      described_class.clear!
+    end
+
+    it "registers all builtin skills" do
+      described_class.load_builtins
+
+      names = described_class.names
+      expect(names).to include("buy_atm_call")
+      expect(names).to include("square_off_all")
+      expect(names).to include("square_off_position")
+      expect(names).to include("iron_condor")
+      expect(names).to include("strangle")
+    end
+
+    it "does not duplicate already registered skills" do
+      described_class.register("buy_atm_call", test_skill)
+      described_class.load_builtins
+
+      found = described_class.find("buy_atm_call")
+      expect(found).to eq(test_skill)
+    end
+  end
 end

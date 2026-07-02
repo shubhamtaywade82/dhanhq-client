@@ -8,7 +8,7 @@ RSpec.describe DhanHQ::Skills::Builtin::Strangle do
       { strike: 24_400, option_type: "PE", security_id: "PE03", last_price: 120.0 },
       { strike: 24_600, option_type: "CE", security_id: "CE01", last_price: 130.0 },
       { strike: 24_800, option_type: "CE", security_id: "CE02", last_price: 90.0 },
-      { strike: 25_000, option_type: "CE", security_id: "CE03", last_price: 55.0 },
+      { strike: 25_000, option_type: "CE", security_id: "CE03", last_price: 55.0 }
     ]
   end
 
