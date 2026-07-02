@@ -58,6 +58,7 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
       expect(types).to eq(%w[CE CE PE PE])
     end
 
+    # rubocop:disable RSpec/MultipleExpectations
     it "builds intent with all required fields" do
       result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
       intent = result[:intent]
@@ -69,6 +70,7 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
       expect(intent[:legs].length).to eq(4)
       expect(intent[:note]).to include("Await human confirmation")
     end
+    # rubocop:enable RSpec/MultipleExpectations
 
     it "raises when chain has insufficient strikes" do
       allow(instrument).to receive(:option_chain).and_return([

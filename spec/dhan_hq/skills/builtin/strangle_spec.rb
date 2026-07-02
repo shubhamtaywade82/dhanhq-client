@@ -58,6 +58,7 @@ RSpec.describe DhanHQ::Skills::Builtin::Strangle do
       expect(actions).to eq(%w[BUY BUY])
     end
 
+    # rubocop:disable RSpec/MultipleExpectations
     it "builds intent with correct fields" do
       result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
       intent = result[:intent]
@@ -70,6 +71,7 @@ RSpec.describe DhanHQ::Skills::Builtin::Strangle do
       expect(intent[:target]).to eq(400)
       expect(intent[:note]).to include("Await human confirmation")
     end
+    # rubocop:enable RSpec/MultipleExpectations
 
     it "selects strikes offset from spot" do
       result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30", offset_pct: 1.0)
