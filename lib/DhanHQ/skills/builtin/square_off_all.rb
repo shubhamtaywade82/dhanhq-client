@@ -35,7 +35,7 @@ module DhanHQ
           end
 
           ctx[:exit_results] = results
-          ctx[:exited_count] = results.count { |r| !r.is_a?(Hash) || !r.key?(:error) }
+          ctx[:exited_count] = results.count { |r| !(r.is_a?(Hash) && r.key?(:error)) }
           ctx[:failed_count] = results.count { |r| r.is_a?(Hash) && r.key?(:error) }
           ctx
         end
