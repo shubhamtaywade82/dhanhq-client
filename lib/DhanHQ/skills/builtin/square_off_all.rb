@@ -16,15 +16,19 @@ module DhanHQ
         step :exit_positions, priority: 2
 
         def fetch_positions(ctx)
-          ctx[:positions] = DhanHQ::Models::Position.all.select do |p|
-            qty = p[:net_quantity] || p["netQuantity"] || p.net_quantity rescue 0
-            qty.to_i != 0
+          ctx[:positions] = DhanHQ::Models::Position.all.reject do |p|
+            qty = begin
+              p[:net_quantity] || p["netQuantity"] || p.net_quantity
+            rescue StandardError
+              0
+            end
+            qty.to_i.zero?
           end
           ctx
         end
 
         def exit_positions(ctx)
-          results = ctx[:positions].map do |pos|
+          results = ctx[:positions].map do
             DhanHQ::Models::Position.exit_all!
           rescue StandardError => e
             { error: e.message }

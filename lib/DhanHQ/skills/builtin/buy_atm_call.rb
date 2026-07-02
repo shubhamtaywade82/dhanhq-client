@@ -30,7 +30,7 @@ module DhanHQ
         step :prepare_intent, priority: 5
 
         def find_instrument(ctx)
-          ctx[:instrument] = DhanHQ::Models::Instrument.find("IDX_I", ctx[:symbol])
+          ctx[:instrument] = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, ctx[:symbol])
           ctx
         end
 

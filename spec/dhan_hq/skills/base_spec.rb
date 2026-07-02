@@ -41,7 +41,7 @@ RSpec.describe DhanHQ::Skills::Base do
   describe ".step" do
     it "defines steps in priority order" do
       steps = test_skill_class.steps
-      expect(steps.map { |s| s[:name] }).to eq([:step_one, :step_two])
+      expect(steps.map { |s| s[:name] }).to eq(%i[step_one step_two])
     end
   end
 

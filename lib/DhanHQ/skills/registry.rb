@@ -22,9 +22,7 @@ module DhanHQ
         # @param klass [Class] skill class inheriting from Base
         # @raise [ArgumentError] if the class is not a Base subclass
         def register(name, klass)
-          unless klass < Base
-            raise ArgumentError, "Skill class must inherit from DhanHQ::Skills::Base"
-          end
+          raise ArgumentError, "Skill class must inherit from DhanHQ::Skills::Base" unless klass < Base
 
           skills[name.to_s] = klass
         end
