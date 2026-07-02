@@ -41,9 +41,9 @@ module DhanHQ
         # @param type [Symbol] :string, :integer, :number, :boolean
         # @param required [Boolean] whether the parameter is required
         # @param default [Object] default value if not provided
-        def param(name, type: :string, required: false, default: nil)
+        def param(name, type: :string, required: false, default: nil, description: nil)
           @params ||= {}
-          @params[name] = { type: type, required: required, default: default }
+          @params[name] = { type: type, required: required, default: default, description: description }
         end
 
         # Define a step in the skill execution sequence.

@@ -2,6 +2,7 @@
 
 RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
   let(:instrument) do
+    # rubocop:disable RSpec/VerifiedDoubles
     double("instrument",
            ltp: { ltp: 24_500.0 },
            option_chain: [
@@ -10,6 +11,7 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
              { strike: 24_600, option_type: "CE", security_id: "SEC003", last_price: 60.0 },
              { strike: 24_500, option_type: "PE", security_id: "SEC004", last_price: 90.0 }
            ])
+    # rubocop:enable RSpec/VerifiedDoubles
   end
 
   before do
@@ -53,21 +55,37 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
       expect(result[:selected_option][:option_type]).to eq("CE")
     end
 
-    it "builds trade intent with correct fields" do
+    it "builds trade intent type and instrument" do
       result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
       intent = result[:intent]
 
       expect(intent[:trade_type]).to eq("OPTIONS_BUY")
       expect(intent[:instrument]).to eq("NIFTY 24500 CE")
       expect(intent[:security_id]).to eq("SEC002")
+    end
+
+    it "builds trade intent strike and expiry" do
+      result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
+      intent = result[:intent]
+
       expect(intent[:strike]).to eq(24_500)
       expect(intent[:expiry]).to eq("2026-01-30")
       expect(intent[:option_type]).to eq("CE")
+    end
+
+    it "builds trade intent quantity and risk params" do
+      result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
+      intent = result[:intent]
+
       expect(intent[:quantity]).to eq(50)
       expect(intent[:premium]).to eq(100.0)
       expect(intent[:stop_loss]).to eq(100)
       expect(intent[:target]).to eq(200)
-      expect(intent[:note]).to include("Await human confirmation")
+    end
+
+    it "includes confirmation note" do
+      result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
+      expect(result[:intent][:note]).to include("Await human confirmation")
     end
 
     it "accepts custom quantity, stop_loss, target" do

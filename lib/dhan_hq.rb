@@ -62,6 +62,10 @@ module DhanHQ
   require_relative "DhanHQ/skills/workflow"
   require_relative "DhanHQ/skills/builtin/buy_atm_call"
   require_relative "DhanHQ/skills/builtin/square_off_all"
+  require_relative "DhanHQ/skills/builtin/square_off_position"
+  require_relative "DhanHQ/skills/builtin/iron_condor"
+  require_relative "DhanHQ/skills/builtin/strangle"
+  DhanHQ::Skills::Registry.load_builtins
 
   class Error < StandardError; end
 

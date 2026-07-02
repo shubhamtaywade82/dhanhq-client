@@ -72,10 +72,21 @@ module DhanHQ
           @skills = {}
         end
 
-        # Load built-in skills from the builtin directory.
+        # Load built-in skills from the builtin directory and register them.
         def load_builtins
           Dir[File.join(__dir__, "builtin", "*.rb")].each do |file|
             require file
+          end
+
+          # Auto-register any Builtin classes that inherit from Base
+          DhanHQ::Skills::Builtin.constants.each do |const_name|
+            klass = DhanHQ::Skills::Builtin.const_get(const_name)
+            next unless klass.is_a?(Class) && klass < Base
+
+            name = const_name.to_s
+                             .gsub(/([a-z])([A-Z])/, '\1_\2')
+                             .downcase
+            register(name, klass) unless skills.key?(name)
           end
         end
 
