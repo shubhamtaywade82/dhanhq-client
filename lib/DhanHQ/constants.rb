@@ -475,6 +475,8 @@ module DhanHQ
     PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES = %w[
       /alerts/orders
       /v2/orders
+      /v2/orders/iceberg
+      /v2/orders/twap
       /v2/forever
       /v2/super/orders
       /v2/positions

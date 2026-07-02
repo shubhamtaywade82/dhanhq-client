@@ -13,7 +13,6 @@ module DhanHQ
     def connection
       @connection ||= Faraday.new(url: BASE_URL) do |faraday|
         faraday.request :url_encoded
-        faraday.response :json, content_type: /\bjson$/
         faraday.adapter Faraday.default_adapter
       end
     end

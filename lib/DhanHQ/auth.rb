@@ -91,7 +91,6 @@ module DhanHQ
     def self.build_connection(base_url)
       Faraday.new(url: base_url) do |c|
         c.request :url_encoded
-        c.response :json, content_type: /\bjson$/
         c.adapter Faraday.default_adapter
       end
     end

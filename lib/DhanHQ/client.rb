@@ -212,9 +212,7 @@ module DhanHQ
       write_timeout = ENV.fetch("DHAN_WRITE_TIMEOUT", 30).to_i
 
       Faraday.new(url: url) do |conn|
-        conn.request :json, parser_options: { symbolize_names: true }
-        conn.response :json, content_type: /\bjson$/
-        conn.response :logger if ENV["DHAN_DEBUG"] == "true"
+        conn.request :url_encoded
         conn.options.timeout = read_timeout
         conn.options.open_timeout = connect_timeout
         conn.options.write_timeout = write_timeout

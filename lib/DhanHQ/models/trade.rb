@@ -44,6 +44,19 @@ module DhanHQ
                  :create_time, :update_time, :exchange_time, :drv_expiry_date,
                  :drv_option_type, :drv_strike_price
 
+      # Returns a concise prompt-friendly summary of the trade.
+      def to_prompt
+        parts = [
+          "#{transaction_type} #{traded_quantity}x #{trading_symbol || security_id}",
+          "@ ₹#{traded_price}",
+          "on #{exchange_segment}/#{product_type}"
+        ]
+        parts << "order=#{order_id}" if order_id
+        parts << "charges=₹#{total_charges}" if respond_to?(:total_charges) && total_charges
+        parts << "time=#{create_time}" if create_time
+        parts.join(", ")
+      end
+
       class << self
         ##
         # Provides a shared instance of the Trades resource for current day tradebook APIs.

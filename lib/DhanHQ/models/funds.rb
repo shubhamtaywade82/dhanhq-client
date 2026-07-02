@@ -29,6 +29,18 @@ module DhanHQ
       attributes :available_balance, :sod_limit, :collateral_amount, :receiveable_amount, :utilized_amount,
                  :blocked_payout_amount, :withdrawable_balance
 
+      # Returns a concise prompt-friendly summary of funds.
+      def to_prompt
+        parts = []
+        parts << "available=₹#{available_balance}" if available_balance
+        parts << "utilized=₹#{utilized_amount}" if utilized_amount
+        parts << "withdrawable=₹#{withdrawable_balance}" if withdrawable_balance
+        parts << "collateral=₹#{collateral_amount}" if collateral_amount&.positive?
+        parts << "sod_limit=₹#{sod_limit}" if sod_limit
+        parts << "blocked_payout=₹#{blocked_payout_amount}" if blocked_payout_amount&.positive?
+        parts.join(", ")
+      end
+
       ##
       # Normalizes the typo'd `availabelBalance` key from the API response to `available_balance`.
       #

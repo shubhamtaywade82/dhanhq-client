@@ -60,14 +60,14 @@ module MarketCalendar
   end
 end
 
-# Default date range: most recent trading day
+# Default date range: last 30 days to ensure enough data for indicators (RSI 14, MACD, etc.)
 DEFAULT_TO_DATE = MarketCalendar.today_or_last_trading_day.strftime("%Y-%m-%d")
-DEFAULT_FROM_DATE = DEFAULT_TO_DATE
+DEFAULT_FROM_DATE = MarketCalendar.last_trading_day(from: MarketCalendar.today_or_last_trading_day - 30).strftime("%Y-%m-%d")
 
 DEFAULTS = {
   exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
   instrument: DhanHQ::Constants::InstrumentType::EQUITY,
-  security_id: "1333", # sample scrip
+  security_id: "2885", # RELIANCE INDUSTRIES LTD
   from_date: DEFAULT_FROM_DATE,
   to_date: DEFAULT_TO_DATE,
   rsi_period: 14,
@@ -466,6 +466,11 @@ if opts[:debug]
   puts "last m15=#{fifteen_min.last.inspect}" if fifteen_min.any?
   puts "last m25=#{twentyfive_min.last.inspect}" if twentyfive_min.any?
   puts "last m60=#{sixty_min.last.inspect}" if sixty_min.any?
+end
+
+if one_min.empty? && !opts[:data_file]
+  warn "WARNING: No data points retrieved for #{opts[:exchange_segment]}:#{opts[:security_id]}. " \
+       "Check if the security ID is correct and the market was open during the requested period."
 end
 
 out = {

@@ -73,6 +73,101 @@ module DhanHQ
                  :drv_strike_price, :oms_error_code, :oms_error_description, :algo_id,
                  :remaining_quantity, :average_traded_price, :filled_qty
 
+      # Returns a concise prompt-friendly summary of the order.
+      # Useful for AI agents to understand order state without raw attributes.
+      def to_prompt
+        parts = [
+          "#{transaction_type} #{quantity}x #{trading_symbol || security_id}",
+          "on #{exchange_segment}",
+          "as #{order_type}/#{product_type}",
+          "status=#{order_status}"
+        ]
+        parts << "price=#{price}" if price&.to_f&.positive?
+        parts << "trigger=#{trigger_price}" if trigger_price&.to_f&.positive?
+        parts << "filled=#{filled_qty}" if filled_qty&.positive?
+        parts << "remaining=#{remaining_quantity}" if remaining_quantity&.positive?
+        parts << "id=#{order_id}" if order_id
+        parts << "correlation=#{correlation_id}" if correlation_id
+        parts.join(", ")
+      end
+
+      # Returns true if the order has been fully filled.
+      def filled?
+        order_status == DhanHQ::Constants::OrderStatus::TRADED
+      end
+
+      # Returns true if the order is pending execution.
+      def pending?
+        order_status == DhanHQ::Constants::OrderStatus::PENDING
+      end
+
+      # Returns true if the order was rejected by the exchange.
+      def rejected?
+        order_status == DhanHQ::Constants::OrderStatus::REJECTED
+      end
+
+      # Returns true if the order was cancelled.
+      def cancelled?
+        order_status == DhanHQ::Constants::OrderStatus::CANCELLED
+      end
+
+      # Returns true if the order is in transit to the exchange.
+      def transit?
+        order_status == DhanHQ::Constants::OrderStatus::TRANSIT
+      end
+
+      # Returns true if the order is partially filled.
+      def partially_filled?
+        filled_qty.to_i.positive? && remaining_quantity.to_i.positive?
+      end
+
+      # Returns the fill percentage (0.0 to 100.0).
+      def fill_percentage
+        return 0.0 if quantity.to_i.zero?
+
+        (filled_qty.to_i.to_f / quantity.to_i * 100).round(2)
+      end
+
+      # Returns true if this is a buy order.
+      def buy?
+        transaction_type == DhanHQ::Constants::TransactionType::BUY
+      end
+
+      # Returns true if this is a sell order.
+      def sell?
+        transaction_type == DhanHQ::Constants::TransactionType::SELL
+      end
+
+      # Returns true if this is an intraday order.
+      def intraday?
+        product_type == DhanHQ::Constants::ProductType::INTRADAY
+      end
+
+      # Returns true if this is a delivery (CNC) order.
+      def delivery?
+        product_type == DhanHQ::Constants::ProductType::CNC
+      end
+
+      # Returns true if this is an MTF order.
+      def mtf?
+        product_type == DhanHQ::Constants::ProductType::MTF
+      end
+
+      # Returns true if this is a market order.
+      def market_order?
+        order_type == DhanHQ::Constants::OrderType::MARKET
+      end
+
+      # Returns true if this is a limit order.
+      def limit_order?
+        order_type == DhanHQ::Constants::OrderType::LIMIT
+      end
+
+      # Returns true if this is a stop-loss order.
+      def stop_loss_order?
+        order_type&.start_with?(DhanHQ::Constants::OrderType::STOP_LOSS)
+      end
+
       class << self
         ##
         # Provides a shared instance of the Orders resource.
