@@ -1,3 +1,14 @@
+## [3.1.0] - 2026-07-02
+
+### Added
+
+- **Agent and MCP support**: Added `DhanHQ::Agent::Policy`, `DhanHQ::Agent::ToolRegistry`, `DhanHQ::Agent::OrderPreview`, and a lightweight stdio MCP server executable, `dhanhq-mcp`, for scoped agent workflows.
+- **Agent-friendly instrument search**: Added `DhanHQ::Models::Instrument.search` and `DhanHQ::Models::SearchResult` for resolving symbols to security IDs from instrument master data.
+- **Ruby agent skill pack**: Added `skills/dhanhq-ruby/SKILL.md` and focused references for safe Ruby SDK usage by coding agents.
+- **AI agent documentation**: Added README guidance and `docs/AI_AGENT_GAP_ANALYSIS.md` covering API/MCP/skills coverage, gaps, and roadmap.
+
+---
+
 ## [3.0.0] - 2026-05-19
 
 ### Breaking Changes
