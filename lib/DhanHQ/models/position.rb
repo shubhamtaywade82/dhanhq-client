@@ -44,6 +44,72 @@ module DhanHQ
                  :day_sell_value, :drv_expiry_date, :drv_option_type, :drv_strike_price,
                  :cross_currency
 
+      # Returns a concise prompt-friendly summary of the position.
+      def to_prompt
+        parts = [
+          "#{position_type} #{net_qty}x #{trading_symbol || security_id}",
+          "on #{exchange_segment}/#{product_type}"
+        ]
+        parts << "buy_avg=#{buy_avg}" if buy_avg&.positive?
+        parts << "sell_avg=#{sell_avg}" if sell_avg&.positive?
+        parts << "realized_pnl=#{realized_profit}" if realized_profit
+        parts << "unrealized_pnl=#{unrealized_profit}" if unrealized_profit
+        parts << "expiry=#{drv_expiry_date}" if drv_expiry_date
+        parts << "strike=#{drv_strike_price}" if drv_strike_price&.positive?
+        parts << "type=#{drv_option_type}" if drv_option_type
+        parts.join(", ")
+      end
+
+      # Returns true if this is a long position.
+      def long?
+        position_type == DhanHQ::Constants::PositionType::LONG
+      end
+
+      # Returns true if this is a short position.
+      def short?
+        position_type == DhanHQ::Constants::PositionType::SHORT
+      end
+
+      # Returns true if this position is closed.
+      def closed?
+        position_type == DhanHQ::Constants::OrderStatus::CLOSED || net_qty.to_i.zero?
+      end
+
+      # Returns true if this position has an open quantity.
+      def open?
+        !closed? && net_qty.to_i != 0
+      end
+
+      # Returns true if this position is profitable (unrealized).
+      def profitable?
+        unrealized_profit.to_f.positive?
+      end
+
+      # Returns true if this position is in loss (unrealized).
+      def in_loss?
+        unrealized_profit.to_f.negative?
+      end
+
+      # Returns the total unrealized P&L including realized.
+      def total_pnl
+        realized_profit.to_f + unrealized_profit.to_f
+      end
+
+      # Returns true if this is an F&O position.
+      def derivatives?
+        drv_expiry_date.present? || drv_strike_price.to_f.positive?
+      end
+
+      # Returns true if this is an options position.
+      def options?
+        derivatives? && drv_option_type.present?
+      end
+
+      # Returns true if this is a futures position.
+      def futures?
+        derivatives? && drv_option_type.nil?
+      end
+
       class << self
         ##
         # Provides a shared instance of the Positions resource.

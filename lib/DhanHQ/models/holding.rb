@@ -33,6 +33,48 @@ module DhanHQ
       attributes :exchange, :trading_symbol, :security_id, :isin, :total_qty,
                  :dp_qty, :t1_qty, :available_qty, :collateral_qty, :avg_cost_price
 
+      # Returns a concise prompt-friendly summary of the holding.
+      def to_prompt
+        parts = [
+          "#{total_qty}x #{trading_symbol || security_id}",
+          "on #{exchange}"
+        ]
+        parts << "avg_cost=#{avg_cost_price}" if avg_cost_price&.positive?
+        parts << "available=#{available_qty}" if available_qty
+        parts << "dp=#{dp_qty}" if dp_qty&.positive?
+        parts << "t1=#{t1_qty}" if t1_qty&.positive?
+        parts << "collateral=#{collateral_qty}" if collateral_qty&.positive?
+        parts << "isin=#{isin}" if isin
+        parts.join(", ")
+      end
+
+      # Returns true if this holding has pending T1 delivery.
+      def pending_delivery?
+        t1_qty.to_i.positive?
+      end
+
+      # Returns true if this holding is fully delivered (no T1).
+      def delivered?
+        t1_qty.to_i.zero?
+      end
+
+      # Returns true if any quantity is pledged as collateral.
+      def pledged?
+        collateral_qty.to_i.positive?
+      end
+
+      # Returns the percentage of holding that is pledged.
+      def pledge_percentage
+        return 0.0 if total_qty.to_i.zero?
+
+        (collateral_qty.to_i.to_f / total_qty.to_i * 100).round(2)
+      end
+
+      # Returns true if this holding is partially pledged.
+      def partially_pledged?
+        pledged? && collateral_qty.to_i < total_qty.to_i
+      end
+
       class << self
         ##
         # Provides a shared instance of the Holdings resource.
