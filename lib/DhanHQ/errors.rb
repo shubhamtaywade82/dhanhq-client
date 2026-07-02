@@ -53,6 +53,10 @@ module DhanHQ
   # Raised when the API signals an issue with the requested data payload.
   class DataError < Error; end
 
+  # Risk management errors
+  # Raised when a pre-execution risk check fails (ASM/GSM, quantity, market hours, etc.)
+  class RiskViolation < Error; end
+
   # Server and network-related errors
   # DH-908, 800
   class InternalServerError < Error; end

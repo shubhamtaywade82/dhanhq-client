@@ -38,9 +38,22 @@ module DhanHQ
   LOADER.collapse(File.join(__dir__, "DhanHQ", "helpers"))
   LOADER.ignore(
     File.join(__dir__, "DhanHQ", "errors.rb"),
-    File.join(__dir__, "DhanHQ", "version.rb")
+    File.join(__dir__, "DhanHQ", "version.rb"),
+    File.join(__dir__, "DhanHQ", "risk.rb")
   )
   LOADER.setup
+
+  # Eager-load risk utilities (PositionSizer, SLCalculator, TrailManager)
+  # and the pre-execution risk pipeline so they are available immediately.
+  require_relative "DhanHQ/risk"
+  require_relative "DhanHQ/risk/checks/trading_permission"
+  require_relative "DhanHQ/risk/checks/asm_gsm"
+  require_relative "DhanHQ/risk/checks/product_support"
+  require_relative "DhanHQ/risk/checks/order_type"
+  require_relative "DhanHQ/risk/checks/quantity"
+  require_relative "DhanHQ/risk/checks/market_hours"
+  require_relative "DhanHQ/risk/checks/options"
+  require_relative "DhanHQ/risk/pipeline"
 
   class Error < StandardError; end
 
