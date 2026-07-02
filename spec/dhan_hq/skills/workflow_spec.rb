@@ -2,27 +2,30 @@
 
 RSpec.describe DhanHQ::Skills::Workflow do
   describe "#call" do
+    # rubocop:disable RSpec/ExampleLength
     it "executes steps in priority order" do
+      order = []
       workflow = described_class.new do
         step :first, priority: 1 do |ctx|
-          ctx[:order] = [:first]
+          order << :first
           ctx
         end
 
         step :second, priority: 2 do |ctx|
-          ctx[:order] << :second
+          order << :second
           ctx
         end
 
         step :third, priority: 3 do |ctx|
-          ctx[:order] << :third
+          order << :third
           ctx
         end
       end
 
-      result = workflow.call({})
-      expect(result[:order]).to eq([:first, :second, :third])
+      workflow.call({})
+      expect(order).to eq(%i[first second third])
     end
+    # rubocop:enable RSpec/ExampleLength
 
     it "passes context between steps" do
       workflow = described_class.new do
@@ -68,12 +71,20 @@ RSpec.describe DhanHQ::Skills::Workflow do
   describe "#steps" do
     it "returns steps sorted by priority" do
       workflow = described_class.new do
-        step :low, priority: 3 do |ctx|; ctx; end
-        step :high, priority: 1 do |ctx|; ctx; end
-        step :mid, priority: 2 do |ctx|; ctx; end
+        step :low, priority: 3 do |ctx|
+          ctx
+        end
+
+        step :high, priority: 1 do |ctx|
+          ctx
+        end
+
+        step :mid, priority: 2 do |ctx|
+          ctx
+        end
       end
 
-      expect(workflow.steps.map(&:name)).to eq([:high, :mid, :low])
+      expect(workflow.steps.map(&:name)).to eq(%i[high mid low])
     end
   end
 
