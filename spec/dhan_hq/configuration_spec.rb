@@ -268,4 +268,49 @@ RSpec.describe DhanHQ::Configuration do
       end
     end
   end
+
+  describe ".configure_from_dashboard" do
+    let(:dashboard_url) { "http://localhost:3011/api/dhan_access_token" }
+    let(:bearer_token) { "secret-dashboard-token" }
+
+    before do
+      DhanHQ.configuration = nil
+    end
+
+    context "when dashboard returns 200 with access_token and client_id" do
+      before do
+        stub_request(:get, dashboard_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { access_token: "dash_token", client_id: "dash_client" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "sets configuration from the dashboard response" do
+        result = DhanHQ.configure_from_dashboard(bearer_token: bearer_token)
+
+        expect(result).to eq(DhanHQ.configuration)
+        expect(DhanHQ.configuration.access_token).to eq("dash_token")
+        expect(DhanHQ.configuration.client_id).to eq("dash_client")
+      end
+    end
+
+    context "when bearer_token is missing" do
+      it "raises TokenEndpointError" do
+        expect { DhanHQ.configure_from_dashboard(bearer_token: "") }
+          .to raise_error(DhanHQ::TokenEndpointError, /bearer_token is required/)
+      end
+    end
+
+    context "when dashboard returns non-2xx status" do
+      before do
+        stub_request(:get, dashboard_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 500, body: { error: "Internal Server Error" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "raises TokenEndpointError" do
+        expect { DhanHQ.configure_from_dashboard(bearer_token: bearer_token) }
+          .to raise_error(DhanHQ::TokenEndpointError, /500/)
+      end
+    end
+  end
 end
