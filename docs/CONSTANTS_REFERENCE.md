@@ -457,10 +457,11 @@ DhanHQ::Constants.all_for(:OrderType) # => ["LIMIT", "MARKET", ...]
 
 | API Type | Per Second | Per Minute | Per Hour | Per Day |
 |----------|------------|------------|----------|---------|
-| Order APIs | 10 | 250 | 1,000 | 7,000 |
-| Data APIs | 5 | - | - | 100,000 |
+| Order APIs | 10 | Unlimited | Unlimited | 100,000 |
+| Data APIs | 5 | - | - | 7,000 |
 | Quote APIs | 1 | Unlimited | Unlimited | Unlimited |
 | Non Trading APIs | 20 | Unlimited | Unlimited | Unlimited |
+| Option Chain | 1 per 3 sec | - | - | - |
 
 **Note:** Order modifications are capped at 25 modifications per order.
 

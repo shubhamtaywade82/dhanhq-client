@@ -381,9 +381,10 @@ module DhanHQ
 
     # Public rate limits published in DhanHQ API documentation.
     module RateLimit
-      ORDER_API = { per_second: 10, per_minute: 250, per_hour: 1000, per_day: 7000 }.freeze
-      DATA_API = { per_second: 5, per_day: 100_000 }.freeze
+      ORDER_API = { per_second: 10, per_day: 100_000 }.freeze
+      DATA_API = { per_second: 5, per_day: 7_000 }.freeze
       QUOTE_API = { per_second: 1 }.freeze
+      OPTION_CHAIN = { per_second: 1.0 / 3 }.freeze
       NON_TRADING_API = { per_second: 20 }.freeze
       ORDER_MODIFICATIONS_PER_ORDER = 25
     end

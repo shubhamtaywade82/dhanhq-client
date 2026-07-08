@@ -5,10 +5,12 @@ require "concurrent"
 module DhanHQ
   # Coarse-grained in-memory throttler matching the platform rate limits.
   class RateLimiter
-    # Per-interval thresholds keyed by API type.
+    # Per-interval thresholds keyed by API type, matching the published
+    # DhanHQ rate-limit table (Order APIs: 10/sec, 100,000/day;
+    # Data APIs: 5/sec, 7,000/day; Market Quote: 1/sec; Option Chain: 1 per 3 sec).
     RATE_LIMITS = {
-      order_api: { per_second: 25, per_minute: 250, per_hour: 1000, per_day: 7000 },
-      data_api: { per_second: 5, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      order_api: { per_second: 10, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      data_api: { per_second: 5, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 7_000 },
       quote_api: { per_second: 1, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: Float::INFINITY },
       option_chain: { per_second: 1.0 / 3, per_minute: 20, per_hour: 600, per_day: 4800 },
       non_trading_api: { per_second: 20, per_minute: Float::INFINITY, per_hour: Float::INFINITY,
