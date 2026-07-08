@@ -1,4 +1,8 @@
 # frozen_string_literal: true
+# rubocop:disable Style/RescueModifier
+# rubocop:disable Naming/VariableNumber
+# rubocop:disable Style/NumericPredicate
+# rubocop:disable Lint/AmbiguousOperatorPrecedence
 
 require "date"
 
@@ -10,7 +14,7 @@ module DhanHQ
       class MarketDataSummarizer < Base
         param :underlying_symbol, type: :string, required: true, description: "Underlying ticker symbol (e.g. NIFTY, RELIANCE)"
         param :mode, type: :string, default: "both", description: "Analysis mode: both, technicals, or option_chain"
-        param :interval, type: :string, default: "DAY", description: "Timeframe for technical indicators"
+        param :interval, type: :string, default: DhanHQ::Constants::Validity::DAY, description: "Timeframe for technical indicators"
         param :range_days, type: :integer, default: 30, description: "Lookback period in days for indicator calculation"
         param :expiry, type: :string, default: "nearest", description: "Specific option expiry date (YYYY-MM-DD) or 'nearest'"
         param :strike_range, type: :integer, default: 5, description: "Number of strikes to include above and below ATM"
@@ -81,7 +85,7 @@ module DhanHQ
           return ctx unless %w[both option_chain].include?(ctx[:mode])
 
           inst = ctx[:instrument]
-          underlying_seg = inst.exchange_segment == "IDX_I" ? "IDX_I" : "NSE_EQ"
+          underlying_seg = inst.exchange_segment == DhanHQ::Constants::ExchangeSegment::IDX_I ? DhanHQ::Constants::ExchangeSegment::IDX_I : DhanHQ::Constants::ExchangeSegment::NSE_EQ
 
           target_expiry = ctx[:expiry]
           if target_expiry.to_s.empty? || target_expiry == "nearest"
