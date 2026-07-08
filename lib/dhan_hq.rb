@@ -215,11 +215,17 @@ module DhanHQ
       data = parse_json_body(response.body)
       data = data.transform_keys(&:to_s) if data.is_a?(Hash)
 
-      access_token = data["access_token"] || data["accessToken"]
+      access_token = data["access_token"] || data["accessToken"] || data["dhan_access_token"] || data["dhanaccesstoken"]
       client_id = data["client_id"] || data["clientId"] || data["dhan_client_id"] || data["dhanClientId"]
       client_id ||= self.configuration&.client_id || ENV.fetch("DHAN_CLIENT_ID", nil)
 
-      raise DhanHQ::TokenEndpointError, "Dashboard response missing access_token or client_id" if access_token.to_s.empty? || client_id.to_s.empty?
+      if access_token.to_s.empty?
+        raise DhanHQ::TokenEndpointError, "Dashboard response missing access_token (tried access_token, dhan_access_token, dhanaccesstoken)"
+      end
+
+      if client_id.to_s.empty?
+        raise DhanHQ::TokenEndpointError, "Dashboard response missing client_id, and no fallback client_id was found in config or ENV['DHAN_CLIENT_ID']"
+      end
 
       self.configuration ||= Configuration.new
       configuration.access_token = access_token.to_s

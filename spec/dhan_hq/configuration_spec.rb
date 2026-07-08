@@ -293,6 +293,32 @@ RSpec.describe DhanHQ::Configuration do
       end
     end
 
+    context "when dashboard returns 200 with dhan_access_token" do
+      before do
+        stub_request(:get, dashboard_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { dhan_access_token: "dash_token", client_id: "dash_client" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "successfully extracts the token" do
+        DhanHQ.configure_from_dashboard(bearer_token: bearer_token)
+        expect(DhanHQ.configuration.access_token).to eq("dash_token")
+      end
+    end
+
+    context "when dashboard returns 200 with dhanaccesstoken" do
+      before do
+        stub_request(:get, dashboard_url)
+          .with(headers: { "Authorization" => "Bearer #{bearer_token}", "Accept" => "application/json" })
+          .to_return(status: 200, body: { dhanaccesstoken: "dash_token", client_id: "dash_client" }.to_json, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "successfully extracts the token" do
+        DhanHQ.configure_from_dashboard(bearer_token: bearer_token)
+        expect(DhanHQ.configuration.access_token).to eq("dash_token")
+      end
+    end
+
     context "when bearer_token is missing" do
       it "raises TokenEndpointError" do
         expect { DhanHQ.configure_from_dashboard(bearer_token: "") }
