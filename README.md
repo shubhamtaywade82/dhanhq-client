@@ -421,13 +421,18 @@ Need initializers, service objects, ActionCable wiring, and background workers? 
 
 These scripts are designed around user goals rather than API surfaces:
 
-| Example | Use case |
-| ------- | -------- |
-| [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb) | Pull historical data, evaluate a simple signal, and place a guarded order |
-| [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb) | Snapshot funds, holdings, and positions for a monitoring script |
+| Example | What it covers |
+| ------- | --------------- |
+| [examples/basic_trading_bot.rb](examples/basic_trading_bot.rb) | Trading bot scaffold with live-trading guard |
+| [examples/comprehensive_websocket_examples.rb](examples/comprehensive_websocket_examples.rb) | WebSocket mode coverage and timeout handling |
 | [examples/options_watchlist.rb](examples/options_watchlist.rb) | Build a live options watchlist with index quotes and option-chain context |
 | [examples/market_feed_example.rb](examples/market_feed_example.rb) | Subscribe to major market indices over WebSocket |
+| [examples/market_depth_example.rb](examples/market_depth_example.rb) | Market depth streaming example |
 | [examples/live_order_updates.rb](examples/live_order_updates.rb) | Track order lifecycle events in real time |
+| [examples/order_update_example.rb](examples/order_update_example.rb) | Single-session order-update flow |
+| [examples/portfolio_monitor.rb](examples/portfolio_monitor.rb) | Snapshot funds, holdings, and positions for a monitoring script |
+| [examples/trading_fields_example.rb](examples/trading_fields_example.rb) | Dhan order-field mappings and constants example |
+| [examples/instrument_finder_test.rb](examples/instrument_finder_test.rb) | Instrument search/resolution troubleshooting |
 
 For search-driven discovery and onboarding content, see:
 
@@ -468,8 +473,6 @@ For search-driven discovery and onboarding content, see:
 | [Best Way To Use Dhan API In Ruby](docs/BEST_WAY_TO_USE_DHAN_API_IN_RUBY.md) | Comparison-focused guide for SDK vs raw HTTP |
 | [Dhan Ruby Q&A](docs/DHAN_RUBY_QA.md) | Publish-ready answers for common Dhan + Ruby questions |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
-
----
 
 ## Best Practices
 
