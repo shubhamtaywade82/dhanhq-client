@@ -65,6 +65,7 @@ module DhanHQ
   require_relative "DhanHQ/skills/builtin/square_off_position"
   require_relative "DhanHQ/skills/builtin/iron_condor"
   require_relative "DhanHQ/skills/builtin/strangle"
+  require_relative "DhanHQ/skills/builtin/market_data_summarizer"
   DhanHQ::Skills::Registry.load_builtins
 
   class Error < StandardError; end
