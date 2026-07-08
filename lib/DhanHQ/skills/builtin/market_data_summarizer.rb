@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # rubocop:disable Style/RescueModifier
 # rubocop:disable Naming/VariableNumber
 # rubocop:disable Style/NumericPredicate
@@ -183,3 +184,8 @@ module DhanHQ
     end
   end
 end
+
+# rubocop:enable Style/RescueModifier
+# rubocop:enable Naming/VariableNumber
+# rubocop:enable Style/NumericPredicate
+# rubocop:enable Lint/AmbiguousOperatorPrecedence

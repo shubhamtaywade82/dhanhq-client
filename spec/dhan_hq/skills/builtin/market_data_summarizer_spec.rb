@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # rubocop:disable RSpec/VerifiedDoubles
 # rubocop:disable RSpec/ReceiveMessages
 # rubocop:disable Naming/VariableNumber
@@ -104,3 +105,8 @@ RSpec.describe DhanHQ::Skills::Builtin::MarketDataSummarizer do
     end
   end
 end
+
+# rubocop:enable RSpec/VerifiedDoubles
+# rubocop:enable RSpec/ReceiveMessages
+# rubocop:enable Naming/VariableNumber
+# rubocop:enable Lint/AmbiguousOperatorPrecedence
