@@ -67,8 +67,9 @@ RSpec.describe DhanHQ::RateLimiter do
       expect(rate_limiter.instance_variable_get(:@request_times).size).to eq(limit)
     end
 
-    it "returns false when exceeding the per_minute limit" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_minute].value = 250
+    it "returns false when exceeding the per_day limit" do
+      limit = DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_day]
+      rate_limiter.instance_variable_get(:@buckets)[:per_day].value = limit
       expect(rate_limiter.send(:allow_request?)).to be false
     end
   end
@@ -108,28 +109,9 @@ RSpec.describe DhanHQ::RateLimiter do
       expect(request_times.size).to eq(0)
     end
 
-    it "resets per_minute limit after 60 seconds" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_minute].value = 250
-      expect(rate_limiter.send(:allow_request?)).to be false
-
-      Timecop.travel(60) # Simulate 60 seconds passing
-      rate_limiter.instance_variable_get(:@buckets)[:per_minute].value = 0
-
-      expect(rate_limiter.send(:allow_request?)).to be true
-    end
-
-    it "resets per_hour limit after 3600 seconds" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_hour].value = 1000
-      expect(rate_limiter.send(:allow_request?)).to be false
-
-      Timecop.travel(3600) # Simulate 1 hour passing
-      rate_limiter.instance_variable_get(:@buckets)[:per_hour].value = 0
-
-      expect(rate_limiter.send(:allow_request?)).to be true
-    end
-
     it "resets per_day limit after 86,400 seconds (1 day)" do
-      rate_limiter.instance_variable_get(:@buckets)[:per_day].value = 7000
+      limit = DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_day]
+      rate_limiter.instance_variable_get(:@buckets)[:per_day].value = limit
       expect(rate_limiter.send(:allow_request?)).to be false
 
       Timecop.travel(86_400) # Simulate 1 day passing
@@ -141,25 +123,31 @@ RSpec.describe DhanHQ::RateLimiter do
 
   describe "configured limits" do
     context "when api type is order_api" do
-      it "enforces documented thresholds" do
+      it "caps at 10 per second and 100,000 per day per the published limits" do
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_second]).to eq(10)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_day]).to eq(100_000)
+      end
+
+      it "allows unlimited minute/hour traffic but blocks at the daily cap" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
 
         # per_second is handled via timestamps in throttle!, not in allow_request?
-        buckets[:per_minute].value = 250
-        expect(rate_limiter.send(:allow_request?)).to be false
+        buckets[:per_minute].value = 10_000
+        buckets[:per_hour].value = 50_000
+        expect(rate_limiter.send(:allow_request?)).to be true
 
-        buckets[:per_minute].value = 0
-        buckets[:per_hour].value = 1000
-        expect(rate_limiter.send(:allow_request?)).to be false
-
-        buckets[:per_hour].value = 0
-        buckets[:per_day].value = 7000
+        buckets[:per_day].value = 100_000
         expect(rate_limiter.send(:allow_request?)).to be false
       end
     end
 
     context "when api type is data_api" do
       let(:api_type) { :data_api }
+
+      it "caps at 5 per second and 7,000 per day per the published limits" do
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_second]).to eq(5)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_day]).to eq(7_000)
+      end
 
       it "allows unlimited minute/hour traffic but caps per_second (via timestamps) and per_day" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
@@ -171,7 +159,7 @@ RSpec.describe DhanHQ::RateLimiter do
 
         buckets[:per_minute].value = 0
         buckets[:per_hour].value = 0
-        buckets[:per_day].value = 100_000
+        buckets[:per_day].value = 7_000
         expect(rate_limiter.send(:allow_request?)).to be false
       end
     end
