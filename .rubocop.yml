@@ -11,6 +11,8 @@ require:
 AllCops:
   TargetRubyVersion: 3.2
   NewCops: enable
+  Exclude:
+    - "skills/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
