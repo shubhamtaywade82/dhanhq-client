@@ -16,3 +16,9 @@
 # Local artifacts
 test_failures.txt
 app/
+.devagent
+
+# Research/backtesting scratch (large data files, not gem code)
+/scratch/
+/data.json
+/debug.log
