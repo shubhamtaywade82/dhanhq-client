@@ -27,17 +27,15 @@ module DhanHQ
         def find_position(ctx)
           positions = DhanHQ::Models::Position.all
           target = positions.find do |p|
-            seg = p[:exchange_segment] || p["exchange_segment"]
-            sym = p[:trading_symbol] || p["tradingSymbol"] || p[:symbol] || p["symbol"]
-            seg.to_s == ctx[:exchange_segment].to_s && sym.to_s.upcase == ctx[:symbol].to_s.upcase
+            p.exchange_segment.to_s == ctx[:exchange_segment].to_s && p.trading_symbol.to_s.upcase == ctx[:symbol].to_s.upcase
           end
 
           raise ArgumentError, "No open position found for #{ctx[:symbol]} on #{ctx[:exchange_segment]}" unless target
 
           ctx[:position] = target
-          ctx[:security_id] = target[:security_id] || target["securityId"]
-          ctx[:trading_symbol] = target[:trading_symbol] || target["tradingSymbol"]
-          ctx[:net_quantity] = (target[:net_quantity] || target["netQuantity"] || target.net_quantity).to_i
+          ctx[:security_id] = target.security_id
+          ctx[:trading_symbol] = target.trading_symbol
+          ctx[:net_quantity] = target.net_qty.to_i
           ctx
         end
 

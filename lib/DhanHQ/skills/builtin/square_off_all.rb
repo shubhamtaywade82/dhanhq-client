@@ -20,14 +20,7 @@ module DhanHQ
         step :exit_positions, priority: 2
 
         def fetch_positions(ctx)
-          ctx[:positions] = DhanHQ::Models::Position.all.reject do |p|
-            qty = begin
-              p[:net_quantity] || p["netQuantity"] || p.net_quantity
-            rescue StandardError
-              0
-            end
-            qty.to_i.zero?
-          end
+          ctx[:positions] = DhanHQ::Models::Position.all.reject { |p| p.net_qty.to_i.zero? }
           ctx
         end
 

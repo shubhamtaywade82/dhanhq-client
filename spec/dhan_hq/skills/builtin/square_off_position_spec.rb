@@ -3,17 +3,7 @@
 RSpec.describe DhanHQ::Skills::Builtin::SquareOffPosition do
   # rubocop:disable RSpec/VerifiedDoubles
   let(:position) do
-    double("position").tap do |pos|
-      allow(pos).to receive(:[]).with(:exchange_segment).and_return("IDX_I")
-      allow(pos).to receive(:[]).with("exchange_segment").and_return("IDX_I")
-      allow(pos).to receive(:[]).with(:trading_symbol).and_return("NIFTY")
-      allow(pos).to receive(:[]).with("tradingSymbol").and_return("NIFTY")
-      allow(pos).to receive(:[]).with(:security_id).and_return("SEC001")
-      allow(pos).to receive(:[]).with("securityId").and_return("SEC001")
-      allow(pos).to receive(:[]).with(:net_quantity).and_return(50)
-      allow(pos).to receive(:[]).with("netQuantity").and_return(50)
-      allow(pos).to receive(:net_quantity).and_return(50)
-    end
+    double("position", exchange_segment: "IDX_I", trading_symbol: "NIFTY", security_id: "SEC001", net_qty: 50)
   end
   # rubocop:enable RSpec/VerifiedDoubles
 
