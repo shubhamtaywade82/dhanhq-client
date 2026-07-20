@@ -65,6 +65,7 @@ module DhanHQ
   require_relative "DhanHQ/skills/builtin/square_off_position"
   require_relative "DhanHQ/skills/builtin/iron_condor"
   require_relative "DhanHQ/skills/builtin/strangle"
+  require_relative "DhanHQ/skills/builtin/market_data_summarizer"
   DhanHQ::Skills::Registry.load_builtins
 
   class Error < StandardError; end
@@ -182,6 +183,49 @@ module DhanHQ
       configuration.access_token = access_token.to_s
       configuration.client_id = client_id.to_s
       dhan_base = data["base_url"] || data[:base_url]
+      configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
+      configuration
+    end
+
+    # Configures the DhanHQ client by fetching credentials from a dashboard API.
+    #
+    # @param bearer_token [String] Secret dashboard token (e.g. YOUR_DASHBOARD_TOKEN)
+    # @param url [String] The full URL of the dashboard API
+    # @return [DhanHQ::Configuration] The configured configuration
+    # @raise [DhanHQ::TokenEndpointError] On HTTP error or missing credentials
+    def configure_from_dashboard(bearer_token:, url: "http://localhost:3011/api/dhan_access_token")
+      raise DhanHQ::TokenEndpointError, "bearer_token is required" if bearer_token.to_s.empty?
+
+      conn = ::Faraday.new(url: url) do |c|
+        c.request :url_encoded
+        c.adapter ::Faraday.default_adapter
+      end
+
+      response = conn.get("") do |req|
+        req.headers["Authorization"] = "Bearer #{bearer_token}"
+        req.headers["Accept"] = "application/json"
+      end
+
+      unless response.success?
+        body = parse_json_body(response.body)
+        msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
+        raise DhanHQ::TokenEndpointError, "Dashboard returned #{response.status}: #{msg}"
+      end
+
+      data = parse_json_body(response.body)
+      data = data.transform_keys(&:to_s) if data.is_a?(Hash)
+
+      access_token = data["access_token"] || data["accessToken"] || data["dhan_access_token"] || data["dhanaccesstoken"]
+      client_id = data["client_id"] || data["clientId"] || data["dhan_client_id"] || data["dhanClientId"]
+      client_id ||= self.configuration&.client_id || ENV.fetch("DHAN_CLIENT_ID", nil)
+
+      raise DhanHQ::TokenEndpointError, "Dashboard response missing access_token (tried access_token, dhan_access_token, dhanaccesstoken)" if access_token.to_s.empty?
+      raise DhanHQ::TokenEndpointError, "Dashboard response missing client_id, and no fallback client_id was found in config or ENV['DHAN_CLIENT_ID']" if client_id.to_s.empty?
+
+      self.configuration ||= Configuration.new
+      configuration.access_token = access_token.to_s
+      configuration.client_id = client_id.to_s
+      dhan_base = data["base_url"] || data["baseUrl"]
       configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
       configuration
     end
