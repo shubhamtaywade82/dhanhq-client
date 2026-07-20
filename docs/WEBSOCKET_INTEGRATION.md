@@ -317,12 +317,10 @@ end
 client = DhanHQ::WS::MarketDepth.client
 
 # Event handlers
+# Note: the current implementation only ever emits :depth_update (never :depth_snapshot),
+# and update_data has no :side key — inspect update_data[:bids]/[:asks] directly instead.
 client.on(:depth_update) do |update_data|
-  puts "📊 Depth Update: #{update_data[:symbol]} - #{update_data[:side]} side updated"
-end
-
-client.on(:depth_snapshot) do |snapshot_data|
-  puts "📸 Depth Snapshot: #{snapshot_data[:symbol]} - Full order book received"
+  puts "📊 Depth Update: #{update_data[:symbol]} - bids/asks refreshed"
 end
 
 client.on(:error) do |error|
@@ -771,8 +769,7 @@ puts "Orders connected: #{orders_client.connected?}"
 puts "Market connected: #{market_client.connected?}"
 puts "Depth connected: #{depth_client.connected?}"
 
-# Get subscription info
-puts "Market subscriptions: #{market_client.subscriptions}"
+# Get subscription info (only DhanHQ::WS::MarketDepth::Client exposes this)
 puts "Depth subscriptions: #{depth_client.subscriptions}"
 ```
 
@@ -890,30 +887,26 @@ puts "Orders connected: #{orders_client.connected?}"
 puts "Market connected: #{market_client.connected?}"
 puts "Depth connected: #{depth_client.connected?}"
 
-# Get subscription info
-puts "Market subscriptions: #{market_client.subscriptions}"
+# Get subscription info (only DhanHQ::WS::MarketDepth::Client exposes this)
 puts "Depth subscriptions: #{depth_client.subscriptions}"
 ```
 
 ## Testing
 
-For comprehensive testing examples and interactive console helpers, see the [Testing Guide](TESTING_GUIDE.md). The guide includes:
-
-- **WebSocket Testing**: Market feed, order updates, and market depth examples
-- **Interactive Console Helpers**: Load `bin/test_helpers.rb` for quick test functions
-- **Complete Examples**: Copy-paste examples for all WebSocket features
+For comprehensive testing examples, see the [Testing Guide](TESTING_GUIDE.md).
 
 **Quick start in console:**
 ```ruby
 # Start console
 bin/console
 
-# Load test helpers
-load 'bin/test_helpers.rb'
-
-# Test WebSocket connections
-test_websocket(:ticker, 5)      # Test market feed for 5 seconds
-test_order_websocket(5)        # Test order updates for 5 seconds
+# Test market feed for 5 seconds
+ticks = []
+client = DhanHQ::WS.connect(mode: :ticker) { |tick| ticks << tick }
+client.subscribe_one(segment: "IDX_I", security_id: 13)
+sleep 5
+client.disconnect!
+p ticks
 ```
 
 ## Examples

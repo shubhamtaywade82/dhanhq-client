@@ -20,6 +20,11 @@ RSpec.describe DhanHQ::Contracts::HistoricalDataContract do
       expect(result.success?).to be true
     end
 
+    it "passes when from_date is equal to to_date" do
+      result = described_class.new.call(valid_daily_params.merge(from_date: "2024-01-02", to_date: "2024-01-02"))
+      expect(result.success?).to be true
+    end
+
     it "passes with optional expiry_code" do
       [0, 1, 2].each do |code|
         result = described_class.new.call(valid_daily_params.merge(expiry_code: code))

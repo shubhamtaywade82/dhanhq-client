@@ -100,13 +100,13 @@ module DhanHQ
         # Choose the nearest expiry (first element); adjust selection if API returns sorted differently
         expiry = expiries.first
         raw = DhanHQ::Models::OptionChain.fetch(underlying_scrip: sid.to_i, underlying_seg: seg, expiry: expiry)
-        oc = raw[:oc] || {}
-        # Transform OC structure into advisor-friendly array [{ strike:, ce: {...}, pe: {...} }]
-        @data[:option_chain] = oc.map do |strike, strike_data|
+        strikes = raw[:strikes] || []
+        # Transform normalized strikes into advisor-friendly array [{ strike:, ce: {...}, pe: {...} }]
+        @data[:option_chain] = strikes.map do |entry|
           {
-            strike: strike.to_f,
-            ce: normalize_leg(strike_data["ce"] || {}),
-            pe: normalize_leg(strike_data["pe"] || {})
+            strike: entry[:strike].to_f,
+            ce: normalize_leg(entry[:call] || {}),
+            pe: normalize_leg(entry[:put] || {})
           }
         end
       rescue StandardError
@@ -114,11 +114,12 @@ module DhanHQ
       end
 
       def normalize_leg(cepe)
+        greeks = cepe[:greeks] || {}
         {
-          ltp: cepe["last_price"], bid: cepe["best_bid_price"], ask: cepe["best_ask_price"],
-          iv: cepe["iv"], oi: cepe["oi"], volume: cepe["volume"],
-          delta: cepe["delta"], gamma: cepe["gamma"], vega: cepe["vega"], theta: cepe["theta"],
-          lot_size: cepe["lot_size"], tradable: true
+          ltp: cepe[:last_price], bid: cepe[:top_bid_price], ask: cepe[:top_ask_price],
+          iv: cepe[:implied_volatility], oi: cepe[:oi], volume: cepe[:volume],
+          delta: greeks[:delta], gamma: greeks[:gamma], vega: greeks[:vega], theta: greeks[:theta],
+          security_id: cepe[:security_id], tradable: true
         }
       end
 

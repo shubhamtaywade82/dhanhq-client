@@ -2,21 +2,19 @@
 
 RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
   let(:chain) do
-    [
-      { strike: 24_000, option_type: "PE", security_id: "PE01" },
-      { strike: 24_200, option_type: "PE", security_id: "PE02" },
-      { strike: 24_400, option_type: "PE", security_id: "PE03" },
-      { strike: 24_500, option_type: "PE", security_id: "PE04" },
-      { strike: 24_600, option_type: "CE", security_id: "CE01" },
-      { strike: 24_800, option_type: "CE", security_id: "CE02" },
-      { strike: 25_000, option_type: "CE", security_id: "CE03" }
-    ]
+    build_option_chain([
+                         { strike: 24_100, ce_id: "CE_24100", ce_price: 450.0, pe_id: "PE_24100", pe_price: 20.0 },
+                         { strike: 24_300, ce_id: "CE_24300", ce_price: 300.0, pe_id: "PE_24300", pe_price: 50.0 },
+                         { strike: 24_500, ce_id: "CE_24500", ce_price: 180.0, pe_id: "PE_24500", pe_price: 100.0 },
+                         { strike: 24_700, ce_id: "CE_24700", ce_price: 90.0, pe_id: "PE_24700", pe_price: 190.0 },
+                         { strike: 24_900, ce_id: "CE_24900", ce_price: 40.0, pe_id: "PE_24900", pe_price: 320.0 }
+                       ])
   end
 
   let(:instrument) do
     # rubocop:disable RSpec/VerifiedDoubles
     double("instrument",
-           ltp: { ltp: 24_500.0 },
+           ltp: 24_500.0,
            option_chain: chain)
     # rubocop:enable RSpec/VerifiedDoubles
   end
@@ -73,9 +71,9 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
     # rubocop:enable RSpec/MultipleExpectations
 
     it "raises when chain has insufficient strikes" do
-      allow(instrument).to receive(:option_chain).and_return([
-                                                               { strike: 24_500, option_type: "CE", security_id: "CE01" }
-                                                             ])
+      allow(instrument).to receive(:option_chain).and_return(
+        build_option_chain([{ strike: 24_500, ce_id: "CE_24500", ce_price: 180.0, pe_id: "PE_24500", pe_price: 100.0 }])
+      )
 
       expect do
         described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")

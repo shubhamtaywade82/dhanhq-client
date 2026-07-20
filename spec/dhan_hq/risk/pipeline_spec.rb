@@ -1,9 +1,17 @@
 # frozen_string_literal: true
 
+# rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Risk::Pipeline do
   let(:market_time) { Time.new(2024, 1, 2, 10, 0, 0, "+05:30") }
   let(:instrument) { FakeInstrument.build }
   let(:base_args) { { "quantity" => 1 } }
+
+  before do
+    allow(DhanHQ::Models::Position).to receive(:all).and_return([])
+    allow(DhanHQ::Models::Funds).to receive(:fetch).and_return(
+      double("funds", available_balance: 500_000)
+    )
+  end
 
   describe ".run!" do
     context "with valid equity inputs" do
@@ -248,3 +256,4 @@ RSpec.describe DhanHQ::Risk::Pipeline do
     end
   end
 end
+# rubocop:enable RSpec/VerifiedDoubles

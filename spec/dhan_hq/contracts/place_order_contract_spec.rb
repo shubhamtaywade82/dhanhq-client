@@ -39,14 +39,14 @@ RSpec.describe DhanHQ::Contracts::PlaceOrderContract do
       expect(result.success?).to be true
     end
 
-    it "accepts correlation_id up to 30 characters and valid pattern" do
+    it "accepts correlation_id up to 25 characters and valid pattern" do
       params = valid_params.merge(correlation_id: "ABC_123-def 456") # 15 chars
       result = contract.call(params)
       expect(result.success?).to be true
     end
 
-    it "rejects correlation_id exceeding 30 characters" do
-      params = valid_params.merge(correlation_id: "a" * 31)
+    it "rejects correlation_id exceeding 25 characters" do
+      params = valid_params.merge(correlation_id: "a" * 26)
       result = contract.call(params)
       expect(result.success?).to be false
     end

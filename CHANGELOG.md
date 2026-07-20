@@ -1,3 +1,54 @@
+## [3.1.0] - 2026-07-20
+
+### Added
+
+- **MCP resources support** — 6 URI-addressable resources (`dhanhq://account/profile`, `funds`, `holdings`, `positions`, `orders`, `dhanhq://market/capabilities`) with `resources/list` and `resources/read`.
+- **MCP prompts support** — 5 pre-built AI prompts (`portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy`) with `prompts/list` and `prompts/get`.
+- **5 new builtin skills** — `covered_call`, `bull_put_spread`, `bear_call_spread`, `protective_put`, `straddle` (10 total).
+- **3 new risk checks** — `PositionLimits` (max 20 concurrent positions), `Concentration` (max 25% per symbol), `MaxLoss` (daily loss limit, default ₹50,000).
+- **Extended risk pipeline** — `DhanHQ::Risk::Pipeline` now includes `DAILY_CHECKS` constant and runs all new checks.
+- **Risk pipeline wired into all order paths** — `Risk::Pipeline.run!` now fires before every order placement via the `OrderAudit` concern, covering Orders, SuperOrders, ForeverOrders, AlertOrders, TwapOrders, IcebergOrders, and PnL Exit. Instrument resolution failures are handled silently so transient lookup issues never block a valid order.
+- **SDK + AI integration docs** — README sections for MCP Server, Skills System, and AI Integration.
+
+### Changed
+
+- `DhanHQ::MCP::Server` now requires `dhan_hq/ai` for prompt generation.
+- CI RuboCop step no longer uses `continue-on-error: true`.
+- Spec path for risk check specs moved to `spec/dhan_hq/risk/checks/`.
+- **`OrderAudit` concern extended** — new `run_risk_checks!(params)` method runs the risk pipeline before order placement, with `trade_type_for` mapping exchange segments to pipeline types. All 7 order resources call it in their `create`/`configure` methods.
+
+### Fixed
+
+- Syntax error in MCP server spec (orphaned `if response["error"]` debug lines removed).
+- `[]` method stub pattern in risk check specs (use `receive(:[])` instead of hash double syntax).
+- `MaxLoss` spec test data corrected to trigger the daily loss limit correctly.
+- All RSpec VerifiedDoubles and MultipleExpectations offenses resolved (0 RuboCop offenses).
+- **Position model accessors in risk checks** — replaced `p[:net_quantity]`, `p[:unrealized_profit_loss]`, and `p[:trading_symbol]` hash indexing with real model accessors (`p.net_qty`, `p.unrealized_profit`, `p.trading_symbol`).
+- **`ltp` access in all 9 skills** — `instrument.ltp` returns a Float, not a Hash; removed the `ltp[:ltp]` unwrapping pattern.
+- **`market_analysis` prompt** — resolves symbol to integer security ID via `Instrument.find` before passing to `MarketFeed.quote`.
+- **`OrderAudit#run_risk_checks!` resolved the wrong instrument** — called `Instrument.find(exchange_segment, security_id)`, but `find`'s second argument is a symbol name (e.g. `"RELIANCE"`), not a security ID. Every real order silently failed instrument resolution (`Instrument.find` returned `nil` for a numeric ID), which combined with the surrounding `rescue StandardError; nil` meant **risk checks never ran for any real order placed through any of the 7 order resources**, despite the "wired into all order paths" claim above. Fixed by switching to the new `Instrument.find_by_security_id`. Confirmed live against a real account: `find("NSE_EQ", "2885")` → `nil`; `find_by_security_id("NSE_EQ", "2885")` → resolves RELIANCE correctly.
+- **MCP JSON-RPC compliance** — notifications (requests with no `id`) no longer receive a response; dispatch errors preserve the caller's request `id`; error codes now use the correct `-32700`/`-32601`/`-32602`/`-32603` instead of a single generic `-32000`; `protocolVersion` is negotiated against the client's request instead of hardcoded.
+- **`dhan_place_order` MCP tool bypassed all risk checks** — now resolves the instrument via `find_by_security_id` and runs `Risk::Pipeline.run!` before calling `Order.place`, same as the resource-level fix above, gated by the same live-write policy checks.
+- **Option chain shape mismatch in 8 of 11 skills** — `Instrument#option_chain` returns `{ last_price:, strikes: [{ strike:, call:, put: }] }` (nested Hash), but `iron_condor`, `straddle`, `strangle`, `buy_atm_call`, `covered_call`, `protective_put`, `bull_put_spread`, and `bear_call_spread` were written assuming a flat array of `{ strike:, option_type:, security_id: }` leg-hashes. Every one of these skills raised `NoMethodError`/`TypeError` against the real API; all specs passed anyway because their fixtures invented the same wrong shape. Confirmed broken live, fixed against real NIFTY/RELIANCE option chains (real security IDs verified), all fixtures rewritten to match reality (`spec/support/option_chain_helpers.rb`).
+- **MCP tool call could hang indefinitely** — a rate-limited `tools/call` blocked the single-threaded stdio loop with no error surfaced. Added a 15s timeout (`DhanHQ::MCP::Server#tool_call_timeout`) that returns a structured error instead.
+- **`dhan_skill_*` tool descriptions** showed the raw Ruby class name (e.g. `"DhanHQ::Skills::Builtin::IronCondor"`) instead of anything useful to an LLM client. Added a `description` class macro to `Skills::Base`; all 11 builtin skills now declare a human-readable one-liner. Verified live via `tools/list`.
+- **`Instrument.find`/`.find_by_security_id` could hang for minutes and use gigabytes of RAM** — both built a full `Instrument` model object (each with ~52 `define_singleton_method` calls from `BaseModel#assign_attributes`) for *every row* in the segment before filtering. Confirmed live: a single `find_by_security_id("NSE_EQ", ...)` call ran 98.9% CPU, 4.2GB RSS, and was killed after 3.5 minutes without finishing — `NSE_EQ` has ~219,000 rows. Fixed both methods to scan raw CSV rows and instantiate only the matching one (~9–11s now, down from unbounded). Added dedicated `.find` spec coverage (previously none existed) including a regression guard asserting only one `Instrument` is ever constructed.
+- **`correlation_id` accepted up to 30 characters in 4 order contracts** (`PlaceOrderContract`, `ForeverOrderContract`, `IcebergOrderContract`, `TwapOrderContract`), but Dhan's real API caps it at 25 and rejects the **entire order** with a generic, field-agnostic `DH-905` error if exceeded — giving no indication `correlation_id` was the problem. Confirmed live by bisecting the exact boundary (25 chars: success: 26 chars: `DH-905`) against a real sandbox order. All 4 contracts corrected to `max_size?: 25`.
+- **`square_off_all`/`square_off_position` never actually found any positions to close** — `SquareOffAll#fetch_positions` called `p[:net_quantity]` on a `Position` model (no `[]` method defined), silently rescued to `0`, and filtered out every real position, always reporting zero exits. `SquareOffPosition#find_position` had the same pattern for `exchange_segment`/`trading_symbol`/`security_id`/`net_quantity`, unguarded by any rescue, so it would raise `NoMethodError` the moment a real position existed. Both bugs were invisible until this session, because no test — unit or live — had ever exercised these skills against a real non-empty `Position.all` result; the unit-test doubles stubbed the same wrong `net_quantity` attribute name the buggy code called. Fixed both to use the real model accessors (`p.net_qty`, `p.exchange_segment`, `p.trading_symbol`, `p.security_id`); fixed both specs' doubles to match. Confirmed live: built a Dhan-API-compatible translation adapter in front of `simulators/paper_exchange` (a real Rails order-matching/fills/positions simulator already in this workspace) so a real order could actually fill (Dhan's own sandbox never executes real fills — confirmed via its docs), producing a genuine non-zero position, then ran `dhan_skill_square_off_all` and `dhan_skill_square_off_position` through the full MCP-gated path against it: both correctly found the position and closed it (`net_qty` 4→0 and 2→0 respectively) with a real `SUCCESS` response.
+
+### Known Limitations
+
+Verified live against a real Dhan account (live-scoped and sandbox), a real independent MCP client, and — for the two paths sandbox cannot simulate (real fills, real position closure) — a purpose-built Dhan-API-compatible adapter in front of `simulators/paper_exchange`'s real order-matching engine.
+
+- **Live-tested, all of it, including the full write path**: core REST client, MCP protocol layer, all 11 skills' intent-building, WebSocket streaming, and — end to end — `dhan_place_order`, `dhan_cancel_order`, `dhan_skill_square_off_all`, and `dhan_skill_square_off_position`, each through the actual MCP-gated path (instrument resolution → full risk pipeline → audit log → real order execution). Dhan's sandbox itself only validates request/response plumbing and never executes a real fill (confirmed via Dhan's own docs: "the sandbox behaves like the live API but does not execute real orders") — fills were exercised against `simulators/paper_exchange`'s real matching engine via a throwaway adapter (not shipped, not committed) instead.
+- **`Concentration`/`PositionLimits`/`MaxLoss` risk checks** have only been observed against zero-position, zero-or-low-balance accounts, and against `paper_exchange`'s simulated position (a single small equity position). Their math is unit-tested; behavior against a large, multi-symbol real portfolio has not been observed.
+- **The sandbox environment's instrument/security-ID catalog appears disconnected from the production instrument master** — a real production TCS security ID (`532540`, resolved via `Instrument.find`) was rejected by the sandbox's matching engine (`DH-906: Transaction has Failed`), while an ID from a prior sandbox test (`11536`) validated successfully. Anyone testing against sandbox should resolve security IDs from sandbox-originated data (e.g. prior order history), not the live instrument master.
+- **`release.yml`'s GitHub Release gem-asset upload** has not fired end-to-end — no tag has been pushed since the fix landed.
+- **v3.1.0 is not tagged** — CHANGELOG reflects work in progress on `main`, not a cut release.
+- **Nothing from this session is committed.**
+
+---
+
 ## [3.0.0] - 2026-05-19
 
 ### Breaking Changes

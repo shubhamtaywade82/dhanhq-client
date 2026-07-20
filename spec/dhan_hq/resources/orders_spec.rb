@@ -35,6 +35,9 @@ RSpec.describe DhanHQ::Resources::Orders do
     # Stub IP lookups so tests never hit real network
     stub_request(:get, "https://api.ipify.org").to_return(body: "1.2.3.4")
     stub_request(:get, "https://api64.ipify.org").to_return(body: "::1")
+
+    # Stub instrument lookup so risk checks don't trigger WebMock errors
+    allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(nil)
   end
 
   after { DhanHQ::Utils::NetworkInspector.reset_cache! }

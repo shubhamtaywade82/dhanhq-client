@@ -12,18 +12,15 @@ module DhanHQ
       #   puts result[:exited_count]
       #
       class SquareOffAll < Base
+        risk "destructive_write"
+        scope "orders:write"
+        description "Exit all open positions at market price."
+
         step :fetch_positions, priority: 1
         step :exit_positions, priority: 2
 
         def fetch_positions(ctx)
-          ctx[:positions] = DhanHQ::Models::Position.all.reject do |p|
-            qty = begin
-              p[:net_quantity] || p["netQuantity"] || p.net_quantity
-            rescue StandardError
-              0
-            end
-            qty.to_i.zero?
-          end
+          ctx[:positions] = DhanHQ::Models::Position.all.reject { |p| p.net_qty.to_i.zero? }
           ctx
         end
 

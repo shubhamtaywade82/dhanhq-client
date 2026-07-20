@@ -65,6 +65,10 @@ module DhanHQ
       end
 
       def build_tools
+        (primitive_tools + skill_tools).to_h { |tool_item| [tool_item.name, tool_item] }
+      end
+
+      def primitive_tools
         [
           tool("dhan_profile", "Fetch Dhan profile", "portfolio:read", "read_only",
                object_schema, profile_handler,
@@ -124,7 +128,31 @@ module DhanHQ
                cancel_schema, cancel_order_handler,
                version: "1.0.0",
                output_schema: { type: "object", properties: { order_id: { type: "string" }, status: { type: "string" } } })
-        ].to_h { |tool_item| [tool_item.name, tool_item] }
+        ]
+      end
+
+      # Exposes each registered DhanHQ::Skills::Registry strategy as an MCP tool,
+      # gated by the risk/scope the skill class declares (see DhanHQ::Skills::Base).
+      def skill_tools
+        DhanHQ::Skills::Registry.list.map do |skill|
+          klass = DhanHQ::Skills::Registry.find(skill[:name])
+          tool("dhan_skill_#{skill[:name]}", skill[:description], klass.scope, klass.risk,
+               skill_input_schema(skill[:params]),
+               ->(arguments) { DhanHQ::Skills::Registry.call(skill[:name], arguments) },
+               version: "1.0.0")
+        end
+      end
+
+      def skill_input_schema(params)
+        properties = params.transform_values do |config|
+          { type: skill_param_type(config[:type]) }.tap { |h| h[:description] = config[:description] if config[:description] }
+        end
+        required = params.select { |_, config| config[:required] }.keys.map(&:to_s)
+        { type: "object", properties: properties, required: required, additionalProperties: false }
+      end
+
+      def skill_param_type(type)
+        { string: "string", integer: "integer", number: "number", boolean: "boolean" }.fetch(type.to_sym, "string")
       end
 
       # rubocop:disable Metrics/ParameterLists
@@ -228,7 +256,20 @@ module DhanHQ
 
       def preview_handler = ->(arguments) { OrderPreview.new(arguments).to_h }
 
-      def place_order_handler = ->(arguments) { DhanHQ::Models::Order.place(arguments) }
+      def place_order_handler
+        lambda do |arguments|
+          instrument = DhanHQ::Models::Instrument.find_by_security_id(arguments[:exchange_segment], arguments[:security_id])
+          unless instrument
+            raise DhanHQ::RiskViolation,
+                  "Cannot verify risk for unknown instrument: #{arguments[:exchange_segment]}:#{arguments[:security_id]}"
+          end
+
+          risk_type = instrument.instrument_type.to_s.start_with?("OPT") ? :options : :equity
+          DhanHQ::Risk::Pipeline.run!(instrument: instrument, args: stringify(arguments), type: risk_type)
+
+          DhanHQ::Models::Order.place(arguments)
+        end
+      end
 
       def cancel_order_handler
         lambda do |arguments|
@@ -241,6 +282,14 @@ module DhanHQ
         case value
         when Hash then value.each_with_object({}) { |(key, val), hash| hash[key.to_sym] = symbolize(val) }
         when Array then value.map { |val| symbolize(val) }
+        else value
+        end
+      end
+
+      def stringify(value)
+        case value
+        when Hash then value.each_with_object({}) { |(key, val), hash| hash[key.to_s] = stringify(val) }
+        when Array then value.map { |val| stringify(val) }
         else value
         end
       end

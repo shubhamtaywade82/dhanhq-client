@@ -22,7 +22,7 @@ module DhanHQ
         required(:slice_interval).filled(:integer, gt?: 0)
         required(:start_time).filled(:string, format?: /\A([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)\z/)
         required(:end_time).filled(:string, format?: /\A([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d)\z/)
-        optional(:correlation_id).maybe(:string, max_size?: 30, format?: /\A[a-zA-Z0-9 _-]*\z/)
+        optional(:correlation_id).maybe(:string, max_size?: 25, format?: /\A[a-zA-Z0-9 _-]*\z/)
         optional(:trigger_price).maybe(:float, gteq?: 0)
         optional(:after_market_order).maybe(:bool)
         optional(:amo_time).maybe(:string, included_in?: AMO_TIMINGS)

@@ -39,8 +39,12 @@ Official instrument sources (managed by the SDK internally):
 Use the SDK's built-in helper methods on the `Instrument` class:
 
 ```ruby
-# Find specific instrument in a segment (exact match)
+# Find specific instrument in a segment by symbol name (exact match)
 inst = DhanHQ::Models::Instrument.find("NSE_EQ", "RELIANCE")
+
+# Find by security ID instead of symbol name — use this, not `.find`, when you
+# already have a security_id (e.g. from an order, position, or option chain leg)
+inst = DhanHQ::Models::Instrument.find_by_security_id("NSE_EQ", "2885")
 
 # Search across multiple segments (finds any match)
 inst = DhanHQ::Models::Instrument.find_anywhere("RELIANCE")
@@ -48,6 +52,8 @@ inst = DhanHQ::Models::Instrument.find_anywhere("RELIANCE")
 # Fuzzy search across multiple segments
 results = DhanHQ::Models::Instrument.search("RELIANCE")
 ```
+
+`.find`'s second argument is always a **symbol name**, never a security ID — passing a security ID there silently returns `nil` (it searches symbol/underlying-symbol text, doesn't match on ID). Use `.find_by_security_id` when resolving by ID.
 
 Or leverage the helper layer in `scripts/dhan_helpers.rb`:
 

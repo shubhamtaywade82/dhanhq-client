@@ -68,7 +68,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       invalid_params = valid_params.merge(from_date: "2021-09-01", to_date: "2021-08-02")
 
       expect { described_class.fetch(invalid_params) }
-        .to raise_error(DhanHQ::ValidationError, /from_date must be before to_date/)
+        .to raise_error(DhanHQ::ValidationError, /from_date must be before or equal to to_date/)
     end
 
     it "validates date range length" do
@@ -450,7 +450,7 @@ RSpec.describe DhanHQ::Models::ExpiredOptionsData do
       result = contract.call(invalid_params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
+      expect(result.errors[:from_date]).to include(/from_date must be before or equal to to_date/)
     end
 
     it "validates date range length" do

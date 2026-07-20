@@ -2,6 +2,7 @@
 
 ## Sandbox behavior
 
+- **Sandbox does NOT execute real order fills/matching.** Confirmed both via Dhan's own docs ("the sandbox behaves like the live API but does not execute real orders") and empirically: a `MARKET` order placed on sandbox validates and returns a real `orderId`, but stays at `PENDING` indefinitely — it never transitions to `TRADED`, even after 24+ seconds of polling. Use sandbox to validate request/response plumbing (auth, payload shape, error codes), not to test fill, cancel, or square-off behavior.
 - **REST:** When `DhanHQ.configuration.sandbox == true` (or `ENV["DHAN_SANDBOX"]=true`), the client uses `https://sandbox.dhan.co/v2` as the base URL for **all** requests that go through `DhanHQ::Client`. Every wrapped REST endpoint listed below is therefore **sent** to the sandbox host when sandbox is enabled.
 - **Sandbox does NOT support WebSocket.** Order updates, market feed, and market depth are **production-only**. The gem always uses production WebSocket URLs regardless of the `sandbox` setting. There are no sandbox WebSocket endpoints in the Dhan v2 API; do not rely on sandbox for real-time streams.
 - **Auth endpoints** (`DhanHQ::Auth`) do **not** use sandbox. They always call:
