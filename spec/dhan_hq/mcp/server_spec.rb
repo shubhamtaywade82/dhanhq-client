@@ -20,6 +20,14 @@ RSpec.describe DhanHQ::MCP::Server do
     JSON.parse(output.read)
   end
 
+  def send_request_raw(raw_line)
+    input.puts(raw_line)
+    input.rewind
+    server.run
+    output.rewind
+    JSON.parse(output.read)
+  end
+
   describe "initialize" do
     it "responds with protocol version and server info" do
       response = send_request("initialize")
@@ -57,6 +65,22 @@ RSpec.describe DhanHQ::MCP::Server do
 
       expect(place_order["description"]).to include("[live_write]")
     end
+
+    it "includes dhan_skill_iron_condor tool with risk badge" do
+      response = send_request("tools/list")
+      tools = response.dig("result", "tools")
+      skill = tools.find { |t| t["name"] == "dhan_skill_iron_condor" }
+
+      expect(skill["description"]).to include("[trade_adjacent_read]")
+    end
+
+    it "includes dhan_skill_square_off_all tool with risk badge" do
+      response = send_request("tools/list")
+      tools = response.dig("result", "tools")
+      skill = tools.find { |t| t["name"] == "dhan_skill_square_off_all" }
+
+      expect(skill["description"]).to include("[destructive_write]")
+    end
   end
 
   describe "tools/call" do
@@ -71,6 +95,12 @@ RSpec.describe DhanHQ::MCP::Server do
 
     it "rejects write tools with read-only policy" do
       response = send_request("tools/call", { name: "dhan_place_order", arguments: { transaction_type: "BUY" } })
+
+      expect(response["error"]).not_to be_nil
+    end
+
+    it "rejects dhan_skill_square_off_all with read-only policy" do
+      response = send_request("tools/call", { name: "dhan_skill_square_off_all", arguments: {} })
 
       expect(response["error"]).not_to be_nil
     end
@@ -203,13 +233,84 @@ RSpec.describe DhanHQ::MCP::Server do
       response = send_request("unknown_method")
 
       expect(response["error"]).not_to be_nil
-      expect(response.dig("error", "code")).to eq(-32_000)
+      expect(response.dig("error", "code")).to eq(-32_601)
     end
 
     it "handles malformed JSON without raising" do
       input.puts("not json")
       input.rewind
       expect { server.run }.not_to raise_error
+    end
+
+    it "returns a parse error with nil id for malformed JSON" do
+      response = send_request_raw("not json")
+
+      expect(response.dig("error", "code")).to eq(-32_700)
+      expect(response["id"]).to be_nil
+    end
+
+    it "returns invalid params for tools/call with an unknown tool name" do
+      response = send_request("tools/call", { name: "bogus_tool", arguments: {} })
+
+      expect(response.dig("error", "code")).to eq(-32_602)
+    end
+
+    it "returns invalid params for resources/read with an unknown uri" do
+      response = send_request("resources/read", { uri: "dhanhq://unknown" })
+
+      expect(response.dig("error", "code")).to eq(-32_602)
+    end
+
+    it "returns invalid params for prompts/get with an unknown name" do
+      response = send_request("prompts/get", { name: "nonexistent" })
+
+      expect(response.dig("error", "code")).to eq(-32_602)
+    end
+
+    it "preserves the request id on dispatch errors" do
+      response = send_request("tools/call", { name: "bogus_tool", arguments: {} }, id: 42)
+
+      expect(response["id"]).to eq(42)
+      expect(response.dig("error", "code")).to eq(-32_602)
+    end
+  end
+
+  describe "tools/call timeout guard" do
+    subject(:server) { described_class.new(input: input, output: output, policy: policy, tool_call_timeout: 0.05) }
+
+    it "returns a timeout error instead of hanging when a tool call blocks too long" do
+      allow(DhanHQ::Agent::ToolRegistry).to receive(:execute) { sleep(1) }
+
+      response = send_request("tools/call", { name: "dhan_profile", arguments: {} })
+
+      expect(response.dig("error", "code")).to eq(-32_603)
+      expect(response.dig("error", "message")).to match(/timed out/i)
+    end
+  end
+
+  describe "notifications" do
+    it "does not respond to a request with no id" do
+      input.puts(JSON.generate({ jsonrpc: "2.0", method: "notifications/initialized" }))
+      input.rewind
+      server.run
+      output.rewind
+
+      expect(output.read).to eq("")
+    end
+  end
+
+  describe "protocolVersion negotiation" do
+    it "echoes back a supported requested version" do
+      response = send_request("initialize", { protocolVersion: "2024-11-05" })
+
+      expect(response.dig("result", "protocolVersion")).to eq("2024-11-05")
+    end
+
+    it "falls back to the latest supported version for an unrecognized request" do
+      response = send_request("initialize", { protocolVersion: "1999-01-01" })
+
+      expect(response.dig("result", "protocolVersion"))
+        .to eq(DhanHQ::MCP::Server::SUPPORTED_PROTOCOL_VERSIONS.last)
     end
   end
 end

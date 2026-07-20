@@ -56,6 +56,21 @@ module DhanHQ
           @steps.sort_by! { |s| s[:priority] }
         end
 
+        # MCP risk level for this skill (defaults to the most conservative tier
+        # so a skill that forgets to declare one fails safe/write-gated).
+        #
+        # @param level [String, nil] one of read_only, trade_adjacent_read, live_write, destructive_write
+        def risk(level = nil)
+          level ? (@risk = level) : (@risk || "destructive_write")
+        end
+
+        # MCP policy scope required to invoke this skill.
+        #
+        # @param value [String, nil] e.g. "orders:read", "orders:write"
+        def scope(value = nil)
+          value ? (@scope = value) : (@scope || "orders:write")
+        end
+
         # Accessor for defined parameters.
         def params
           @params || {}

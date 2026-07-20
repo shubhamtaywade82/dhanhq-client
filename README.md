@@ -488,18 +488,31 @@ export DHAN_CLIENT_ID="your_client_id"
 export DHAN_ACCESS_TOKEN="your_access_token"
 
 # 2. Start the server (stdio)
-bundle exec ruby -e "
-  require 'dhan_hq'
-  require 'dhan_hq/mcp'
-  DhanHQ::MCP::Server.new.run
-"
+bundle exec dhanhq-mcp
+```
+
+Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "dhanhq": {
+      "command": "bundle",
+      "args": ["exec", "dhanhq-mcp"],
+      "env": {
+        "DHAN_CLIENT_ID": "your_client_id",
+        "DHAN_ACCESS_TOKEN": "your_access_token"
+      }
+    }
+  }
+}
 ```
 
 ### MCP Features
 
 | Feature | Description |
 | ------- | ----------- |
-| **Tools** | 12 trading operations: profile, funds, holdings, positions, order history, place/modify/cancel orders, historical data, option chain, market feed, instruments |
+| **Tools** | 11 primitive tools (profile, funds, holdings, positions, order history, place/cancel orders, instruments, market feed) + 10 skill-derived tools (`dhan_skill_*` — one per builtin strategy in [Skills System](#skills-system) below) |
 | **Resources** | 6 URI-addressable data endpoints: `dhanhq://account/profile`, `dhanhq://account/funds`, `dhanhq://account/holdings`, `dhanhq://account/positions`, `dhanhq://account/orders`, `dhanhq://market/capabilities` |
 | **Prompts** | 5 pre-built AI prompts: `portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy` |
 
@@ -509,8 +522,8 @@ bundle exec ruby -e "
 # Read-only mode (no order placement)
 DhanHQ::Agent::Policy.read_only
 
-# Live trading mode (full access)
-DhanHQ::Agent::Policy.live_trading
+# Scope-based policy from env (DHANHQ_AGENT_SCOPES)
+DhanHQ::Agent::Policy.from_env
 ```
 
 The policy engine respects `DHANHQ_MCP_ENABLE_WRITES` and `LIVE_TRADING` env vars. Write operations are blocked by default — explicit opt-in required.

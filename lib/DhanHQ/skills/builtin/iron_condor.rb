@@ -16,6 +16,9 @@ module DhanHQ
       #   )
       #
       class IronCondor < Base
+        risk "trade_adjacent_read"
+        scope "orders:read"
+
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true
         param :quantity, type: :integer, default: 50

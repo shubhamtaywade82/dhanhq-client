@@ -31,6 +31,20 @@ RSpec.describe DhanHQ::Agent::ToolRegistry do
       expect(tool.name).to eq("dhan_cancel_order")
       expect(tool.risk).to eq("destructive_write")
     end
+
+    it "includes dhan_skill_iron_condor with trade_adjacent_read risk" do
+      tool = described_class.find("dhan_skill_iron_condor")
+
+      expect(tool.scope).to eq("orders:read")
+      expect(tool.risk).to eq("trade_adjacent_read")
+    end
+
+    it "includes dhan_skill_square_off_all with destructive_write risk" do
+      tool = described_class.find("dhan_skill_square_off_all")
+
+      expect(tool.scope).to eq("orders:write")
+      expect(tool.risk).to eq("destructive_write")
+    end
   end
 
   describe ".find" do
@@ -73,6 +87,34 @@ RSpec.describe DhanHQ::Agent::ToolRegistry do
 
       expect do
         described_class.execute("dhan_place_order", { transaction_type: "BUY" }, policy: policy)
+      end.to raise_error(DhanHQ::Error, /Agent scope required/)
+    end
+
+    it "executes a skill tool end-to-end" do
+      policy = DhanHQ::Agent::Policy.new(scopes: ["orders:read"])
+      # rubocop:disable RSpec/VerifiedDoubles
+      instrument = double("instrument", ltp: { ltp: 24_500.0 }, option_chain: [
+                            { strike: 24_000, option_type: "PE", security_id: "PE01" },
+                            { strike: 24_200, option_type: "PE", security_id: "PE02" },
+                            { strike: 24_400, option_type: "PE", security_id: "PE03" },
+                            { strike: 24_500, option_type: "PE", security_id: "PE04" },
+                            { strike: 24_600, option_type: "CE", security_id: "CE01" },
+                            { strike: 24_800, option_type: "CE", security_id: "CE02" },
+                            { strike: 25_000, option_type: "CE", security_id: "CE03" }
+                          ])
+      # rubocop:enable RSpec/VerifiedDoubles
+      allow(DhanHQ::Models::Instrument).to receive(:find).and_return(instrument)
+
+      result = described_class.execute("dhan_skill_iron_condor", { symbol: "NIFTY", expiry: "2026-01-30" }, policy: policy)
+
+      expect(result[:intent][:trade_type]).to eq("IRON_CONDOR")
+    end
+
+    it "raises on policy violation for skill tools without write scope" do
+      policy = DhanHQ::Agent::Policy.new(scopes: ["portfolio:read"])
+
+      expect do
+        described_class.execute("dhan_skill_square_off_all", {}, policy: policy)
       end.to raise_error(DhanHQ::Error, /Agent scope required/)
     end
   end

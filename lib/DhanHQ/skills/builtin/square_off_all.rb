@@ -12,6 +12,9 @@ module DhanHQ
       #   puts result[:exited_count]
       #
       class SquareOffAll < Base
+        risk "destructive_write"
+        scope "orders:write"
+
         step :fetch_positions, priority: 1
         step :exit_positions, priority: 2
 

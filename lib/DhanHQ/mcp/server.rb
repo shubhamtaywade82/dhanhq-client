@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "timeout"
 require_relative "../agent"
 require_relative "../ai"
 
@@ -8,6 +9,14 @@ module DhanHQ
   module MCP
     # Minimal MCP-compatible stdio JSON-RPC server for DhanHQ agent tools.
     class Server
+      # Raised for an unrecognized top-level JSON-RPC method (maps to -32601).
+      class UnknownMethodError < StandardError; end
+      # Raised for a well-formed request with invalid/unknown params (maps to -32602).
+      class InvalidParamsError < StandardError; end
+
+      SUPPORTED_PROTOCOL_VERSIONS = ["2024-11-05"].freeze
+      DEFAULT_TOOL_CALL_TIMEOUT_SECONDS = 15
+
       RESOURCES = [
         { uri: "dhanhq://account/profile", name: "Dhan Profile", description: "Current account profile including client ID, PAN, name, and trading permissions",
           mimeType: "application/json" },
@@ -27,10 +36,12 @@ module DhanHQ
         { name: "order_preview", description: "Preview an order before placing it with risk validation" }
       ].freeze
 
-      def initialize(input: $stdin, output: $stdout, policy: DhanHQ::Agent::Policy.from_env)
+      def initialize(input: $stdin, output: $stdout, policy: DhanHQ::Agent::Policy.from_env,
+                     tool_call_timeout: DEFAULT_TOOL_CALL_TIMEOUT_SECONDS)
         @input = input
         @output = output
         @policy = policy
+        @tool_call_timeout = tool_call_timeout
       end
 
       def run
@@ -39,47 +50,79 @@ module DhanHQ
 
       def handle_line(line)
         request = JSON.parse(line)
-        respond(request["id"], dispatch(request["method"], request["params"] || {}))
-      rescue StandardError => e
-        respond(nil, nil, code: -32_000, message: e.message)
+      rescue JSON::ParserError => e
+        respond(nil, nil, code: -32_700, message: "Parse error: #{e.message}")
+      else
+        handle_request(request)
       end
 
       private
+
+      def handle_request(request)
+        return unless request.key?("id") # JSON-RPC notification — must not receive a response
+
+        id = request["id"]
+        respond(id, dispatch(request["method"], request["params"] || {}))
+      rescue StandardError => e
+        respond(id, nil, code: error_code_for(e), message: e.message)
+      end
+
+      def error_code_for(error)
+        case error
+        when UnknownMethodError then -32_601
+        when InvalidParamsError then -32_602
+        else -32_603
+        end
+      end
 
       def dispatch(method, params)
         case method
         when "initialize"
           {
-            protocolVersion: "2024-11-05",
+            protocolVersion: negotiate_protocol_version(params["protocolVersion"]),
             serverInfo: { name: "dhanhq-ruby", version: DhanHQ::VERSION },
             capabilities: { tools: {}, resources: {}, prompts: {} }
           }
         when "tools/list"
           { tools: DhanHQ::Agent::ToolRegistry.list.map { |t| mcp_tool(t) } }
         when "tools/call"
-          result = DhanHQ::Agent::ToolRegistry.execute(
-            params.fetch("name"),
-            params.fetch("arguments", {}),
-            policy: @policy
-          )
-          { content: [{ type: "text", text: JSON.pretty_generate(serialize(result)) }] }
+          { content: [{ type: "text", text: JSON.pretty_generate(serialize(call_tool(params))) }] }
         when "resources/list"
           { resources: resource_definitions }
         when "resources/read"
           resource = resources.find { |r| r[:uri] == params["uri"] }
-          raise ArgumentError, "Unknown resource: #{params["uri"]}" unless resource
+          raise InvalidParamsError, "Unknown resource: #{params["uri"]}" unless resource
 
           { contents: [resource_read(resource)] }
         when "prompts/list"
           { prompts: prompt_definitions }
         when "prompts/get"
           prompt = prompts.find { |p| p[:name] == params["name"] }
-          raise ArgumentError, "Unknown prompt: #{params["name"]}" unless prompt
+          raise InvalidParamsError, "Unknown prompt: #{params["name"]}" unless prompt
 
           prompt_result(prompt, params.fetch("arguments", {}))
         else
-          raise ArgumentError, "Unsupported MCP method: #{method}"
+          raise UnknownMethodError, "Unsupported MCP method: #{method}"
         end
+      end
+
+      def negotiate_protocol_version(requested)
+        SUPPORTED_PROTOCOL_VERSIONS.include?(requested) ? requested : SUPPORTED_PROTOCOL_VERSIONS.last
+      end
+
+      def call_tool(params)
+        Timeout.timeout(@tool_call_timeout) do
+          DhanHQ::Agent::ToolRegistry.execute(
+            params.fetch("name"),
+            params.fetch("arguments", {}),
+            policy: @policy
+          )
+        end
+      rescue ArgumentError => e
+        raise InvalidParamsError, e.message
+      rescue Timeout::Error
+        raise "Tool call '#{params["name"]}' timed out after #{@tool_call_timeout}s " \
+              "(likely blocked on rate-limit backoff) — retry shortly"
       end
 
       def resources

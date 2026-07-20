@@ -65,6 +65,10 @@ module DhanHQ
       end
 
       def build_tools
+        (primitive_tools + skill_tools).to_h { |tool_item| [tool_item.name, tool_item] }
+      end
+
+      def primitive_tools
         [
           tool("dhan_profile", "Fetch Dhan profile", "portfolio:read", "read_only",
                object_schema, profile_handler,
@@ -124,7 +128,31 @@ module DhanHQ
                cancel_schema, cancel_order_handler,
                version: "1.0.0",
                output_schema: { type: "object", properties: { order_id: { type: "string" }, status: { type: "string" } } })
-        ].to_h { |tool_item| [tool_item.name, tool_item] }
+        ]
+      end
+
+      # Exposes each registered DhanHQ::Skills::Registry strategy as an MCP tool,
+      # gated by the risk/scope the skill class declares (see DhanHQ::Skills::Base).
+      def skill_tools
+        DhanHQ::Skills::Registry.list.map do |skill|
+          klass = DhanHQ::Skills::Registry.find(skill[:name])
+          tool("dhan_skill_#{skill[:name]}", skill[:description], klass.scope, klass.risk,
+               skill_input_schema(skill[:params]),
+               ->(arguments) { DhanHQ::Skills::Registry.call(skill[:name], arguments) },
+               version: "1.0.0")
+        end
+      end
+
+      def skill_input_schema(params)
+        properties = params.transform_values do |config|
+          { type: skill_param_type(config[:type]) }.tap { |h| h[:description] = config[:description] if config[:description] }
+        end
+        required = params.select { |_, config| config[:required] }.keys.map(&:to_s)
+        { type: "object", properties: properties, required: required, additionalProperties: false }
+      end
+
+      def skill_param_type(type)
+        { string: "string", integer: "integer", number: "number", boolean: "boolean" }.fetch(type.to_sym, "string")
       end
 
       # rubocop:disable Metrics/ParameterLists

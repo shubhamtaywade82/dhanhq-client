@@ -14,6 +14,9 @@ module DhanHQ
       #   )
       #
       class SquareOffPosition < Base
+        risk "destructive_write"
+        scope "orders:write"
+
         param :symbol, type: :string, required: true
         param :exchange_segment, type: :string, required: true
 

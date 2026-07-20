@@ -17,6 +17,9 @@ module DhanHQ
       #   puts result[:intent]
       #
       class BuyAtmCall < Base
+        risk "trade_adjacent_read"
+        scope "orders:read"
+
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true
         param :quantity, type: :integer, default: 50
