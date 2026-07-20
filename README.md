@@ -474,6 +474,124 @@ For search-driven discovery and onboarding content, see:
 | [Dhan Ruby Q&A](docs/DHAN_RUBY_QA.md) | Publish-ready answers for common Dhan + Ruby questions |
 | [Release Guide](docs/RELEASE_GUIDE.md) | Versioning, publishing, changelog |
 
+---
+
+## MCP Server (AI Agent Integration)
+
+DhanHQ includes a built-in [Model Context Protocol](https://modelcontextprotocol.io) server that lets AI coding agents (Claude Code, Codex, OpenCode, Cursor) interact with your Dhan account directly from the editor or CLI.
+
+### Quick Start
+
+```bash
+# 1. Configure credentials
+export DHAN_CLIENT_ID="your_client_id"
+export DHAN_ACCESS_TOKEN="your_access_token"
+
+# 2. Start the server (stdio)
+bundle exec ruby -e "
+  require 'dhan_hq'
+  require 'dhan_hq/mcp'
+  DhanHQ::MCP::Server.new.run
+"
+```
+
+### MCP Features
+
+| Feature | Description |
+| ------- | ----------- |
+| **Tools** | 12 trading operations: profile, funds, holdings, positions, order history, place/modify/cancel orders, historical data, option chain, market feed, instruments |
+| **Resources** | 6 URI-addressable data endpoints: `dhanhq://account/profile`, `dhanhq://account/funds`, `dhanhq://account/holdings`, `dhanhq://account/positions`, `dhanhq://account/orders`, `dhanhq://market/capabilities` |
+| **Prompts** | 5 pre-built AI prompts: `portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy` |
+
+### Security & Policy
+
+```ruby
+# Read-only mode (no order placement)
+DhanHQ::Agent::Policy.read_only
+
+# Live trading mode (full access)
+DhanHQ::Agent::Policy.live_trading
+```
+
+The policy engine respects `DHANHQ_MCP_ENABLE_WRITES` and `LIVE_TRADING` env vars. Write operations are blocked by default — explicit opt-in required.
+
+## Skills System
+
+Skills are reusable, composable trading strategies. DhanHQ ships with **10 builtin skills** and a registry for discovery and invocation.
+
+### Builtin Skills
+
+| Skill | Type | Description |
+| ----- | ---- | ----------- |
+| `buy_atm_call` | Single-leg | Buy ATM call option |
+| `square_off_all` | Action | Square off all open positions |
+| `square_off_position` | Action | Square off a specific position |
+| `iron_condor` | Multi-leg | Sell OTM put + buy further OTM put + sell OTM call + buy further OTM call |
+| `strangle` | Multi-leg | Buy OTM put + buy OTM call |
+| `covered_call` | Multi-leg | Buy equity + sell OTM call |
+| `bull_put_spread` | Multi-leg | Sell OTM put + buy further OTM put |
+| `bear_call_spread` | Multi-leg | Sell OTM call + buy further OTM call |
+| `protective_put` | Multi-leg | Buy equity + buy OTM put |
+| `straddle` | Multi-leg | Buy ATM call + buy ATM put |
+
+### Using Skills
+
+```ruby
+# Register all builtin skills
+DhanHQ::Skills::Registry.load_builtins
+
+# Find a skill by name
+skill = DhanHQ::Skills::Registry.find("covered_call")
+
+# Invoke — returns an intent hash (trade_type, legs, risk metadata)
+result = skill.call(symbol: "RELIANCE", expiry: "2026-06-25")
+# => { intent: { trade_type: "COVERED_CALL", legs: [...], total_premium: ..., break_even: ..., note: "..." } }
+```
+
+Skills return intent hashes (not executed trades), keeping a human-in-the-loop safety pattern.
+
+## AI Integration
+
+DhanHQ provides prompt helpers and risk reporting for LLM-powered trading agents.
+
+### Prompt Helpers
+
+```ruby
+require 'dhan_hq/ai'
+
+# Portfolio summary for AI consumption
+DhanHQ::AI::PromptHelpers.portfolio_summary
+# => "Portfolio Summary\n━━━━━━━━━━━━━\nFunds: ₹1,00,000.00\n..."
+
+# Risk report
+DhanHQ::AI::PromptHelpers.risk_report
+# => "🔴 RISK ALERT: 394.6% drawdown..."
+```
+
+### Risk Pipeline
+
+```ruby
+# Run pre-trade risk checks
+DhanHQ::Risk::Pipeline.run!(
+  instrument: instrument,
+  args: { quantity: 25, price: 24_500 },
+  type: :fno,
+  now: Time.now
+)
+```
+
+Available checks:
+- **MaxLoss** — daily loss limit (default ₹50,000)
+- **Concentration** — max 25% portfolio in a single symbol
+- **PositionLimits** — max 20 concurrent open positions
+- **CapitalThreshold** — minimum available balance (₹10,000)
+- **MarketHours** — verifies market is open
+- **WeekendGuard** — blocks trades on weekends
+
+Checks raise `DhanHQ::RiskViolation` with human-readable messages, safe for AI parsing.
+
+---
+
 ## Best Practices
 
 - Keep `on(:tick)` handlers **non-blocking** — push heavy work to a queue/thread

@@ -1,3 +1,29 @@
+## [3.1.0] - 2026-07-20
+
+### Added
+
+- **MCP resources support** — 6 URI-addressable resources (`dhanhq://account/profile`, `funds`, `holdings`, `positions`, `orders`, `dhanhq://market/capabilities`) with `resources/list` and `resources/read`.
+- **MCP prompts support** — 5 pre-built AI prompts (`portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy`) with `prompts/list` and `prompts/get`.
+- **5 new builtin skills** — `covered_call`, `bull_put_spread`, `bear_call_spread`, `protective_put`, `straddle` (10 total).
+- **3 new risk checks** — `PositionLimits` (max 20 concurrent positions), `Concentration` (max 25% per symbol), `MaxLoss` (daily loss limit, default ₹50,000).
+- **Extended risk pipeline** — `DhanHQ::Risk::Pipeline` now includes `DAILY_CHECKS` constant and runs all new checks.
+- **SDK + AI integration docs** — README sections for MCP Server, Skills System, and AI Integration.
+
+### Changed
+
+- `DhanHQ::MCP::Server` now requires `dhan_hq/ai` for prompt generation.
+- CI RuboCop step no longer uses `continue-on-error: true`.
+- Spec path for risk check specs moved to `spec/dhan_hq/risk/checks/`.
+
+### Fixed
+
+- Syntax error in MCP server spec (orphaned `if response["error"]` debug lines removed).
+- `[]` method stub pattern in risk check specs (use `receive(:[])` instead of hash double syntax).
+- `MaxLoss` spec test data corrected to trigger the daily loss limit correctly.
+- All RSpec VerifiedDoubles and MultipleExpectations offenses resolved (0 RuboCop offenses).
+
+---
+
 ## [3.0.0] - 2026-05-19
 
 ### Breaking Changes

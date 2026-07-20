@@ -34,4 +34,3 @@ jobs:
 
       - name: Run RuboCop
         run: bundle exec rubocop
-        continue-on-error: true
