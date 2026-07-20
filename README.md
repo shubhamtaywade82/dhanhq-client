@@ -595,14 +595,26 @@ DhanHQ::Risk::Pipeline.run!(
 ```
 
 Available checks:
-- **MaxLoss** — daily loss limit (default ₹50,000)
-- **Concentration** — max 25% portfolio in a single symbol
+- **TradingPermission** — blocks instruments where trading is disabled (`buy_sell_indicator != "A"`)
+- **AsmGsm** — blocks ASM/GSM restricted instruments
+- **ProductSupport** — validates bracket/cover order support for the instrument
+- **OrderType** — restricts to `MARKET`/`LIMIT` order types
+- **Quantity** — max 10 units / ₹1,00,000 notional (an agent-safety limit, not a general trading cap)
+- **MarketHours** — verifies market is open (9:15 AM–3:30 PM IST)
 - **PositionLimits** — max 20 concurrent open positions
-- **CapitalThreshold** — minimum available balance (₹10,000)
-- **MarketHours** — verifies market is open
-- **WeekendGuard** — blocks trades on weekends
+- **Concentration** — max 25% of available balance in a single symbol
+- **Options** (options only) — index-only, requires stop loss + target + risk-reward
+- **MaxLoss** (daily) — daily loss limit (default ₹50,000)
 
-Checks raise `DhanHQ::RiskViolation` with human-readable messages, safe for AI parsing.
+Checks raise `DhanHQ::RiskViolation` with human-readable messages, safe for AI parsing. Wired into every order-placing path via `DhanHQ::Concerns::OrderAudit#run_risk_checks!` (Orders, SuperOrders, ForeverOrders, AlertOrders, TwapOrders, IcebergOrders, PnL Exit) and into the `dhan_place_order` MCP tool.
+
+### Known Limitations
+
+This gem's core REST/WS client (orders, positions, funds, market data) is mature and already depended on in production by other repos in this workspace. The MCP server, Skills system, and Risk pipeline are newer and have been verified live against a real (empty) Dhan account and a real independent MCP client for the first time — see [CHANGELOG.md](CHANGELOG.md#known-limitations) for what's been proven and what hasn't:
+
+- Read path (profile/funds/holdings/positions/orders/instrument lookup/option chains, all 11 skills' intent-building) — live-verified.
+- Write path (`dhan_place_order`, `dhan_cancel_order`, `square_off_all`, `square_off_position`) — risk-gated but unit-tested only, never fired against a real order.
+- Risk checks that read portfolio state (`Concentration`, `PositionLimits`, `MaxLoss`) have only been observed against a zero-balance, zero-position account.
 
 ---
 
