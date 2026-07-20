@@ -17,14 +17,12 @@ module DhanHQ
 
           positions = DhanHQ::Models::Position.all
           symbol_positions = positions.select do |p|
-            sym = p[:trading_symbol] || p["tradingSymbol"] || p[:security_id] || p["securityId"]
+            sym = p.trading_symbol || p.security_id
             sym.to_s == symbol.to_s
           end
 
           current_exposure = symbol_positions.sum do |p|
-            qty = (p[:net_quantity] || p["netQuantity"] || p.net_quantity).to_i
-            ltp = (p[:ltp] || p["last_price"] || p["lastPrice"] || 0).to_f
-            qty.abs * ltp
+            p.net_qty.to_i.abs * p.cost_price.to_f
           end
 
           concentration_pct = (current_exposure / available) * 100.0

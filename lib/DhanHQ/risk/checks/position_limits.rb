@@ -10,12 +10,7 @@ module DhanHQ
         def self.run!(**_unused)
           positions = DhanHQ::Models::Position.all
           open_count = positions.count do |p|
-            qty = begin
-              p[:net_quantity] || p["netQuantity"] || p.net_quantity
-            rescue StandardError
-              0
-            end
-            qty.to_i != 0
+            p.net_qty.to_i != 0
           end
 
           return if open_count < MAX_OPEN_POSITIONS

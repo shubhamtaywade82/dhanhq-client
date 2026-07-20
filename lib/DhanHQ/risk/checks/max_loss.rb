@@ -10,12 +10,7 @@ module DhanHQ
         def self.run!(**_unused)
           positions = DhanHQ::Models::Position.all
           total_unrealized_loss = positions.sum do |p|
-            urpl = begin
-              p[:unrealized_profit_loss] || p["unrealized_profit_loss"] || p.unrealized_profit_loss
-            rescue StandardError
-              0
-            end
-            urpl.to_f
+            p.unrealized_profit.to_f
           end
 
           return if total_unrealized_loss >= -DAILY_MAX_LOSS

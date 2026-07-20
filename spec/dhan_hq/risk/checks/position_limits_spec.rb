@@ -3,11 +3,7 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Risk::Checks::PositionLimits do
   def position_double(net_qty)
-    double("position").tap do |p|
-      allow(p).to receive(:[]).with(:net_quantity).and_return(net_qty)
-      allow(p).to receive(:[]).with("netQuantity").and_return(net_qty)
-      allow(p).to receive(:net_quantity).and_return(net_qty)
-    end
+    double("position", net_qty: net_qty)
   end
 
   describe ".run!" do

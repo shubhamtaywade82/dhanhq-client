@@ -16,7 +16,7 @@ RSpec.describe DhanHQ::Skills::Builtin::BullPutSpread do
 
   let(:instrument) do
     double("instrument",
-           ltp: { ltp: 24_500.0 },
+           ltp: 24_500.0,
            option_chain: chain)
   end
 

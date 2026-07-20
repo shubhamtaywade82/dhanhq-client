@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
   let(:instrument) do
     # rubocop:disable RSpec/VerifiedDoubles
     double("instrument",
-           ltp: { ltp: 24_500.0 },
+           ltp: 24_500.0,
            option_chain: [
              { strike: 24_400, option_type: "CE", security_id: "SEC001", last_price: 150.0 },
              { strike: 24_500, option_type: "CE", security_id: "SEC002", last_price: 100.0 },

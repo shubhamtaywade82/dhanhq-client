@@ -3,11 +3,7 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Risk::Checks::MaxLoss do
   def position_double(urpl)
-    double("position").tap do |p|
-      allow(p).to receive(:[]).with(:unrealized_profit_loss).and_return(urpl)
-      allow(p).to receive(:[]).with("unrealized_profit_loss").and_return(urpl)
-      allow(p).to receive(:unrealized_profit_loss).and_return(urpl)
-    end
+    double("position", unrealized_profit: urpl)
   end
 
   describe ".run!" do

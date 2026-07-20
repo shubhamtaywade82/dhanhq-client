@@ -184,8 +184,14 @@ module DhanHQ
           { messages: [{ role: "user", content: { type: "text", text: summary } }] }
         when "market_analysis"
           symbol = arguments["symbol"] || "NIFTY"
-          snapshot = DhanHQ::Models::MarketFeed.quote(DhanHQ::Constants::ExchangeSegment::IDX_I => [symbol])
-          text = "Market snapshot for #{symbol}: #{snapshot}"
+          instrument = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::IDX_I, symbol)
+          security_id = instrument&.security_id&.to_i
+          if security_id
+            snapshot = DhanHQ::Models::MarketFeed.quote(DhanHQ::Constants::ExchangeSegment::IDX_I => [security_id])
+            text = "Market snapshot for #{symbol}: #{snapshot}"
+          else
+            text = "Could not resolve symbol #{symbol} to a security ID for market data."
+          end
           { messages: [{ role: "user", content: { type: "text", text: text } }] }
         when "risk_report"
           positions = DhanHQ::Models::Position.all

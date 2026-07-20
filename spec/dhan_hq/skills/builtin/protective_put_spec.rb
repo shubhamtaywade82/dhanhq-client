@@ -13,7 +13,7 @@ RSpec.describe DhanHQ::Skills::Builtin::ProtectivePut do
 
   let(:instrument) do
     double("instrument",
-           ltp: { ltp: 2450.0 },
+           ltp: 2450.0,
            security_id: "EQ001",
            option_chain: chain)
   end

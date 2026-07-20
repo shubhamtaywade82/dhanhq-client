@@ -16,7 +16,7 @@ RSpec.describe DhanHQ::Skills::Builtin::IronCondor do
   let(:instrument) do
     # rubocop:disable RSpec/VerifiedDoubles
     double("instrument",
-           ltp: { ltp: 24_500.0 },
+           ltp: 24_500.0,
            option_chain: chain)
     # rubocop:enable RSpec/VerifiedDoubles
   end

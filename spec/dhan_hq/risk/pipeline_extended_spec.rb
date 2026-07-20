@@ -7,13 +7,7 @@ RSpec.describe DhanHQ::Risk::Pipeline do
   let(:base_args) { { "quantity" => 1 } }
 
   def position_double(net_qty, urpl = 0)
-    double("position").tap do |p|
-      allow(p).to receive(:[]).with(:net_quantity).and_return(net_qty)
-      allow(p).to receive(:[]).with("netQuantity").and_return(net_qty)
-      allow(p).to receive(:[]).with(:unrealized_profit_loss).and_return(urpl)
-      allow(p).to receive(:[]).with("unrealized_profit_loss").and_return(urpl)
-      allow(p).to receive_messages(net_quantity: net_qty, unrealized_profit_loss: urpl)
-    end
+    double("position", net_qty: net_qty, unrealized_profit: urpl)
   end
 
   before do

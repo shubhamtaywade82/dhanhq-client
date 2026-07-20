@@ -23,7 +23,7 @@ module DhanHQ
     #     end
     #
     #     def get_spot_price(ctx)
-    #       ctx[:spot_price] = ctx[:instrument].ltp[:ltp]
+    #       ctx[:spot_price] = ctx[:instrument].ltp
     #       ctx
     #     end
     #

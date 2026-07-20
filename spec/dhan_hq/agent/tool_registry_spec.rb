@@ -93,7 +93,7 @@ RSpec.describe DhanHQ::Agent::ToolRegistry do
     it "executes a skill tool end-to-end" do
       policy = DhanHQ::Agent::Policy.new(scopes: ["orders:read"])
       # rubocop:disable RSpec/VerifiedDoubles
-      instrument = double("instrument", ltp: { ltp: 24_500.0 }, option_chain: [
+      instrument = double("instrument", ltp: 24_500.0, option_chain: [
                             { strike: 24_000, option_type: "PE", security_id: "PE01" },
                             { strike: 24_200, option_type: "PE", security_id: "PE02" },
                             { strike: 24_400, option_type: "PE", security_id: "PE03" },

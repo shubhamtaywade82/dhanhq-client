@@ -13,19 +13,7 @@ RSpec.describe DhanHQ::Risk::Checks::Concentration do
     end
 
     def position_double(net_qty, price, symbol: "RELIANCE")
-      double("position").tap do |p|
-        allow(p).to receive(:[]).with(:net_quantity).and_return(net_qty)
-        allow(p).to receive(:[]).with("netQuantity").and_return(net_qty)
-        allow(p).to receive(:[]).with(:trading_symbol).and_return(symbol)
-        allow(p).to receive(:[]).with("tradingSymbol").and_return(symbol)
-        allow(p).to receive(:[]).with(:security_id).and_return("2885")
-        allow(p).to receive(:[]).with("securityId").and_return("2885")
-        allow(p).to receive(:[]).with(:ltp).and_return(price)
-        allow(p).to receive(:[]).with("ltp").and_return(price)
-        allow(p).to receive(:[]).with(:last_price).and_return(price)
-        allow(p).to receive(:[]).with("lastPrice").and_return(price)
-        allow(p).to receive_messages(net_quantity: net_qty, trading_symbol: symbol, ltp: price)
-      end
+      double("position", trading_symbol: symbol, security_id: "2885", net_qty: net_qty, cost_price: price)
     end
 
     it "passes when no symbol is specified" do
