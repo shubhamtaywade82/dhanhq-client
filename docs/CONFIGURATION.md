@@ -9,7 +9,7 @@ require 'dhan_hq'
 DhanHQ.configure_with_env
 ```
 
-`configure_with_env` reads `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` from `ENV` and raises if either is missing.
+`configure_with_env` reads `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN` from `ENV`. It does **not** raise if either is missing — they're simply left `nil`, and a `DhanHQ::AuthenticationError` (or similar) surfaces later, only when a request actually needs the token.
 
 ## Required Environment Variables
 
@@ -25,7 +25,8 @@ Set these _before_ calling `configure_with_env` to override defaults:
 | Variable                         | Default    | Description                                             |
 | -------------------------------- | ---------- | ------------------------------------------------------- |
 | `DHAN_LOG_LEVEL`                 | `INFO`     | Logger verbosity (`DEBUG`, `INFO`, `WARN`, `ERROR`)     |
-| `DHAN_BASE_URL`                  | Dhan prod  | Point REST calls to a different API hostname            |
+| `DHAN_SANDBOX`                   | `false`    | Set `"true"` to route REST calls to `https://sandbox.dhan.co/v2` instead of production. Note: Dhan's sandbox validates request/response plumbing only — it does not execute real order fills/matching. Placed orders stay `PENDING` indefinitely. See [ENDPOINTS_AND_SANDBOX.md](ENDPOINTS_AND_SANDBOX.md). |
+| `DHAN_BASE_URL`                  | Dhan prod  | Point REST calls to a different API hostname. Takes precedence over `DHAN_SANDBOX` only when explicitly set to something other than the production default. |
 | `DHAN_WS_VERSION`                | latest     | Pin WebSocket connections to a specific API version     |
 | `DHAN_WS_ORDER_URL`              | Dhan prod  | Override the order update WebSocket endpoint            |
 | `DHAN_WS_USER_TYPE`              | `SELF`     | Switch between `SELF` and `PARTNER` streaming modes     |

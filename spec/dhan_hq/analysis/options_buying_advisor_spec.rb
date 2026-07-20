@@ -42,4 +42,33 @@ RSpec.describe DhanHQ::Analysis::OptionsBuyingAdvisor do
     out = described_class.new(data: bad).call
     expect(out[:decision]).to eq(:no_trade)
   end
+
+  # rubocop:disable RSpec/ExampleLength
+  it "auto-fetches and normalizes the option chain against the real nested OptionChain shape" do
+    without_chain = data.dup
+    without_chain.delete(:option_chain)
+
+    allow(DhanHQ::Models::OptionChain).to receive_messages(fetch_expiry_list: ["2026-01-30"], fetch: {
+      last_price: 24_900.0,
+      strikes: [
+        { strike: 24_900.0,
+          call: { last_price: 120.0, top_bid_price: 119.0, top_ask_price: 121.0, implied_volatility: 12.0,
+                  oi: 20_000, volume: 5000, security_id: "CE1", greeks: { delta: 0.5, gamma: 0.01, vega: 5.0, theta: -2.0 } },
+          put: { last_price: 100.0, top_bid_price: 99.0, top_ask_price: 101.0, implied_volatility: 14.0,
+                 oi: 15_000, volume: 4000, security_id: "PE1", greeks: { delta: -0.5, gamma: 0.01, vega: 5.0, theta: -2.0 } } },
+        { strike: 24_950.0,
+          call: { last_price: 90.0, top_bid_price: 89.0, top_ask_price: 91.0, implied_volatility: 13.0,
+                  oi: 18_000, volume: 4500, security_id: "CE2", greeks: { delta: 0.4, gamma: 0.01, vega: 5.0, theta: -2.0 } },
+          put: { last_price: 110.0, top_bid_price: 109.0, top_ask_price: 111.0, implied_volatility: 15.0,
+                 oi: 10_000, volume: 3000, security_id: "PE2", greeks: { delta: -0.6, gamma: 0.01, vega: 5.0, theta: -2.0 } } }
+      ]
+    }.with_indifferent_access)
+
+    out = described_class.new(data: without_chain).call
+
+    expect(DhanHQ::Models::OptionChain).to have_received(:fetch)
+    expect(out[:decision]).to eq(:enter_long)
+    expect(out[:strike]).to include(:recommended)
+  end
+  # rubocop:enable RSpec/ExampleLength
 end

@@ -17,8 +17,9 @@ Exchange segments for different markets and instruments.
 | `NSE_EQ` | `"NSE_EQ"` | NSE - Equity Cash | 1 |
 | `NSE_FNO` | `"NSE_FNO"` | NSE - Futures & Options | 2 |
 | `NSE_CURRENCY` | `"NSE_CURRENCY"` | NSE - Currency | 3 |
-| `BSE_EQ` | `"BSE_EQ"` | BSE - Equity Cash | 4 |
-| `MCX_COMM` | `"MCX_COMM"` | MCX - Commodity | 5 |
+| `NSE_COMM` | `"NSE_COMM"` | NSE - Commodity | 4 |
+| `BSE_EQ` | `"BSE_EQ"` | BSE - Equity Cash | 5 |
+| `MCX_COMM` | `"MCX_COMM"` | MCX - Commodity | 6 |
 | `BSE_CURRENCY` | `"BSE_CURRENCY"` | BSE - Currency | 7 |
 | `BSE_FNO` | `"BSE_FNO"` | BSE - Futures & Options | 8 |
 
@@ -431,7 +432,7 @@ end
 
 ### Validation Helpers
 
-Consider adding validation helpers:
+Already implemented in `lib/DhanHQ/constants.rb`:
 
 ```ruby
 module DhanHQ
@@ -439,7 +440,7 @@ module DhanHQ
     def self.valid?(module_name, value)
       const_get(module_name)::ALL.include?(value)
     end
-    
+
     def self.all_for(module_name)
       const_get(module_name)::ALL
     end

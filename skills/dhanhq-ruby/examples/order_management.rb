@@ -27,6 +27,13 @@ if ENV["RUN_LIVE_EXAMPLE"] != "1"
   exit 0
 end
 
+# The gem has its own independent safety gate: Order.place/modify/cancel raise
+# DhanHQ::LiveTradingDisabledError unless ENV["LIVE_TRADING"]="true" is also set.
+if ENV["LIVE_TRADING"] != "true"
+  puts "Also set ENV['LIVE_TRADING']='true' — the SDK blocks order placement without it."
+  exit 0
+end
+
 # Step 1: Place a limit order (well below market for demo — won't fill)
 puts "Step 1: Placing limit buy order for RELIANCE..."
 order = DhanHQ::Models::Order.place(

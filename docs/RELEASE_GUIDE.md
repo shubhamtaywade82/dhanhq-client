@@ -148,8 +148,9 @@ When you push a tag (e.g., `v2.1.12`), the **Release** workflow (`.github/workfl
 2. ✅ **Generate OTP code** from secret `RUBYGEMS_OTP_SECRET`
 3. ✅ **Build gem** using `gem build DhanHQ.gemspec`
 4. ✅ **Push to RubyGems** with OTP using `GEM_HOST_API_KEY` (from secret `RUBYGEMS_API_KEY`)
+5. ✅ **Attach gem to GitHub Release** — uploads `DhanHQ-<version>.gem` as a downloadable asset on the GitHub Release for the tag, creating the release (with auto-generated notes) if it doesn't already exist, or uploading to it if it does
 
-Tests run on push/PR via the main CI workflow; the release job does not run tests. No GitHub Release is created (tag-only publish, same pattern as ollama-client).
+Tests run on push/PR via the main CI workflow; the release job does not run tests. A GitHub Release page is created/updated with the built `.gem` attached as a downloadable asset (verified working on the real v3.1.0 release: https://github.com/shubhamtaywade82/dhanhq-client/releases/tag/v3.1.0).
 
 **No manual intervention needed!** ⚡
 
@@ -284,6 +285,16 @@ on:
    ```bash
    # RubyGems uses GEM_HOST_API_KEY from the environment (set from secret RUBYGEMS_API_KEY)
    gem push "DhanHQ-${gem_version}.gem" --otp "$otp_code"
+   ```
+
+5. **Attach gem to GitHub Release**
+   ```bash
+   # Creates the release (with --generate-notes) if it doesn't exist yet, else uploads to it
+   if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+     gh release upload "$tag" "$gem_file" --repo "$GITHUB_REPOSITORY" --clobber
+   else
+     gh release create "$tag" "$gem_file" --repo "$GITHUB_REPOSITORY" --title "$tag" --generate-notes
+   fi
    ```
 
 ### Security Features
@@ -476,7 +487,7 @@ The old workflow (`.github/workflows/main.yml`):
 ✅ **MFA secured:** OTP authentication on every release
 ✅ **Production ready:** Battle-tested release workflow
 ✅ **Tests integrated:** Ensures quality before release
-✅ **Tag-only release:** Same pattern as ollama-client; push tag `v*` to publish
+✅ **Tag-triggered release:** push tag `v*` to publish to RubyGems and attach the built gem to a GitHub Release
 
 Questions or issues? Check the [Troubleshooting](#troubleshooting) section above.
 

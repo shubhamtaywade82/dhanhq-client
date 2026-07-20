@@ -3,6 +3,8 @@
 Critical API rules:
 - Order placement, modification, cancellation, super orders, and forever orders require static IP whitelisting.
 - Dhan's current order docs say API market orders are converted to limit orders with MPP.
+- **`ENV["LIVE_TRADING"]="true"` is required for `place`/`create`/`modify`/`cancel` to actually submit anything** — the gem raises `DhanHQ::LiveTradingDisabledError` otherwise, as a safety gate against accidental order placement from a dev machine.
+- **`correlation_id` must be 25 characters or fewer.** Dhan's real API rejects the entire order with a generic `DH-905` error if exceeded — it doesn't say which field was wrong.
 
 ## Regular Orders
 
