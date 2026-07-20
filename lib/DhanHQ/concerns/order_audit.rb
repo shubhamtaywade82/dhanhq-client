@@ -57,7 +57,7 @@ module DhanHQ
         exchange_segment = extract_param(params, :exchangeSegment, :exchange_segment)
         return unless security_id && exchange_segment
 
-        instrument = DhanHQ::Models::Instrument.find(exchange_segment, security_id)
+        instrument = DhanHQ::Models::Instrument.find_by_security_id(exchange_segment, security_id)
         return unless instrument
 
         DhanHQ::Risk::Pipeline.run!(

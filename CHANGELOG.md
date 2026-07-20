@@ -26,6 +26,23 @@
 - **Position model accessors in risk checks** — replaced `p[:net_quantity]`, `p[:unrealized_profit_loss]`, and `p[:trading_symbol]` hash indexing with real model accessors (`p.net_qty`, `p.unrealized_profit`, `p.trading_symbol`).
 - **`ltp` access in all 9 skills** — `instrument.ltp` returns a Float, not a Hash; removed the `ltp[:ltp]` unwrapping pattern.
 - **`market_analysis` prompt** — resolves symbol to integer security ID via `Instrument.find` before passing to `MarketFeed.quote`.
+- **`OrderAudit#run_risk_checks!` resolved the wrong instrument** — called `Instrument.find(exchange_segment, security_id)`, but `find`'s second argument is a symbol name (e.g. `"RELIANCE"`), not a security ID. Every real order silently failed instrument resolution (`Instrument.find` returned `nil` for a numeric ID), which combined with the surrounding `rescue StandardError; nil` meant **risk checks never ran for any real order placed through any of the 7 order resources**, despite the "wired into all order paths" claim above. Fixed by switching to the new `Instrument.find_by_security_id`. Confirmed live against a real account: `find("NSE_EQ", "2885")` → `nil`; `find_by_security_id("NSE_EQ", "2885")` → resolves RELIANCE correctly.
+- **MCP JSON-RPC compliance** — notifications (requests with no `id`) no longer receive a response; dispatch errors preserve the caller's request `id`; error codes now use the correct `-32700`/`-32601`/`-32602`/`-32603` instead of a single generic `-32000`; `protocolVersion` is negotiated against the client's request instead of hardcoded.
+- **`dhan_place_order` MCP tool bypassed all risk checks** — now resolves the instrument via `find_by_security_id` and runs `Risk::Pipeline.run!` before calling `Order.place`, same as the resource-level fix above, gated by the same live-write policy checks.
+- **Option chain shape mismatch in 8 of 11 skills** — `Instrument#option_chain` returns `{ last_price:, strikes: [{ strike:, call:, put: }] }` (nested Hash), but `iron_condor`, `straddle`, `strangle`, `buy_atm_call`, `covered_call`, `protective_put`, `bull_put_spread`, and `bear_call_spread` were written assuming a flat array of `{ strike:, option_type:, security_id: }` leg-hashes. Every one of these skills raised `NoMethodError`/`TypeError` against the real API; all specs passed anyway because their fixtures invented the same wrong shape. Confirmed broken live, fixed against real NIFTY/RELIANCE option chains (real security IDs verified), all fixtures rewritten to match reality (`spec/support/option_chain_helpers.rb`).
+- **MCP tool call could hang indefinitely** — a rate-limited `tools/call` blocked the single-threaded stdio loop with no error surfaced. Added a 15s timeout (`DhanHQ::MCP::Server#tool_call_timeout`) that returns a structured error instead.
+
+### Known Limitations
+
+Verified live against a real (empty, zero-balance) Dhan account and via an independent MCP client. Read path is production-verified for the first time; write path remains unproven in the same way it always was.
+
+- **Live-tested**: core REST client (profile, funds, holdings, positions, orders, instrument lookup, `ltp`), MCP protocol layer (handshake, tools/list, tools/call, error codes) against both fake and real credentials, all 11 skills' intent-building logic against real option chain data (real security IDs confirmed for 8 multi-leg strategies).
+- **Never live-tested**: `dhan_place_order` / `Order.place` execution itself, `dhan_cancel_order`, `square_off_all`, `square_off_position` — the risk-pipeline gating on these paths is unit-tested with mocks only, not fired against a real order. Deliberate, given the money at stake — but it means the write path is exercised the same way it always was, not more.
+- **`Concentration`/`PositionLimits`/`MaxLoss` risk checks** have only been validated against an account with zero positions and zero balance. Their math is unit-tested; behavior against a real non-empty portfolio has not been observed.
+- **`dhan_skill_*` tool descriptions** in `tools/list` show the raw Ruby class name (e.g. `"DhanHQ::Skills::Builtin::IronCondor"`) instead of a human-readable description — `Skills::Base#description` needs a per-skill override to be genuinely useful to an LLM client.
+- **WebSocket/streaming feed** was not touched or re-verified in this pass — presumed mature per prior audit, not re-tested live.
+- **`release.yml`'s GitHub Release gem-asset upload** has not fired end-to-end — no tag has been pushed since the fix landed.
+- **v3.1.0 is not tagged** — CHANGELOG reflects work in progress on `main`, not a cut release.
 
 ---
 
