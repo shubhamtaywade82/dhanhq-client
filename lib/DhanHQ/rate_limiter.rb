@@ -48,60 +48,65 @@ module DhanHQ
 
     # Blocks until the current request is allowed by the configured limits.
     #
+    # Deliberately never sleeps while holding `mutex` — the background
+    # cleanup threads (see {#start_cleanup_threads}) need that same mutex to
+    # reset the per-minute/hour/day counters. Holding it across a sleep loop
+    # here would starve those threads out forever once a counter maxes out
+    # (observed: a sustained high-volume run pins the data_api per-day bucket
+    # at its cap and the process never recovers).
+    #
     # @return [void]
     def throttle!
-      mutex.synchronize do
-        if @api_type == :option_chain
-          last_request_time = @buckets[:last_request_time]
-
-          sleep_time = 3 - (Time.now - last_request_time)
-          if sleep_time.positive?
-            if ENV["DHAN_DEBUG"] == "true"
-              puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit"
-            end
-            sleep(sleep_time)
-          end
-
-          @buckets[:last_request_time] = Time.now
-          return
-        end
-
-        # For per-second limits, use timestamp-based sliding window
-        per_second_limit = RATE_LIMITS[@api_type][:per_second]
-        if per_second_limit && per_second_limit != Float::INFINITY
-          now = Time.now
-          # Remove requests older than 1 second
-          @request_times.reject! { |t| now - t >= 1.0 }
-
-          # Check if we've hit the per-second limit
-          if @request_times.size >= per_second_limit
-            # Calculate how long to wait until the oldest request is 1 second old
-            oldest_time = @request_times.min
-            wait_time = 1.0 - (now - oldest_time)
-
-            if wait_time.positive?
-              sleep(wait_time)
-              # Recalculate after sleep
-              now = Time.now
-              @request_times.reject! { |t| now - t >= 1.0 }
-            end
-          end
-
-          # Record this request time
-          @request_times << Time.now
-        end
-
-        # Check other limits (per_minute, per_hour, per_day)
-        loop do
-          break if allow_request?
-
-          sleep(0.1)
-        end
-        record_request
+      if @api_type == :option_chain
+        wait_for_option_chain_slot
+        return
       end
+
+      wait_for_per_second_slot
+      wait_for_bucket_capacity
+      mutex.synchronize { record_request }
     end
 
     private
+
+    def wait_for_option_chain_slot
+      loop do
+        sleep_time = mutex.synchronize { 3 - (Time.now - @buckets[:last_request_time]) }
+        break if sleep_time <= 0
+
+        puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit" if ENV["DHAN_DEBUG"] == "true"
+        sleep(sleep_time)
+      end
+      mutex.synchronize { @buckets[:last_request_time] = Time.now }
+    end
+
+    def wait_for_per_second_slot
+      per_second_limit = RATE_LIMITS[@api_type][:per_second]
+      return unless per_second_limit && per_second_limit != Float::INFINITY
+
+      loop do
+        wait_time = mutex.synchronize do
+          now = Time.now
+          @request_times.reject! { |t| now - t >= 1.0 }
+          break 0 if @request_times.size < per_second_limit
+
+          1.0 - (now - @request_times.min)
+        end
+        break unless wait_time.positive?
+
+        sleep(wait_time)
+      end
+
+      mutex.synchronize { @request_times << Time.now }
+    end
+
+    def wait_for_bucket_capacity
+      loop do
+        break if mutex.synchronize { allow_request? }
+
+        sleep(0.1)
+      end
+    end
 
     # Gets or creates a mutex for this API type for thread-safe throttling
     def mutex
