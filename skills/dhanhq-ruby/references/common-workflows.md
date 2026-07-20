@@ -23,20 +23,20 @@ end
 
 Use this flow for selling demat holdings:
 1. Fetch holdings and identify ISIN.
-2. Generate TPIN: `DhanHQ::Models::EDIS.generate_tpin`
-3. Open authorization form: `DhanHQ::Models::EDIS.open_browser_for_tpin(isin: "...", qty: 5, exchange: "NSE")`
-4. Check inquiry: `DhanHQ::Models::EDIS.inquiry(isin: "...")`
+2. Generate TPIN: `DhanHQ::Models::Edis.generate_tpin`
+3. Generate the authorization form: `DhanHQ::Models::Edis.generate_form(isin: "...", qty: 5, exchange: "NSE", segment: "EQ")`
+4. Check status: `DhanHQ::Models::Edis.inquire(isin: "...")`
 5. Place the sell order.
 
 ```ruby
 # Generate TPIN
-DhanHQ::Models::EDIS.generate_tpin
+DhanHQ::Models::Edis.generate_tpin
 
-# Open authorization portal
-DhanHQ::Models::EDIS.open_browser_for_tpin(isin: "INE002A01018", qty: 5, exchange: "NSE")
+# Generate authorization form
+DhanHQ::Models::Edis.generate_form(isin: "INE002A01018", qty: 5, exchange: "NSE", segment: "EQ")
 
-# Inquiry
-status = DhanHQ::Models::EDIS.inquiry(isin: "INE002A01018")
+# Check status
+status = DhanHQ::Models::Edis.inquire(isin: "INE002A01018")
 ```
 
 ## Single-Leg F&O Execution

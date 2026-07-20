@@ -32,6 +32,11 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 │  → Dry::Validation, shared macros in BaseContract               │
 ├─────────────────────────────────────────────────────────────────┤
 │  WebSocket (WS::*) — separate subsystem                         │
+├─────────────────────────────────────────────────────────────────┤
+│  AI / Agent layer (Agent, Skills, Risk, MCP) — separate subsystem│
+│  MCP server (JSON-RPC over stdio) → Agent::ToolRegistry          │
+│  → primitive tools (Models) + skill tools (Skills::Registry)     │
+│  → gated by Agent::Policy + Risk::Pipeline before any order      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,6 +56,12 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 | `concerns/` | Shared behavior | Modules included across layers (e.g. `OrderAudit` for live trading guard + audit logging, included in all order resources). |
 | `utils/` | Utilities | Cross-cutting utilities not tied to a single layer (e.g. `NetworkInspector` for IP/hostname/env lookup used by order audit logging). |
 | `ws/` | WebSocket | Connection, packets, decoder, market depth, orders client — isolated from REST. |
+| `mcp/` | MCP server | `DhanHQ::MCP::Server` — hand-rolled JSON-RPC 2.0 stdio server. Exposes `tools/list`, `tools/call`, `resources/*`, `prompts/*` to any MCP client (Claude Desktop, Claude Code, etc.). Launched via `exe/dhanhq-mcp`. |
+| `agent/` | AI tool registry | `Agent::ToolRegistry` — 12 primitive tools (`dhan_profile`, `dhan_place_order`, …) plus one `dhan_skill_*` tool per registered `Skills::Registry` entry (23 total). `Agent::Policy` gates every call by scope + `LIVE_TRADING`/`DHANHQ_MCP_ENABLE_WRITES`. `Agent::OrderPreview` validates without submitting. |
+| `skills/` | Composable strategies | `Skills::Base` DSL (`param`, `step`, `risk`, `scope`, `description`) + `Skills::Registry`. 11 builtin skills (`iron_condor`, `straddle`, `strangle`, `buy_atm_call`, `covered_call`, `protective_put`, `bull_put_spread`, `bear_call_spread`, `square_off_all`, `square_off_position`, `market_data_summarizer`) under `skills/builtin/`. |
+| `risk/` | Pre-trade risk gate | `Risk::Pipeline.run!` — runs `TradingPermission`, `AsmGsm`, `ProductSupport`, `OrderType`, `Quantity`, `MarketHours`, `PositionLimits`, `Concentration`, `Options` (options-only), `MaxLoss` (daily) under `risk/checks/`. Wired into every order-placing resource via `Concerns::OrderAudit#run_risk_checks!` and into the `dhan_place_order` MCP tool. |
+| `ai/` | LLM prompt helpers | `AI::PromptHelpers` — human-readable portfolio summaries and risk reports, consumed by the MCP server's `prompts/get`. |
+| `strategy/`, `market_data/`, `option_analytics/`, `events/` | Analysis modules | Strategy base class, market-data snapshot/OHLC types, option analytics (Black-Scholes, max pain), and typed event objects (`Events::Base`, `Events::Bus`). Zeitwerk-autoloaded like the rest of `DhanHQ::*` — distinct from the separate opt-in `lib/dhanhq/analysis` and `lib/dhanhq/ta` modules (lowercase namespace, require explicitly; see [3.0.0] in CHANGELOG.md). |
 
 ---
 

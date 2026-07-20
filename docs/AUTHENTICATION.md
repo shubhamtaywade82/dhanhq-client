@@ -54,7 +54,7 @@ If the token was **generated from Dhan Web** (not API key flow), you can refresh
 
 ```ruby
 # Returns a hash with API response (e.g. accessToken, expiryTime). Use the new token for subsequent requests.
-response = DhanHQ::Auth.renew_token(current_access_token, client_id)
+response = DhanHQ::Auth.renew_token(access_token: current_access_token, client_id: client_id)
 new_token = response["accessToken"] || response[:accessToken]
 # Optional: response may include "expiryTime"
 ```
@@ -68,7 +68,7 @@ Example: refresh in provider and cache the result until near expiry:
 config.access_token_provider = lambda do
   stored = YourTokenStore.current
   if stored.nil? || stored.expired_soon?
-    response = DhanHQ::Auth.renew_token(stored&.access_token || ENV["DHAN_ACCESS_TOKEN"], config.client_id)
+    response = DhanHQ::Auth.renew_token(access_token: stored&.access_token || ENV["DHAN_ACCESS_TOKEN"], client_id: config.client_id)
     YourTokenStore.update!(response["accessToken"], response["expiryTime"])
     stored = YourTokenStore.current
   end
@@ -220,5 +220,3 @@ Central service: configure_from_token_endpoint
 Fully automated: TOTP generate (Auth / Client#generate_access_token)
 
 Production-grade automation: enable_auto_token_management! (generate + renew)
-
-If you tell me your exact deployment style (single user box, multi-user SaaS, on-prem, etc.), I can tell you which one you should actually use and what to delete as overkill.

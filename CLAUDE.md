@@ -4,7 +4,7 @@ Ruby gem — the canonical DhanHQ v2 API client for this workspace. All other tr
 
 ## What it is
 
-A pure-Ruby library wrapping the DhanHQ v2 REST + WebSocket API. Provides typed model classes, a rate limiter, request/response helpers, and WebSocket streaming (`DhanHQ::WS`).
+A pure-Ruby library wrapping the DhanHQ v2 REST + WebSocket API. Provides typed model classes, a rate limiter, request/response helpers, WebSocket streaming (`DhanHQ::WS`), and an AI-agent layer (MCP server, composable trading skills, pre-trade risk pipeline).
 
 ## Stack
 
@@ -34,10 +34,15 @@ lib/DhanHQ/
   models/        # Typed AR-like model classes (Order, Position, Holding, etc.)
   resources/     # REST resource wrappers
   contracts/     # Request/response contract validators
-  concerns/      # Shared behavior modules (OrderAudit)
+  concerns/      # Shared behavior modules (OrderAudit — runs the risk pipeline before every order)
   auth/          # Auth flow
   utils/         # Cross-cutting utilities (NetworkInspector)
   ws/            # WebSocket client and feed
+  mcp/           # MCP server (JSON-RPC over stdio) — launched via exe/dhanhq-mcp
+  agent/         # ToolRegistry (23 MCP tools), Policy (scope + live-trading gate), OrderPreview
+  skills/        # Composable trading strategies — Skills::Base DSL + 11 builtin skills
+  risk/          # Risk::Pipeline — pre-trade checks wired into every order path + dhan_place_order
+  ai/            # AI::PromptHelpers — portfolio summaries / risk reports for MCP prompts
 ```
 
 Entry point: `lib/dhan_hq.rb` — sets up Zeitwerk loader, eager-requires core files.
@@ -52,6 +57,10 @@ Entry point: `lib/dhan_hq.rb` — sets up Zeitwerk loader, eager-requires core f
 | `DhanHQ::WS` | WebSocket feed client |
 | `DhanHQ::Configuration` | Client ID, access token, env setup |
 | `DhanHQ::Utils::NetworkInspector` | Public IP, hostname, env for order audit logging |
+| `DhanHQ::MCP::Server` | JSON-RPC 2.0 stdio server exposing tools/resources/prompts to MCP clients |
+| `DhanHQ::Agent::ToolRegistry` | 12 primitive tools + 11 `dhan_skill_*` tools (23 total), each gated by `Agent::Policy` |
+| `DhanHQ::Skills::Registry` | Composable trading strategies (`iron_condor`, `straddle`, `square_off_all`, …) |
+| `DhanHQ::Risk::Pipeline` | Pre-trade risk checks — wired into every order-placing resource and `dhan_place_order` |
 
 ## Configuration
 

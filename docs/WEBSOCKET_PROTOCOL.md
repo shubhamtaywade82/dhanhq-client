@@ -16,13 +16,15 @@ Low-level protocol details for the DhanHQ WebSocket market feed. For high-level 
 
 ## Request Codes
 
-Per Dhan documentation:
+Per the actual implementation (`lib/DhanHQ/ws/connection.rb`):
 
 | Action       | Ticker | Quote | Full |
 | ------------ | ------ | ----- | ---- |
-| Subscribe    | 15     | 17    | 21   |
-| Unsubscribe  | 16     | 18    | 22   |
+| Subscribe    | 15     | 15    | 15   |
+| Unsubscribe  | 12     | 12    | 12   |
 | Disconnect   | 12     | 12    | 12   |
+
+All three modes send request code `15` to subscribe (per the official API — mode is set at connection time via the WebSocket URL, not per-message). "Unsubscribe" reuses the disconnect code `12` for all modes rather than distinct per-mode codes.
 
 ---
 
@@ -48,7 +50,9 @@ Per Dhan documentation:
 | 6    | Prev Close    | `prev_close`, `oi_prev`                                      |
 | 7    | Market Status | Raw/misc unless documented                                   |
 | 8    | Full          | Quote fields + `open_interest` + 5× depth (bid/ask)         |
+| 41   | Depth Bid     | Market depth bid levels (20-level depth feed)                |
 | 50   | Disconnect    | Reason code                                                  |
+| 51   | Depth Ask     | Market depth ask levels (20-level depth feed)                |
 
 ---
 

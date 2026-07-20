@@ -996,8 +996,8 @@ class MarketDataCLI
       volume: full[:vol],
       day_high: full[:day_high],
       day_low: full[:day_low],
-      open: full[:open],
-      close: full[:close],
+      open: full[:day_open],
+      close: full[:day_close],
       timestamp: timestamp.iso8601
     }
 

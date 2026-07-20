@@ -104,7 +104,8 @@ Use constants from the `DhanHQ::Constants` module for segments, order types, val
 | Option chain | `DhanHQ::Models::OptionChain.fetch(params)` |
 | Expiry list | `DhanHQ::Models::OptionChain.fetch_expiry_list(params)` |
 | Search instruments | `DhanHQ::Models::Instrument.search(query, options)` |
-| Find specific instrument | `DhanHQ::Models::Instrument.find(exchange_segment, symbol, options)` |
+| Find specific instrument by symbol | `DhanHQ::Models::Instrument.find(exchange_segment, symbol, options)` |
+| Find specific instrument by security ID | `DhanHQ::Models::Instrument.find_by_security_id(exchange_segment, security_id)` |
 | Find instrument anywhere | `DhanHQ::Models::Instrument.find_anywhere(symbol, options)` |
 | Super orders | `DhanHQ::Models::SuperOrder.create(params)` |
 | Forever orders | `DhanHQ::Models::ForeverOrder.create(params)` |
