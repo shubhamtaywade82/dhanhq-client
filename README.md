@@ -512,7 +512,7 @@ Claude Desktop config (`claude_desktop_config.json`):
 
 | Feature | Description |
 | ------- | ----------- |
-| **Tools** | 11 primitive tools (profile, funds, holdings, positions, order history, place/cancel orders, instruments, market feed) + 10 skill-derived tools (`dhan_skill_*` — one per builtin strategy in [Skills System](#skills-system) below) |
+| **Tools** | 12 primitive tools (profile, funds, holdings, positions, order history, order preview/place/cancel, instruments, market feed) + 11 skill-derived tools (`dhan_skill_*` — one per builtin strategy in [Skills System](#skills-system) below) |
 | **Resources** | 6 URI-addressable data endpoints: `dhanhq://account/profile`, `dhanhq://account/funds`, `dhanhq://account/holdings`, `dhanhq://account/positions`, `dhanhq://account/orders`, `dhanhq://market/capabilities` |
 | **Prompts** | 5 pre-built AI prompts: `portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy` |
 
@@ -530,7 +530,7 @@ The policy engine respects `DHANHQ_MCP_ENABLE_WRITES` and `LIVE_TRADING` env var
 
 ## Skills System
 
-Skills are reusable, composable trading strategies. DhanHQ ships with **10 builtin skills** and a registry for discovery and invocation.
+Skills are reusable, composable trading strategies. DhanHQ ships with **11 builtin skills** and a registry for discovery and invocation.
 
 ### Builtin Skills
 
@@ -546,6 +546,7 @@ Skills are reusable, composable trading strategies. DhanHQ ships with **10 built
 | `bear_call_spread` | Multi-leg | Sell OTM call + buy further OTM call |
 | `protective_put` | Multi-leg | Buy equity + buy OTM put |
 | `straddle` | Multi-leg | Buy ATM call + buy ATM put |
+| `market_data_summarizer` | Read-only | Summarize technicals and/or option chain for a symbol |
 
 ### Using Skills
 
