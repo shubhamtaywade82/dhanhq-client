@@ -18,6 +18,7 @@ module DhanHQ
       class BearCallSpread < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a bear call spread: sell an OTM call, buy a further OTM call for defined risk."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

@@ -18,6 +18,7 @@ module DhanHQ
       class CoveredCall < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a covered call: buy the underlying equity, sell an OTM call against it."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

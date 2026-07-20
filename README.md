@@ -612,7 +612,7 @@ Checks raise `DhanHQ::RiskViolation` with human-readable messages, safe for AI p
 
 This gem's core REST/WS client (orders, positions, funds, market data) is mature and already depended on in production by other repos in this workspace. The MCP server, Skills system, and Risk pipeline are newer and have been verified live against a real (empty) Dhan account and a real independent MCP client for the first time — see [CHANGELOG.md](CHANGELOG.md#known-limitations) for what's been proven and what hasn't:
 
-- Read path (profile/funds/holdings/positions/orders/instrument lookup/option chains, all 11 skills' intent-building) — live-verified.
+- Read path (profile/funds/holdings/positions/orders/instrument lookup/option chains, all 11 skills' intent-building, WebSocket streaming) — live-verified.
 - Write path (`dhan_place_order`, `dhan_cancel_order`, `square_off_all`, `square_off_position`) — risk-gated but unit-tested only, never fired against a real order.
 - Risk checks that read portfolio state (`Concentration`, `PositionLimits`, `MaxLoss`) have only been observed against a zero-balance, zero-position account.
 

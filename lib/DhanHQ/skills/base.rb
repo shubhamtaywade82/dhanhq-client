@@ -71,6 +71,13 @@ module DhanHQ
           value ? (@scope = value) : (@scope || "orders:write")
         end
 
+        # Human-readable description shown to MCP/LLM clients in tools/list.
+        #
+        # @param text [String, nil] one-line summary of what the skill does
+        def description(text = nil)
+          text ? (@description = text) : @description
+        end
+
         # Accessor for defined parameters.
         def params
           @params || {}
@@ -119,9 +126,9 @@ module DhanHQ
         self.class.name || self.class.to_s
       end
 
-      # Skill description (override in subclasses).
+      # Skill description (declare via the class-level `description` macro; falls back to class name).
       def description
-        self.class.to_s
+        self.class.description || self.class.to_s
       end
 
       # List of parameter definitions for this skill.

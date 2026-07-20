@@ -19,6 +19,7 @@ module DhanHQ
       class BuyAtmCall < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Buy an at-the-money call option on an index (e.g. NIFTY)."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

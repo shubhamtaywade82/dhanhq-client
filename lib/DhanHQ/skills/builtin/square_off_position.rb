@@ -16,6 +16,7 @@ module DhanHQ
       class SquareOffPosition < Base
         risk "destructive_write"
         scope "orders:write"
+        description "Exit a specific open position by symbol and exchange segment."
 
         param :symbol, type: :string, required: true
         param :exchange_segment, type: :string, required: true

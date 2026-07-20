@@ -18,6 +18,7 @@ module DhanHQ
       class IronCondor < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build an iron condor: sell OTM call + sell OTM put, buy further OTM call + put for protection."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

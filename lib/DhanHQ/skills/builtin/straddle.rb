@@ -18,6 +18,7 @@ module DhanHQ
       class Straddle < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a long straddle: buy ATM call + buy ATM put at the same strike."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

@@ -18,6 +18,7 @@ module DhanHQ
       class BullPutSpread < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a bull put spread: sell an OTM put, buy a further OTM put for defined risk."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

@@ -18,6 +18,7 @@ module DhanHQ
       class Strangle < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a long strangle: buy OTM call + buy OTM put around the current spot price."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true

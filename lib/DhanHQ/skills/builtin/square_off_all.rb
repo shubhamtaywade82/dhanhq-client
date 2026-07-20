@@ -14,6 +14,7 @@ module DhanHQ
       class SquareOffAll < Base
         risk "destructive_write"
         scope "orders:write"
+        description "Exit all open positions at market price."
 
         step :fetch_positions, priority: 1
         step :exit_positions, priority: 2

@@ -18,6 +18,7 @@ module DhanHQ
       class ProtectivePut < Base
         risk "trade_adjacent_read"
         scope "orders:read"
+        description "Build a protective put: buy the underlying equity, buy an OTM put as downside insurance."
 
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true
