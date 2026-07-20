@@ -14,9 +14,6 @@ module DhanHQ
 
       rule(:from_date) do
         key.failure("must be in YYYY-MM-DD format (e.g., 2024-01-15)") unless valid_date_format?(value)
-        next unless valid_date_format?(value)
-
-        key.failure("must be a valid trading date (no weekend dates)") unless trading_day?(Date.parse(value))
       end
 
       rule(:to_date) do
@@ -28,7 +25,7 @@ module DhanHQ
         to = values[:to_date]
         next unless valid_date_format?(from) && valid_date_format?(to)
 
-        key.failure("from_date must be before to_date") if Date.parse(from) >= Date.parse(to)
+        key.failure("from_date must be before or equal to to_date") if Date.parse(from) > Date.parse(to)
       rescue Date::Error
         key.failure("invalid date format")
       end
@@ -42,10 +39,6 @@ module DhanHQ
         true
       rescue Date::Error
         false
-      end
-
-      def trading_day?(date)
-        date.is_a?(Date) && (1..5).cover?(date.wday)
       end
     end
   end

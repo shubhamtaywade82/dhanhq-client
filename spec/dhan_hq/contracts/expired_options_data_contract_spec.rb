@@ -256,16 +256,15 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       result = contract.call(params)
 
       expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
+      expect(result.errors[:from_date]).to include(/from_date must be before or equal to to_date/)
     end
 
-    it "rejects when from_date equals to_date" do
+    it "accepts when from_date equals to_date" do
       params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-02")
       contract = described_class.new
       result = contract.call(params)
 
-      expect(result.failure?).to be true
-      expect(result.errors[:from_date]).to include(/from_date must be before to_date/)
+      expect(result.success?).to be true
     end
 
     it "validates date range length (31 days max, non-inclusive)" do
