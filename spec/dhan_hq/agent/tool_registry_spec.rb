@@ -117,5 +117,89 @@ RSpec.describe DhanHQ::Agent::ToolRegistry do
         described_class.execute("dhan_skill_square_off_all", {}, policy: policy)
       end.to raise_error(DhanHQ::Error, /Agent scope required/)
     end
+
+    describe "dhan_place_order risk pipeline" do
+      let(:write_policy) { DhanHQ::Agent::Policy.new(scopes: ["orders:write"]) }
+      let(:order_args) do
+        {
+          transaction_type: "BUY",
+          exchange_segment: "NSE_EQ",
+          product_type: "INTRADAY",
+          order_type: "MARKET",
+          validity: "DAY",
+          security_id: "2885",
+          quantity: 5,
+          price: 100
+        }
+      end
+
+      # rubocop:disable RSpec/VerifiedDoubles
+      let(:compliant_instrument) do
+        double("instrument",
+               instrument_type: "EQUITY",
+               buy_sell_indicator: "A",
+               asm_gsm_flag: "N",
+               bracket_flag: "N",
+               cover_flag: "N")
+      end
+      # rubocop:enable RSpec/VerifiedDoubles
+
+      around do |example|
+        original_writes = ENV.fetch("DHANHQ_MCP_ENABLE_WRITES", nil)
+        original_live = ENV.fetch("LIVE_TRADING", nil)
+        ENV["DHANHQ_MCP_ENABLE_WRITES"] = "true"
+        ENV["LIVE_TRADING"] = "true"
+        example.run
+        ENV["DHANHQ_MCP_ENABLE_WRITES"] = original_writes
+        ENV["LIVE_TRADING"] = original_live
+      end
+
+      before do
+        # rubocop:disable RSpec/VerifiedDoubles
+        allow(DhanHQ::Models::Funds).to receive(:fetch).and_return(double("funds", available_balance: 100_000))
+        # rubocop:enable RSpec/VerifiedDoubles
+        allow(DhanHQ::Models::Position).to receive(:all).and_return([])
+      end
+
+      it "places the order when the resolved instrument passes every risk check" do
+        allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).with("NSE_EQ", "2885").and_return(compliant_instrument)
+        allow(DhanHQ::Models::Order).to receive(:place).and_return(instance_double(DhanHQ::Models::Order))
+        market_hours_now = Time.new(2026, 1, 30, 10, 0, 0, "+05:30")
+        allow(DhanHQ::Risk::Checks::MarketHours).to(receive(:run!).and_wrap_original { |method, **kwargs| method.call(now: market_hours_now, **kwargs.except(:now)) })
+
+        described_class.execute("dhan_place_order", order_args, policy: write_policy)
+
+        expect(DhanHQ::Models::Order).to have_received(:place)
+      end
+
+      it "blocks the order and never calls Order.place when the instrument cannot be resolved" do
+        allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(nil)
+        allow(DhanHQ::Models::Order).to receive(:place)
+
+        expect do
+          described_class.execute("dhan_place_order", order_args, policy: write_policy)
+        end.to raise_error(DhanHQ::RiskViolation, /unknown instrument/i)
+
+        expect(DhanHQ::Models::Order).not_to have_received(:place)
+      end
+
+      it "blocks the order and never calls Order.place when the instrument fails a risk check" do
+        # rubocop:disable RSpec/VerifiedDoubles
+        restricted_instrument = double("instrument",
+                                       instrument_type: "EQUITY",
+                                       buy_sell_indicator: "A",
+                                       asm_gsm_flag: "Y",
+                                       asm_gsm_category: "ASM Stage 1")
+        # rubocop:enable RSpec/VerifiedDoubles
+        allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(restricted_instrument)
+        allow(DhanHQ::Models::Order).to receive(:place)
+
+        expect do
+          described_class.execute("dhan_place_order", order_args, policy: write_policy)
+        end.to raise_error(DhanHQ::RiskViolation, %r{ASM/GSM})
+
+        expect(DhanHQ::Models::Order).not_to have_received(:place)
+      end
+    end
   end
 end

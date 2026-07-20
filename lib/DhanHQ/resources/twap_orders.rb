@@ -24,6 +24,7 @@ module DhanHQ
       # @return [Hash]
       def create(params)
         ensure_live_trading!
+        run_risk_checks!(params)
         log_order_context("DHAN_TWAP_ORDER_ATTEMPT", params)
         post("", params: params)
       end

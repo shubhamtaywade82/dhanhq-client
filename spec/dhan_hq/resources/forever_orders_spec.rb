@@ -47,6 +47,7 @@ RSpec.describe DhanHQ::Resources::ForeverOrders do
   describe "#create audit log" do
     before do
       stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
+      allow(DhanHQ::Models::Instrument).to receive(:find).and_return(nil)
       stub_request(:post, %r{/v2/forever/orders}).to_return(
         status: 200,
         body: { orderId: "OID-1" }.to_json,

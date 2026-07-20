@@ -7,6 +7,7 @@
 - **5 new builtin skills** — `covered_call`, `bull_put_spread`, `bear_call_spread`, `protective_put`, `straddle` (10 total).
 - **3 new risk checks** — `PositionLimits` (max 20 concurrent positions), `Concentration` (max 25% per symbol), `MaxLoss` (daily loss limit, default ₹50,000).
 - **Extended risk pipeline** — `DhanHQ::Risk::Pipeline` now includes `DAILY_CHECKS` constant and runs all new checks.
+- **Risk pipeline wired into all order paths** — `Risk::Pipeline.run!` now fires before every order placement via the `OrderAudit` concern, covering Orders, SuperOrders, ForeverOrders, AlertOrders, TwapOrders, IcebergOrders, and PnL Exit. Instrument resolution failures are handled silently so transient lookup issues never block a valid order.
 - **SDK + AI integration docs** — README sections for MCP Server, Skills System, and AI Integration.
 
 ### Changed
@@ -14,6 +15,7 @@
 - `DhanHQ::MCP::Server` now requires `dhan_hq/ai` for prompt generation.
 - CI RuboCop step no longer uses `continue-on-error: true`.
 - Spec path for risk check specs moved to `spec/dhan_hq/risk/checks/`.
+- **`OrderAudit` concern extended** — new `run_risk_checks!(params)` method runs the risk pipeline before order placement, with `trade_type_for` mapping exchange segments to pipeline types. All 7 order resources call it in their `create`/`configure` methods.
 
 ### Fixed
 
@@ -21,6 +23,9 @@
 - `[]` method stub pattern in risk check specs (use `receive(:[])` instead of hash double syntax).
 - `MaxLoss` spec test data corrected to trigger the daily loss limit correctly.
 - All RSpec VerifiedDoubles and MultipleExpectations offenses resolved (0 RuboCop offenses).
+- **Position model accessors in risk checks** — replaced `p[:net_quantity]`, `p[:unrealized_profit_loss]`, and `p[:trading_symbol]` hash indexing with real model accessors (`p.net_qty`, `p.unrealized_profit`, `p.trading_symbol`).
+- **`ltp` access in all 9 skills** — `instrument.ltp` returns a Float, not a Hash; removed the `ltp[:ltp]` unwrapping pattern.
+- **`market_analysis` prompt** — resolves symbol to integer security ID via `Instrument.find` before passing to `MarketFeed.quote`.
 
 ---
 

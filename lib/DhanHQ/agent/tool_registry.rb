@@ -256,7 +256,20 @@ module DhanHQ
 
       def preview_handler = ->(arguments) { OrderPreview.new(arguments).to_h }
 
-      def place_order_handler = ->(arguments) { DhanHQ::Models::Order.place(arguments) }
+      def place_order_handler
+        lambda do |arguments|
+          instrument = DhanHQ::Models::Instrument.find_by_security_id(arguments[:exchange_segment], arguments[:security_id])
+          unless instrument
+            raise DhanHQ::RiskViolation,
+                  "Cannot verify risk for unknown instrument: #{arguments[:exchange_segment]}:#{arguments[:security_id]}"
+          end
+
+          risk_type = instrument.instrument_type.to_s.start_with?("OPT") ? :options : :equity
+          DhanHQ::Risk::Pipeline.run!(instrument: instrument, args: stringify(arguments), type: risk_type)
+
+          DhanHQ::Models::Order.place(arguments)
+        end
+      end
 
       def cancel_order_handler
         lambda do |arguments|
@@ -269,6 +282,14 @@ module DhanHQ
         case value
         when Hash then value.each_with_object({}) { |(key, val), hash| hash[key.to_sym] = symbolize(val) }
         when Array then value.map { |val| symbolize(val) }
+        else value
+        end
+      end
+
+      def stringify(value)
+        case value
+        when Hash then value.each_with_object({}) { |(key, val), hash| hash[key.to_s] = stringify(val) }
+        when Array then value.map { |val| stringify(val) }
         else value
         end
       end

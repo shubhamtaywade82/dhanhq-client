@@ -28,4 +28,35 @@ RSpec.describe DhanHQ::Models::Instrument do
       expect(described_class.by_segment("NSE_EQ")).to eq([])
     end
   end
+
+  describe ".find_by_security_id" do
+    let(:csv) do
+      <<~CSV
+        EXCH_ID,SEGMENT,SECURITY_ID,ISIN,INSTRUMENT,UNDERLYING_SECURITY_ID,UNDERLYING_SYMBOL,SYMBOL_NAME,DISPLAY_NAME,INSTRUMENT_TYPE,SERIES,LOT_SIZE,SM_EXPIRY_DATE,STRIKE_PRICE,OPTION_TYPE,TICK_SIZE,EXPIRY_FLAG,BRACKET_FLAG,COVER_FLAG,ASM_GSM_FLAG,ASM_GSM_CATEGORY,BUY_SELL_INDICATOR,BUY_CO_MIN_MARGIN_PER,SELL_CO_MIN_MARGIN_PER,BUY_CO_SL_RANGE_MAX_PERC,SELL_CO_SL_RANGE_MAX_PERC,BUY_CO_SL_RANGE_MIN_PERC,SELL_CO_SL_RANGE_MIN_PERC,BUY_BO_MIN_MARGIN_PER,SELL_BO_MIN_MARGIN_PER,BUY_BO_SL_RANGE_MAX_PERC,SELL_BO_SL_RANGE_MAX_PERC,BUY_BO_SL_RANGE_MIN_PERC,SELL_BO_SL_MIN_RANGE,BUY_BO_PROFIT_RANGE_MAX_PERC,SELL_BO_PROFIT_RANGE_MAX_PERC,BUY_BO_PROFIT_RANGE_MIN_PERC,SELL_BO_PROFIT_RANGE_MIN_PERC,MTF_LEVERAGE
+        NSE,E,1333,INE040A01034,EQUITY,,,,HDFCBANK,EQUITY,EQ,1.0,,,,0.05,NA,N,N,N,NA,A,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        NSE,E,2885,INE002A01018,EQUITY,,,,RELIANCE,EQUITY,EQ,1.0,,,,0.05,NA,N,N,N,NA,A,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      CSV
+    end
+
+    before do
+      allow(resource_double).to receive(:by_segment).with("NSE_EQ").and_return(csv)
+    end
+
+    it "returns the instrument matching the security id within the segment" do
+      instrument = described_class.find_by_security_id("NSE_EQ", "2885")
+
+      expect(instrument.security_id).to eq("2885")
+      expect(instrument.display_name).to eq("RELIANCE")
+    end
+
+    it "coerces integer security ids for comparison" do
+      instrument = described_class.find_by_security_id("NSE_EQ", 1333)
+
+      expect(instrument.security_id).to eq("1333")
+    end
+
+    it "returns nil when no instrument matches" do
+      expect(described_class.find_by_security_id("NSE_EQ", "999999")).to be_nil
+    end
+  end
 end

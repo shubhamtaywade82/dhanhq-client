@@ -19,6 +19,7 @@ module DhanHQ
       # @return [Hash] API response containing pnlExitStatus and message.
       def configure(params)
         ensure_live_trading!
+        run_risk_checks!(params)
         log_order_context("DHAN_PNL_EXIT_CONFIGURE_ATTEMPT", params)
         post("", params: params)
       end

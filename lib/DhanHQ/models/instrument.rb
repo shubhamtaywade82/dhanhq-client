@@ -84,6 +84,19 @@ module DhanHQ
           end
         end
 
+        # Find a specific instrument within a segment by its security ID.
+        # @param exchange_segment [String] The exchange segment (e.g., "NSE_EQ", "NSE_FNO")
+        # @param security_id [String, Integer] The Dhan security ID
+        # @return [Instrument, nil] The found instrument or nil if not found
+        # @example
+        #   instrument = DhanHQ::Models::Instrument.find_by_security_id("NSE_EQ", "2885")
+        #   puts instrument.symbol_name  # => "RELIANCE"
+        def find_by_security_id(exchange_segment, security_id)
+          validate_params!({ exchange_segment: exchange_segment }, DhanHQ::Contracts::InstrumentListContract)
+
+          by_segment(exchange_segment).find { |instrument| instrument.security_id.to_s == security_id.to_s }
+        end
+
         # Find a specific instrument across all exchange segments.
         # @param symbol [String] The symbol name to search for
         # @param options [Hash] Additional search options
