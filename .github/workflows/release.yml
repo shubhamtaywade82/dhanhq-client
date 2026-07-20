@@ -9,7 +9,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,3 +68,16 @@ jobs:
           # Push gem with OTP
           echo "Pushing gem to RubyGems with OTP authentication..."
           gem push "$gem_file" --otp "$otp_code"
+      - name: Attach gem to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          gem_version=$(ruby -e "require_relative 'lib/DhanHQ/version'; puts DhanHQ::VERSION")
+          gem_file="DhanHQ-${gem_version}.gem"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$gem_file" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" "$gem_file" --repo "$GITHUB_REPOSITORY" --title "$tag" --generate-notes
+          fi

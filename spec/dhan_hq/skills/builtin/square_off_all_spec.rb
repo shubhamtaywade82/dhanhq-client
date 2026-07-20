@@ -2,21 +2,8 @@
 
 RSpec.describe DhanHQ::Skills::Builtin::SquareOffAll do
   # rubocop:disable RSpec/VerifiedDoubles
-  let(:position_with_qty) do
-    double("position").tap do |pos|
-      allow(pos).to receive(:[]).with(:net_quantity).and_return(50)
-      allow(pos).to receive(:[]).with("netQuantity").and_return(50)
-      allow(pos).to receive(:net_quantity).and_return(50)
-    end
-  end
-
-  let(:position_zero_qty) do
-    double("position").tap do |pos|
-      allow(pos).to receive(:[]).with(:net_quantity).and_return(0)
-      allow(pos).to receive(:[]).with("netQuantity").and_return(0)
-      allow(pos).to receive(:net_quantity).and_return(0)
-    end
-  end
+  let(:position_with_qty) { double("position", net_qty: 50) }
+  let(:position_zero_qty) { double("position", net_qty: 0) }
   # rubocop:enable RSpec/VerifiedDoubles
 
   let(:positions) { [position_with_qty, position_zero_qty] }
@@ -57,18 +44,9 @@ RSpec.describe DhanHQ::Skills::Builtin::SquareOffAll do
       expect(result[:exit_results].first[:error]).to eq("API error")
     end
 
-    # rubocop:disable RSpec/ExampleLength
     it "handles mixed success and failure" do
-      position_a = double("position_a").tap do |pos| # rubocop:disable RSpec/VerifiedDoubles
-        allow(pos).to receive(:[]).with(:net_quantity).and_return(10)
-        allow(pos).to receive(:[]).with("netQuantity").and_return(10)
-        allow(pos).to receive(:net_quantity).and_return(10)
-      end
-      position_b = double("position_b").tap do |pos| # rubocop:disable RSpec/VerifiedDoubles
-        allow(pos).to receive(:[]).with(:net_quantity).and_return(20)
-        allow(pos).to receive(:[]).with("netQuantity").and_return(20)
-        allow(pos).to receive(:net_quantity).and_return(20)
-      end
+      position_a = double("position_a", net_qty: 10) # rubocop:disable RSpec/VerifiedDoubles
+      position_b = double("position_b", net_qty: 20) # rubocop:disable RSpec/VerifiedDoubles
 
       allow(DhanHQ::Models::Position).to receive(:all).and_return([position_a, position_b])
 
@@ -84,7 +62,6 @@ RSpec.describe DhanHQ::Skills::Builtin::SquareOffAll do
       expect(result[:exited_count]).to eq(1)
       expect(result[:failed_count]).to eq(1)
     end
-    # rubocop:enable RSpec/ExampleLength
 
     it "returns empty results when no positions have quantity" do
       allow(DhanHQ::Models::Position).to receive(:all).and_return([position_zero_qty])

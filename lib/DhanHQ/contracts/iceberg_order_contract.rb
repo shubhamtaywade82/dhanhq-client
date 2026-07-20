@@ -21,7 +21,7 @@ module DhanHQ
         required(:price).filled(:float, gt?: 0)
         required(:iceberg_qty).filled(:integer, gt?: 0)
         required(:disclosed_quantity).filled(:integer, gteq?: 0)
-        optional(:correlation_id).maybe(:string, max_size?: 30, format?: /\A[a-zA-Z0-9 _-]*\z/)
+        optional(:correlation_id).maybe(:string, max_size?: 25, format?: /\A[a-zA-Z0-9 _-]*\z/)
         optional(:trigger_price).maybe(:float, gteq?: 0)
         optional(:after_market_order).maybe(:bool)
         optional(:amo_time).maybe(:string, included_in?: AMO_TIMINGS)

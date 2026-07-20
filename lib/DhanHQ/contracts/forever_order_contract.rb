@@ -17,7 +17,7 @@ module DhanHQ
         required(:quantity).filled(:integer, gt?: 0)
         required(:price).filled(:float, gt?: 0)
         required(:trigger_price).filled(:float)
-        optional(:correlation_id).maybe(:string, max_size?: 30, format?: /\A[a-zA-Z0-9 _-]*\z/)
+        optional(:correlation_id).maybe(:string, max_size?: 25, format?: /\A[a-zA-Z0-9 _-]*\z/)
         optional(:disclosed_quantity).maybe(:integer, gteq?: 0)
         optional(:price1).maybe(:float, gt?: 0)
         optional(:trigger_price1).maybe(:float)

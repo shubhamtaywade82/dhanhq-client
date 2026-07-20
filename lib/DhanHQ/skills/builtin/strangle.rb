@@ -16,6 +16,10 @@ module DhanHQ
       #   )
       #
       class Strangle < Base
+        risk "trade_adjacent_read"
+        scope "orders:read"
+        description "Build a long strangle: buy OTM call + buy OTM put around the current spot price."
+
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true
         param :quantity, type: :integer, default: 50
@@ -35,8 +39,7 @@ module DhanHQ
         end
 
         def get_spot_price(ctx)
-          ltp = ctx[:instrument].ltp
-          ctx[:spot_price] = ltp[:ltp] || ltp["ltp"]
+          ctx[:spot_price] = ctx[:instrument].ltp
           ctx
         end
 
@@ -50,24 +53,21 @@ module DhanHQ
           chain = ctx[:chain]
           offset = ctx[:offset_pct] / 100.0
 
-          ce_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "CE" }
-          pe_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "PE" }
-
           ce_strike = spot * (1 + offset)
           pe_strike = spot * (1 - offset)
 
-          long_ce = ce_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - ce_strike).abs }
-          long_pe = pe_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - pe_strike).abs }
+          long_ce = nearest_strike(chain, ce_strike)
+          long_pe = nearest_strike(chain, pe_strike)
 
           raise ArgumentError, "Could not find suitable CE strike near #{ce_strike}" unless long_ce
           raise ArgumentError, "Could not find suitable PE strike near #{pe_strike}" unless long_pe
 
-          ctx[:ce_strike] = long_ce[:strike] || long_ce["strike"]
-          ctx[:pe_strike] = long_pe[:strike] || long_pe["strike"]
-          ctx[:ce_security_id] = long_ce[:security_id] || long_ce["securityId"]
-          ctx[:pe_security_id] = long_pe[:security_id] || long_pe["securityId"]
-          ctx[:ce_premium] = long_ce[:last_price] || long_ce["lastPrice"] || long_ce[:ltp]
-          ctx[:pe_premium] = long_pe[:last_price] || long_pe["lastPrice"] || long_pe[:ltp]
+          ctx[:ce_strike] = long_ce[:strike]
+          ctx[:pe_strike] = long_pe[:strike]
+          ctx[:ce_security_id] = leg_security_id(long_ce, "CE")
+          ctx[:pe_security_id] = leg_security_id(long_pe, "PE")
+          ctx[:ce_premium] = leg_premium(long_ce, "CE")
+          ctx[:pe_premium] = leg_premium(long_pe, "PE")
           ctx
         end
 

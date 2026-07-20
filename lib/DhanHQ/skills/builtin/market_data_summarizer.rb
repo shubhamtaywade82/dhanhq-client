@@ -13,6 +13,10 @@ module DhanHQ
       # Programmatic Agent Skill to process and summarize market data.
       # Exposes computed technical indicators and options statistics rather than raw data.
       class MarketDataSummarizer < Base
+        risk "read_only"
+        scope "market:read"
+        description "Summarize technicals and/or option chain (PCR, OI walls, ATM strikes) for a symbol."
+
         param :underlying_symbol, type: :string, required: true, description: "Underlying ticker symbol (e.g. NIFTY, RELIANCE)"
         param :mode, type: :string, default: "both", description: "Analysis mode: both, technicals, or option_chain"
         param :interval, type: :string, default: DhanHQ::Constants::Validity::DAY, description: "Timeframe for technical indicators"

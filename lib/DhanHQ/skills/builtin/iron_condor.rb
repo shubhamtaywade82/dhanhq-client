@@ -16,6 +16,10 @@ module DhanHQ
       #   )
       #
       class IronCondor < Base
+        risk "trade_adjacent_read"
+        scope "orders:read"
+        description "Build an iron condor: sell OTM call + sell OTM put, buy further OTM call + put for protection."
+
         param :symbol, type: :string, required: true
         param :expiry, type: :string, required: true
         param :quantity, type: :integer, default: 50
@@ -34,8 +38,7 @@ module DhanHQ
         end
 
         def get_spot_price(ctx)
-          ltp = ctx[:instrument].ltp
-          ctx[:spot_price] = ltp[:ltp] || ltp["ltp"]
+          ctx[:spot_price] = ctx[:instrument].ltp
           ctx
         end
 
@@ -47,29 +50,22 @@ module DhanHQ
         def select_strikes(ctx)
           spot = ctx[:spot_price]
           chain = ctx[:chain]
-          wing = ctx[:wing_width]
+          wing = ctx[:wing_width].to_f
 
-          ce_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "CE" }
-                            .sort_by { |o| (o[:strike] || o["strike"]).to_f }
-          pe_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "PE" }
-                            .sort_by { |o| (o[:strike] || o["strike"]).to_f }
+          atm_strike = nearest_strike(chain, spot)[:strike].to_f
 
-          atm = ce_options.min_by { |o| (o[:strike] || o["strike"]).to_f - spot.to_f }
-
-          atm_strike = (atm[:strike] || atm["strike"]).to_f
-
-          short_ce = ce_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike + wing)).abs < 0.001 }
-          long_ce = ce_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike + (wing * 2))).abs < 0.001 }
-          short_pe = pe_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike - wing)).abs < 0.001 }
-          long_pe = pe_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike - (wing * 2))).abs < 0.001 }
+          short_ce = find_strike(chain, atm_strike + wing)
+          long_ce = find_strike(chain, atm_strike + (wing * 2))
+          short_pe = find_strike(chain, atm_strike - wing)
+          long_pe = find_strike(chain, atm_strike - (wing * 2))
 
           raise ArgumentError, "Could not build iron condor — insufficient strikes in chain" unless short_ce && long_ce && short_pe && long_pe
 
           ctx[:legs] = [
-            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "CE", strike: atm_strike + wing, security_id: short_ce[:security_id] || short_ce["securityId"] },
-            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "CE", strike: atm_strike + (wing * 2), security_id: long_ce[:security_id] || long_ce["securityId"] },
-            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "PE", strike: atm_strike - wing, security_id: short_pe[:security_id] || short_pe["securityId"] },
-            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "PE", strike: atm_strike - (wing * 2), security_id: long_pe[:security_id] || long_pe["securityId"] }
+            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "CE", strike: short_ce[:strike], security_id: leg_security_id(short_ce, "CE") },
+            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "CE", strike: long_ce[:strike], security_id: leg_security_id(long_ce, "CE") },
+            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "PE", strike: short_pe[:strike], security_id: leg_security_id(short_pe, "PE") },
+            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "PE", strike: long_pe[:strike], security_id: leg_security_id(long_pe, "PE") }
           ]
           ctx
         end

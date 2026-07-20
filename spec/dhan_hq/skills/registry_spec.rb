@@ -78,6 +78,7 @@ RSpec.describe DhanHQ::Skills::Registry do
       described_class.clear!
     end
 
+    # rubocop:disable RSpec/MultipleExpectations
     it "registers all builtin skills" do
       described_class.load_builtins
 
@@ -87,7 +88,13 @@ RSpec.describe DhanHQ::Skills::Registry do
       expect(names).to include("square_off_position")
       expect(names).to include("iron_condor")
       expect(names).to include("strangle")
+      expect(names).to include("covered_call")
+      expect(names).to include("bull_put_spread")
+      expect(names).to include("bear_call_spread")
+      expect(names).to include("protective_put")
+      expect(names).to include("straddle")
     end
+    # rubocop:enable RSpec/MultipleExpectations
 
     it "does not duplicate already registered skills" do
       described_class.register("buy_atm_call", test_skill)

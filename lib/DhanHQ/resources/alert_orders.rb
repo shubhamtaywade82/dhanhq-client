@@ -13,6 +13,7 @@ module DhanHQ
 
       def create(params)
         ensure_live_trading!
+        run_risk_checks!(params)
         log_order_context("DHAN_ALERT_ORDER_ATTEMPT", params)
         super
       end

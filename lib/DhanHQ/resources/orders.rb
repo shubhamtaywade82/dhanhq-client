@@ -17,6 +17,7 @@ module DhanHQ
 
       def create(params)
         ensure_live_trading!
+        run_risk_checks!(params)
         log_order_context("DHAN_ORDER_ATTEMPT", params)
         validate_place_order!(params)
         post("", params: params)
@@ -31,6 +32,7 @@ module DhanHQ
 
       def slicing(params)
         ensure_live_trading!
+        run_risk_checks!(params)
         log_order_context("DHAN_ORDER_SLICING_ATTEMPT", params)
         validate_place_order!(params)
         post("/slicing", params: params)

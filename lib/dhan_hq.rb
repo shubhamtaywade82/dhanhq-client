@@ -53,6 +53,9 @@ module DhanHQ
   require_relative "DhanHQ/risk/checks/quantity"
   require_relative "DhanHQ/risk/checks/market_hours"
   require_relative "DhanHQ/risk/checks/options"
+  require_relative "DhanHQ/risk/checks/position_limits"
+  require_relative "DhanHQ/risk/checks/concentration"
+  require_relative "DhanHQ/risk/checks/max_loss"
   require_relative "DhanHQ/risk/pipeline"
 
   # Skills layer: multi-step trading workflows

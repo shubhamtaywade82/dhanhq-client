@@ -23,7 +23,7 @@ module DhanHQ
     #     end
     #
     #     def get_spot_price(ctx)
-    #       ctx[:spot_price] = ctx[:instrument].ltp[:ltp]
+    #       ctx[:spot_price] = ctx[:instrument].ltp
     #       ctx
     #     end
     #
@@ -54,6 +54,28 @@ module DhanHQ
           @steps ||= []
           @steps << { name: name, priority: priority }
           @steps.sort_by! { |s| s[:priority] }
+        end
+
+        # MCP risk level for this skill (defaults to the most conservative tier
+        # so a skill that forgets to declare one fails safe/write-gated).
+        #
+        # @param level [String, nil] one of read_only, trade_adjacent_read, live_write, destructive_write
+        def risk(level = nil)
+          level ? (@risk = level) : (@risk || "destructive_write")
+        end
+
+        # MCP policy scope required to invoke this skill.
+        #
+        # @param value [String, nil] e.g. "orders:read", "orders:write"
+        def scope(value = nil)
+          value ? (@scope = value) : (@scope || "orders:write")
+        end
+
+        # Human-readable description shown to MCP/LLM clients in tools/list.
+        #
+        # @param text [String, nil] one-line summary of what the skill does
+        def description(text = nil)
+          text ? (@description = text) : @description
         end
 
         # Accessor for defined parameters.
@@ -104,9 +126,9 @@ module DhanHQ
         self.class.name || self.class.to_s
       end
 
-      # Skill description (override in subclasses).
+      # Skill description (declare via the class-level `description` macro; falls back to class name).
       def description
-        self.class.to_s
+        self.class.description || self.class.to_s
       end
 
       # List of parameter definitions for this skill.
@@ -115,6 +137,35 @@ module DhanHQ
       end
 
       private
+
+      # Real DhanHQ::Models::OptionChain#fetch shape: { last_price:, strikes: [{ strike:, call: {...}, put: {...} }] }.
+      # Nearest strike to a target price — always returns an entry (never nil) unless the chain is empty.
+      def nearest_strike(chain, target_price)
+        strikes = chain[:strikes]
+        return nil if strikes.nil? || strikes.empty?
+
+        strikes.min_by { |s| (s[:strike].to_f - target_price.to_f).abs }
+      end
+
+      # Exact strike match within tolerance — nil if no strike sits on that price.
+      def find_strike(chain, target_price, tolerance: 0.001)
+        strikes = chain[:strikes]
+        return nil if strikes.nil? || strikes.empty?
+
+        strikes.find { |s| (s[:strike].to_f - target_price.to_f).abs < tolerance }
+      end
+
+      def leg_side(strike_entry, option_type)
+        option_type == "CE" ? strike_entry[:call] : strike_entry[:put]
+      end
+
+      def leg_security_id(strike_entry, option_type)
+        leg_side(strike_entry, option_type)[:security_id]
+      end
+
+      def leg_premium(strike_entry, option_type)
+        leg_side(strike_entry, option_type)[:last_price]
+      end
 
       def build_context(args)
         ctx = {}
