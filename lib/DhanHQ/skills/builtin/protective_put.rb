@@ -52,20 +52,18 @@ module DhanHQ
           offset_pct = ctx[:strike_offset] / 100.0
           max_prem = ctx[:max_premium_pct] / 100.0
 
-          pe_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "PE" }
-
           target_strike = spot * (1 - offset_pct)
-          otm_put = pe_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - target_strike).abs }
+          otm_put = nearest_strike(chain, target_strike)
 
           raise ArgumentError, "Could not find suitable OTM put strike near #{target_strike}" unless otm_put
 
-          premium = (otm_put[:last_price] || otm_put["lastPrice"] || otm_put[:ltp] || otm_put["ltp"]).to_f
+          premium = leg_premium(otm_put, "PE").to_f
           premium_pct = premium / spot
 
           raise ArgumentError, "Put premium #{premium_pct * 100}% exceeds max #{ctx[:max_premium_pct]}%" if premium_pct > max_prem
 
-          ctx[:put_strike] = otm_put[:strike] || otm_put["strike"]
-          ctx[:put_security_id] = otm_put[:security_id] || otm_put["securityId"]
+          ctx[:put_strike] = otm_put[:strike]
+          ctx[:put_security_id] = leg_security_id(otm_put, "PE")
           ctx[:put_premium] = premium
           ctx[:equity_security_id] = ctx[:instrument].security_id
           ctx

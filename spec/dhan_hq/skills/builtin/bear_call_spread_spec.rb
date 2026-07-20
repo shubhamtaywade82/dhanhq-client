@@ -3,13 +3,12 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Skills::Builtin::BearCallSpread do
   let(:chain) do
-    [
-      { strike: 24_600, option_type: "CE", security_id: "CE01" },
-      { strike: 24_800, option_type: "CE", security_id: "CE02" },
-      { strike: 25_000, option_type: "CE", security_id: "CE03" },
-      { strike: 25_200, option_type: "CE", security_id: "CE04" },
-      { strike: 24_500, option_type: "PE", security_id: "PE01" }
-    ]
+    build_option_chain([
+                         { strike: 24_600, ce_id: "CE_24600", ce_price: 130.0, pe_id: "PE_24600", pe_price: 220.0 },
+                         { strike: 24_800, ce_id: "CE_24800", ce_price: 90.0, pe_id: "PE_24800", pe_price: 380.0 },
+                         { strike: 25_000, ce_id: "CE_25000", ce_price: 55.0, pe_id: "PE_25000", pe_price: 550.0 },
+                         { strike: 25_200, ce_id: "CE_25200", ce_price: 30.0, pe_id: "PE_25200", pe_price: 700.0 }
+                       ])
   end
 
   let(:instrument) do
@@ -59,9 +58,9 @@ RSpec.describe DhanHQ::Skills::Builtin::BearCallSpread do
     end
 
     it "raises when chain has insufficient strikes" do
-      allow(instrument).to receive(:option_chain).and_return([
-                                                               { strike: 24_600, option_type: "CE", security_id: "CE01" }
-                                                             ])
+      allow(instrument).to receive(:option_chain).and_return(
+        build_option_chain([{ strike: 24_600, ce_id: "CE_24600", ce_price: 130.0, pe_id: "PE_24600", pe_price: 220.0 }])
+      )
 
       expect do
         described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")

@@ -2,14 +2,14 @@
 
 RSpec.describe DhanHQ::Skills::Builtin::Strangle do
   let(:chain) do
-    [
-      { strike: 24_000, option_type: "PE", security_id: "PE01", last_price: 50.0 },
-      { strike: 24_200, option_type: "PE", security_id: "PE02", last_price: 80.0 },
-      { strike: 24_400, option_type: "PE", security_id: "PE03", last_price: 120.0 },
-      { strike: 24_600, option_type: "CE", security_id: "CE01", last_price: 130.0 },
-      { strike: 24_800, option_type: "CE", security_id: "CE02", last_price: 90.0 },
-      { strike: 25_000, option_type: "CE", security_id: "CE03", last_price: 55.0 }
-    ]
+    build_option_chain([
+                         { strike: 24_000, ce_id: "CE_24000", ce_price: 550.0, pe_id: "PE_24000", pe_price: 50.0 },
+                         { strike: 24_200, ce_id: "CE_24200", ce_price: 380.0, pe_id: "PE_24200", pe_price: 80.0 },
+                         { strike: 24_400, ce_id: "CE_24400", ce_price: 220.0, pe_id: "PE_24400", pe_price: 120.0 },
+                         { strike: 24_600, ce_id: "CE_24600", ce_price: 130.0, pe_id: "PE_24600", pe_price: 220.0 },
+                         { strike: 24_800, ce_id: "CE_24800", ce_price: 90.0, pe_id: "PE_24800", pe_price: 380.0 },
+                         { strike: 25_000, ce_id: "CE_25000", ce_price: 55.0, pe_id: "PE_25000", pe_price: 550.0 }
+                       ])
   end
 
   let(:instrument) do

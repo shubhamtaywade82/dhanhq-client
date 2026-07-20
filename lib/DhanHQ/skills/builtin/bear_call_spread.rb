@@ -49,24 +49,20 @@ module DhanHQ
         def select_strikes(ctx)
           spot = ctx[:spot_price].to_f
           chain = ctx[:chain]
-          spread = ctx[:spread_width]
+          spread = ctx[:spread_width].to_f
 
-          ce_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "CE" }
-                            .sort_by { |o| (o[:strike] || o["strike"]).to_f }
+          atm_strike_price = nearest_strike(chain, spot)[:strike].to_f
 
-          atm_strike = ce_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - spot).abs }
-          atm_strike_price = (atm_strike[:strike] || atm_strike["strike"]).to_f
-
-          short_call = ce_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike_price + spread)).abs < 0.001 }
-          long_call = ce_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike_price + (spread * 2))).abs < 0.001 }
+          short_call = find_strike(chain, atm_strike_price + spread)
+          long_call = find_strike(chain, atm_strike_price + (spread * 2))
 
           raise ArgumentError, "Could not build bear call spread — insufficient strikes in chain" unless short_call && long_call
 
           ctx[:legs] = [
-            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "CE", strike: atm_strike_price + spread,
-              security_id: short_call[:security_id] || short_call["securityId"] },
-            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "CE", strike: atm_strike_price + (spread * 2),
-              security_id: long_call[:security_id] || long_call["securityId"] }
+            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "CE", strike: short_call[:strike],
+              security_id: leg_security_id(short_call, "CE") },
+            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "CE", strike: long_call[:strike],
+              security_id: leg_security_id(long_call, "CE") }
           ]
           ctx
         end

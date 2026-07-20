@@ -3,12 +3,12 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Skills::Builtin::CoveredCall do
   let(:chain) do
-    [
-      { strike: 2400, option_type: "CE", security_id: "CE01", last_price: 50.0 },
-      { strike: 2450, option_type: "CE", security_id: "CE02", last_price: 30.0 },
-      { strike: 2500, option_type: "CE", security_id: "CE03", last_price: 15.0 },
-      { strike: 2550, option_type: "CE", security_id: "CE04", last_price: 8.0 }
-    ]
+    build_option_chain([
+                         { strike: 2400, ce_id: "CE01", ce_price: 50.0, pe_id: "PE01", pe_price: 5.0 },
+                         { strike: 2450, ce_id: "CE02", ce_price: 30.0, pe_id: "PE02", pe_price: 10.0 },
+                         { strike: 2500, ce_id: "CE03", ce_price: 15.0, pe_id: "PE03", pe_price: 20.0 },
+                         { strike: 2550, ce_id: "CE04", ce_price: 8.0, pe_id: "PE04", pe_price: 35.0 }
+                       ])
   end
 
   let(:instrument) do

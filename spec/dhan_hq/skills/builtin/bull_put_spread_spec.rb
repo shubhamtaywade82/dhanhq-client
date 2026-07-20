@@ -3,15 +3,15 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Skills::Builtin::BullPutSpread do
   let(:chain) do
-    [
-      { strike: 24_100, option_type: "PE", security_id: "PE00" },
-      { strike: 24_200, option_type: "PE", security_id: "PE01" },
-      { strike: 24_300, option_type: "PE", security_id: "PE02" },
-      { strike: 24_400, option_type: "PE", security_id: "PE03" },
-      { strike: 24_500, option_type: "PE", security_id: "PE04" },
-      { strike: 24_600, option_type: "CE", security_id: "CE01" },
-      { strike: 24_800, option_type: "CE", security_id: "CE02" }
-    ]
+    build_option_chain([
+                         { strike: 24_100, ce_id: "CE_24100", ce_price: 500.0, pe_id: "PE_24100", pe_price: 20.0 },
+                         { strike: 24_200, ce_id: "CE_24200", ce_price: 420.0, pe_id: "PE_24200", pe_price: 35.0 },
+                         { strike: 24_300, ce_id: "CE_24300", ce_price: 340.0, pe_id: "PE_24300", pe_price: 55.0 },
+                         { strike: 24_400, ce_id: "CE_24400", ce_price: 260.0, pe_id: "PE_24400", pe_price: 85.0 },
+                         { strike: 24_500, ce_id: "CE_24500", ce_price: 180.0, pe_id: "PE_24500", pe_price: 120.0 },
+                         { strike: 24_600, ce_id: "CE_24600", ce_price: 130.0, pe_id: "PE_24600", pe_price: 220.0 },
+                         { strike: 24_800, ce_id: "CE_24800", ce_price: 90.0, pe_id: "PE_24800", pe_price: 380.0 }
+                       ])
   end
 
   let(:instrument) do
@@ -68,9 +68,9 @@ RSpec.describe DhanHQ::Skills::Builtin::BullPutSpread do
     end
 
     it "raises when chain has insufficient strikes" do
-      allow(instrument).to receive(:option_chain).and_return([
-                                                               { strike: 24_500, option_type: "PE", security_id: "PE01" }
-                                                             ])
+      allow(instrument).to receive(:option_chain).and_return(
+        build_option_chain([{ strike: 24_500, ce_id: "CE_24500", ce_price: 180.0, pe_id: "PE_24500", pe_price: 120.0 }])
+      )
 
       expect do
         described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")

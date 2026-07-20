@@ -92,16 +92,15 @@ RSpec.describe DhanHQ::Agent::ToolRegistry do
 
     it "executes a skill tool end-to-end" do
       policy = DhanHQ::Agent::Policy.new(scopes: ["orders:read"])
+      chain = build_option_chain([
+                                   { strike: 24_100, ce_id: "CE_24100", ce_price: 450.0, pe_id: "PE_24100", pe_price: 20.0 },
+                                   { strike: 24_300, ce_id: "CE_24300", ce_price: 300.0, pe_id: "PE_24300", pe_price: 50.0 },
+                                   { strike: 24_500, ce_id: "CE_24500", ce_price: 180.0, pe_id: "PE_24500", pe_price: 100.0 },
+                                   { strike: 24_700, ce_id: "CE_24700", ce_price: 90.0, pe_id: "PE_24700", pe_price: 190.0 },
+                                   { strike: 24_900, ce_id: "CE_24900", ce_price: 40.0, pe_id: "PE_24900", pe_price: 320.0 }
+                                 ])
       # rubocop:disable RSpec/VerifiedDoubles
-      instrument = double("instrument", ltp: 24_500.0, option_chain: [
-                            { strike: 24_000, option_type: "PE", security_id: "PE01" },
-                            { strike: 24_200, option_type: "PE", security_id: "PE02" },
-                            { strike: 24_400, option_type: "PE", security_id: "PE03" },
-                            { strike: 24_500, option_type: "PE", security_id: "PE04" },
-                            { strike: 24_600, option_type: "CE", security_id: "CE01" },
-                            { strike: 24_800, option_type: "CE", security_id: "CE02" },
-                            { strike: 25_000, option_type: "CE", security_id: "CE03" }
-                          ])
+      instrument = double("instrument", ltp: 24_500.0, option_chain: chain)
       # rubocop:enable RSpec/VerifiedDoubles
       allow(DhanHQ::Models::Instrument).to receive(:find).and_return(instrument)
 

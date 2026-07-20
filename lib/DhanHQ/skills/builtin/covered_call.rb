@@ -52,16 +52,14 @@ module DhanHQ
           chain = ctx[:chain]
           offset_pct = ctx[:strike_offset] / 100.0
 
-          ce_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "CE" }
-
           target_strike = spot * (1 + offset_pct)
-          otm_call = ce_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - target_strike).abs }
+          otm_call = nearest_strike(chain, target_strike)
 
           raise ArgumentError, "Could not find suitable OTM call strike near #{target_strike}" unless otm_call
 
-          ctx[:call_strike] = otm_call[:strike] || otm_call["strike"]
-          ctx[:call_security_id] = otm_call[:security_id] || otm_call["securityId"]
-          ctx[:call_premium] = otm_call[:last_price] || otm_call["lastPrice"] || otm_call[:ltp] || otm_call["ltp"]
+          ctx[:call_strike] = otm_call[:strike]
+          ctx[:call_security_id] = leg_security_id(otm_call, "CE")
+          ctx[:call_premium] = leg_premium(otm_call, "CE")
           ctx[:equity_security_id] = ctx[:instrument].security_id
           ctx
         end

@@ -5,12 +5,11 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
     # rubocop:disable RSpec/VerifiedDoubles
     double("instrument",
            ltp: 24_500.0,
-           option_chain: [
-             { strike: 24_400, option_type: "CE", security_id: "SEC001", last_price: 150.0 },
-             { strike: 24_500, option_type: "CE", security_id: "SEC002", last_price: 100.0 },
-             { strike: 24_600, option_type: "CE", security_id: "SEC003", last_price: 60.0 },
-             { strike: 24_500, option_type: "PE", security_id: "SEC004", last_price: 90.0 }
-           ])
+           option_chain: build_option_chain([
+                                              { strike: 24_400, ce_id: "SEC001", ce_price: 150.0, pe_id: "SEC005", pe_price: 60.0 },
+                                              { strike: 24_500, ce_id: "SEC002", ce_price: 100.0, pe_id: "SEC004", pe_price: 90.0 },
+                                              { strike: 24_600, ce_id: "SEC003", ce_price: 60.0, pe_id: "SEC006", pe_price: 150.0 }
+                                            ]))
     # rubocop:enable RSpec/VerifiedDoubles
   end
 
@@ -49,10 +48,10 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
       expect(instrument).to have_received(:option_chain).with(expiry: "2026-01-30")
     end
 
-    it "selects ATM CE strike closest to spot" do
+    it "selects ATM strike closest to spot" do
       result = described_class.new.call(symbol: "NIFTY", expiry: "2026-01-30")
-      expect(result[:selected_option][:strike]).to eq(24_500)
-      expect(result[:selected_option][:option_type]).to eq("CE")
+      expect(result[:selected_option][:strike]).to eq(24_500.0)
+      expect(result[:selected_option][:call][:security_id]).to eq("SEC002")
     end
 
     it "builds trade intent type and instrument" do
@@ -60,7 +59,7 @@ RSpec.describe DhanHQ::Skills::Builtin::BuyAtmCall do
       intent = result[:intent]
 
       expect(intent[:trade_type]).to eq("OPTIONS_BUY")
-      expect(intent[:instrument]).to eq("NIFTY 24500 CE")
+      expect(intent[:instrument]).to eq("NIFTY 24500.0 CE")
       expect(intent[:security_id]).to eq("SEC002")
     end
 

@@ -50,20 +50,14 @@ module DhanHQ
           spot = ctx[:spot_price].to_f
           chain = ctx[:chain]
 
-          ce_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "CE" }
-          pe_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "PE" }
+          atm = nearest_strike(chain, spot)
+          raise ArgumentError, "Could not find ATM strike" unless atm
 
-          atm_ce = ce_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - spot).abs }
-          atm_pe = pe_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - spot).abs }
-
-          raise ArgumentError, "Could not find ATM CE strike" unless atm_ce
-          raise ArgumentError, "Could not find ATM PE strike" unless atm_pe
-
-          ctx[:atm_strike] = atm_ce[:strike] || atm_ce["strike"]
-          ctx[:ce_security_id] = atm_ce[:security_id] || atm_ce["securityId"]
-          ctx[:pe_security_id] = atm_pe[:security_id] || atm_pe["securityId"]
-          ctx[:ce_premium] = atm_ce[:last_price] || atm_ce["lastPrice"] || atm_ce[:ltp] || atm_ce["ltp"]
-          ctx[:pe_premium] = atm_pe[:last_price] || atm_pe["lastPrice"] || atm_pe[:ltp] || atm_pe["ltp"]
+          ctx[:atm_strike] = atm[:strike]
+          ctx[:ce_security_id] = leg_security_id(atm, "CE")
+          ctx[:pe_security_id] = leg_security_id(atm, "PE")
+          ctx[:ce_premium] = leg_premium(atm, "CE")
+          ctx[:pe_premium] = leg_premium(atm, "PE")
           ctx[:total_premium] = ctx[:ce_premium].to_f + ctx[:pe_premium].to_f
           ctx
         end

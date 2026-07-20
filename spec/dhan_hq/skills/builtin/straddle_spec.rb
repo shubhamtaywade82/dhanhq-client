@@ -3,14 +3,11 @@
 # rubocop:disable RSpec/VerifiedDoubles
 RSpec.describe DhanHQ::Skills::Builtin::Straddle do
   let(:chain) do
-    [
-      { strike: 24_400, option_type: "CE", security_id: "CE01", last_price: 150.0 },
-      { strike: 24_500, option_type: "CE", security_id: "CE02", last_price: 100.0 },
-      { strike: 24_600, option_type: "CE", security_id: "CE03", last_price: 60.0 },
-      { strike: 24_400, option_type: "PE", security_id: "PE01", last_price: 50.0 },
-      { strike: 24_500, option_type: "PE", security_id: "PE02", last_price: 80.0 },
-      { strike: 24_600, option_type: "PE", security_id: "PE03", last_price: 120.0 }
-    ]
+    build_option_chain([
+                         { strike: 24_400, ce_id: "CE_24400", ce_price: 150.0, pe_id: "PE_24400", pe_price: 50.0 },
+                         { strike: 24_500, ce_id: "CE_24500", ce_price: 100.0, pe_id: "PE_24500", pe_price: 80.0 },
+                         { strike: 24_600, ce_id: "CE_24600", ce_price: 60.0, pe_id: "PE_24600", pe_price: 120.0 }
+                       ])
   end
 
   let(:instrument) do

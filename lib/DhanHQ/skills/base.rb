@@ -131,6 +131,35 @@ module DhanHQ
 
       private
 
+      # Real DhanHQ::Models::OptionChain#fetch shape: { last_price:, strikes: [{ strike:, call: {...}, put: {...} }] }.
+      # Nearest strike to a target price — always returns an entry (never nil) unless the chain is empty.
+      def nearest_strike(chain, target_price)
+        strikes = chain[:strikes]
+        return nil if strikes.nil? || strikes.empty?
+
+        strikes.min_by { |s| (s[:strike].to_f - target_price.to_f).abs }
+      end
+
+      # Exact strike match within tolerance — nil if no strike sits on that price.
+      def find_strike(chain, target_price, tolerance: 0.001)
+        strikes = chain[:strikes]
+        return nil if strikes.nil? || strikes.empty?
+
+        strikes.find { |s| (s[:strike].to_f - target_price.to_f).abs < tolerance }
+      end
+
+      def leg_side(strike_entry, option_type)
+        option_type == "CE" ? strike_entry[:call] : strike_entry[:put]
+      end
+
+      def leg_security_id(strike_entry, option_type)
+        leg_side(strike_entry, option_type)[:security_id]
+      end
+
+      def leg_premium(strike_entry, option_type)
+        leg_side(strike_entry, option_type)[:last_price]
+      end
+
       def build_context(args)
         ctx = {}
 

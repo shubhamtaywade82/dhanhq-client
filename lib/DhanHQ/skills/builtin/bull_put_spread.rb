@@ -49,24 +49,20 @@ module DhanHQ
         def select_strikes(ctx)
           spot = ctx[:spot_price].to_f
           chain = ctx[:chain]
-          spread = ctx[:spread_width]
+          spread = ctx[:spread_width].to_f
 
-          pe_options = chain.select { |o| (o[:option_type] || o["optionType"]) == "PE" }
-                            .sort_by { |o| -(o[:strike] || o["strike"]).to_f }
+          atm_strike_price = nearest_strike(chain, spot)[:strike].to_f
 
-          atm_strike = pe_options.min_by { |o| ((o[:strike] || o["strike"]).to_f - spot).abs }
-          atm_strike_price = (atm_strike[:strike] || atm_strike["strike"]).to_f
-
-          short_put = pe_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike_price - spread)).abs < 0.001 }
-          long_put = pe_options.find { |o| ((o[:strike] || o["strike"]).to_f - (atm_strike_price - (spread * 2))).abs < 0.001 }
+          short_put = find_strike(chain, atm_strike_price - spread)
+          long_put = find_strike(chain, atm_strike_price - (spread * 2))
 
           raise ArgumentError, "Could not build bull put spread — insufficient strikes in chain" unless short_put && long_put
 
           ctx[:legs] = [
-            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "PE", strike: atm_strike_price - spread,
-              security_id: short_put[:security_id] || short_put["securityId"] },
-            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "PE", strike: atm_strike_price - (spread * 2),
-              security_id: long_put[:security_id] || long_put["securityId"] }
+            { action: DhanHQ::Constants::TransactionType::SELL, option_type: "PE", strike: short_put[:strike],
+              security_id: leg_security_id(short_put, "PE") },
+            { action: DhanHQ::Constants::TransactionType::BUY, option_type: "PE", strike: long_put[:strike],
+              security_id: leg_security_id(long_put, "PE") }
           ]
           ctx
         end

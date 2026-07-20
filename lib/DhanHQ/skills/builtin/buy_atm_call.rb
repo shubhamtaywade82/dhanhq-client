@@ -51,19 +51,13 @@ module DhanHQ
           spot = ctx[:spot_price]
           chain = ctx[:chain]
 
-          ce_options = chain.select do |opt|
-            opt[:option_type] == "CE" || opt["optionType"] == "CE"
-          end
-
-          atm = ce_options.min_by do |opt|
-            strike = opt[:strike] || opt["strike"]
-            (strike.to_f - spot).abs
-          end
+          atm = nearest_strike(chain, spot)
+          raise ArgumentError, "Could not find ATM strike" unless atm
 
           ctx[:selected_option] = atm
-          ctx[:security_id] = atm[:security_id] || atm["securityId"]
-          ctx[:strike] = atm[:strike] || atm["strike"]
-          ctx[:premium] = atm[:last_price] || atm["lastPrice"] || atm[:ltp] || atm["ltp"]
+          ctx[:security_id] = leg_security_id(atm, "CE")
+          ctx[:strike] = atm[:strike]
+          ctx[:premium] = leg_premium(atm, "CE")
           ctx
         end
 
