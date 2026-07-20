@@ -610,11 +610,12 @@ Checks raise `DhanHQ::RiskViolation` with human-readable messages, safe for AI p
 
 ### Known Limitations
 
-This gem's core REST/WS client (orders, positions, funds, market data) is mature and already depended on in production by other repos in this workspace. The MCP server, Skills system, and Risk pipeline are newer and have been verified live against a real (empty) Dhan account and a real independent MCP client for the first time — see [CHANGELOG.md](CHANGELOG.md#known-limitations) for what's been proven and what hasn't:
+This gem's core REST/WS client (orders, positions, funds, market data) is mature and already depended on in production by other repos in this workspace. The MCP server, Skills system, and Risk pipeline are newer and have been verified live against real Dhan accounts (both live-scoped and sandbox) and a real independent MCP client — see [CHANGELOG.md](CHANGELOG.md#known-limitations) for what's been proven and what hasn't:
 
 - Read path (profile/funds/holdings/positions/orders/instrument lookup/option chains, all 11 skills' intent-building, WebSocket streaming) — live-verified.
-- Write path (`dhan_place_order`, `dhan_cancel_order`, `square_off_all`, `square_off_position`) — risk-gated but unit-tested only, never fired against a real order.
-- Risk checks that read portfolio state (`Concentration`, `PositionLimits`, `MaxLoss`) have only been observed against a zero-balance, zero-position account.
+- Write path — `dhan_place_order` verified end-to-end against a sandbox account: instrument resolution, full risk pipeline, audit logging, and a real Dhan API request that reached genuine order validation. Blocked only by the sandbox account's own Kill Switch toggle, not a gem defect. `dhan_cancel_order`, `square_off_all`, `square_off_position` remain untested against a real open position (none existed to act on).
+- Risk checks that read portfolio state (`Concentration`, `PositionLimits`, `MaxLoss`) have only been observed against zero/low-balance, zero-position accounts.
+- The sandbox environment's security-ID catalog is disconnected from the production instrument master — resolve IDs from sandbox order history, not `Instrument.find`, when testing against sandbox.
 
 ---
 

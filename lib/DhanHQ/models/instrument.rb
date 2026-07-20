@@ -63,25 +63,31 @@ module DhanHQ
           exact_match = options[:exact_match] || false
           case_sensitive = options[:case_sensitive] || false
 
-          instruments = by_segment(exchange_segment)
-          return nil if instruments.empty?
+          csv_text = resource.by_segment(exchange_segment)
+          return nil unless csv_text.is_a?(String) && !csv_text.empty?
 
+          require "csv"
           search_symbol = case_sensitive ? symbol : symbol.upcase
 
-          instruments.find do |instrument|
+          # Scan raw CSV rows and instantiate only the match — building a full
+          # Instrument for every row in a large segment (NSE_EQ is ~219k rows)
+          # is minutes-slow and can use gigabytes of memory (see #by_segment).
+          row = CSV.parse(csv_text, headers: true).find do |r|
             # For equity instruments, prefer underlying_symbol over symbol_name
-            instrument_symbol = if instrument.instrument == DhanHQ::Constants::InstrumentType::EQUITY && instrument.underlying_symbol
-                                  case_sensitive ? instrument.underlying_symbol : instrument.underlying_symbol.upcase
-                                else
-                                  case_sensitive ? instrument.symbol_name : instrument.symbol_name.upcase
-                                end
+            row_symbol = if r["INSTRUMENT"] == DhanHQ::Constants::InstrumentType::EQUITY && !r["UNDERLYING_SYMBOL"].to_s.empty?
+                           r["UNDERLYING_SYMBOL"]
+                         else
+                           r["SYMBOL_NAME"]
+                         end
+            next false if row_symbol.nil?
 
-            if exact_match
-              instrument_symbol == search_symbol
-            else
-              instrument_symbol.include?(search_symbol)
-            end
+            comparable = case_sensitive ? row_symbol : row_symbol.upcase
+            exact_match ? comparable == search_symbol : comparable.include?(search_symbol)
           end
+
+          return nil unless row
+
+          new(normalize_csv_row(row), skip_validation: true)
         end
 
         # Find a specific instrument within a segment by its security ID.
@@ -94,7 +100,18 @@ module DhanHQ
         def find_by_security_id(exchange_segment, security_id)
           validate_params!({ exchange_segment: exchange_segment }, DhanHQ::Contracts::InstrumentListContract)
 
-          by_segment(exchange_segment).find { |instrument| instrument.security_id.to_s == security_id.to_s }
+          csv_text = resource.by_segment(exchange_segment)
+          return nil unless csv_text.is_a?(String) && !csv_text.empty?
+
+          require "csv"
+          # Scan raw CSV rows and instantiate only the match — building a full
+          # Instrument (and its per-attribute singleton methods) for every row
+          # in a large segment (NSE_EQ is ~219k rows) is minutes-slow and can
+          # use gigabytes of memory. See #by_segment for the bulk path.
+          row = CSV.parse(csv_text, headers: true).find { |r| r["SECURITY_ID"].to_s == security_id.to_s }
+          return nil unless row
+
+          new(normalize_csv_row(row), skip_validation: true)
         end
 
         # Find a specific instrument across all exchange segments.
