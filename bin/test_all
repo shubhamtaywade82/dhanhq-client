@@ -101,8 +101,8 @@ if __FILE__ == $PROGRAM_NAME
   end
 
   today = Date.today
-  from_date = next_weekday(today - 14).strftime("%Y-%m-%d")
-  to_date = next_weekday(today - 1).strftime("%Y-%m-%d")
+  from_date = ENV["DHAN_FROM_DATE"] || next_weekday(today - 14).strftime("%Y-%m-%d")
+  to_date = ENV["DHAN_TO_DATE"] || next_weekday(today - 1).strftime("%Y-%m-%d")
   expiry_date = ENV["DHAN_TEST_EXPIRY"] || next_weekday(today + 7).strftime("%Y-%m-%d")
   security_id = ENV["DHAN_TEST_SECURITY_ID"] || "11536"
   order_id = ENV["DHAN_TEST_ORDER_ID"] || "1"

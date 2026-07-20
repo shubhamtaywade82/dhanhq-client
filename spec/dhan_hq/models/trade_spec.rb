@@ -81,7 +81,7 @@ RSpec.describe DhanHQ::Models::Trade do
 
       # Invalid date range (from_date after to_date)
       expect { trade_model.history(from_date: "2024-12-31", to_date: "2024-12-02") }
-        .to raise_error(DhanHQ::ValidationError, /from_date must be before to_date/)
+        .to raise_error(DhanHQ::ValidationError, /from_date must be before or equal to to_date/)
 
       # Invalid page number
       expect { trade_model.history(from_date: "2024-12-02", to_date: "2024-12-31", page: -1) }
