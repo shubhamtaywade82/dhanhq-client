@@ -16,3 +16,4 @@
 # Local artifacts
 test_failures.txt
 app/
+.devagent
