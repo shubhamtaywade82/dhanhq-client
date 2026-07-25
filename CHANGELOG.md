@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Fixed
+
+- **Restored the Claude Agent Skill pack to the published gem.** Switching `spec.files` from a reject-list to an allowlist in 3.2.0 stripped 51 MB of junk (a 36 MB core dump and a 17 MB `diagram.html`), but it also dropped `skills/dhanhq-ruby/` — 28 files, 164 KB: `SKILL.md` and its trigger frontmatter, 12 reference guides, 11 examples and 4 helper scripts. That pack is product content, added deliberately in #41. No Ruby code loads it at runtime, so nothing broke and no spec noticed; users installing 3.2.0 simply stopped receiving it. `CODE_OF_CONDUCT.md` and `AGENTS.md` are restored alongside it.
+
+  Unaffected and still shipped throughout: the MCP server (`lib/DhanHQ/mcp/`, `exe/dhanhq-mcp`), the agent tool layer (all 32 tools), the Ruby skills classes (`lib/DhanHQ/skills/`, 11 builtin skills), the risk pipeline and the WebSocket subsystem.
+
+  Gem size: 3.1.0 was 5.9 MB, 3.2.0 was 292 KB, and this is 324 KB. The 20× reduction is real and almost entirely the core dump; the skill pack was collateral.
+
+### Added
+
+- **`spec/dhan_hq/gem_packaging_spec.rb`** — pins both ends of what ships, since packaging has now failed in both directions. Asserts the entry point, both executables, RBS signatures, Rails initializer, MCP server, agent tool layer, Ruby skills and the Claude Skill pack are all present; asserts the known junk, any crash dump, the spec suite and development config are all absent; and caps the uncompressed payload at 3 MB so a stray binary fails loudly rather than silently adding megabytes to a release.
+
 ## [3.2.0] - 2026-07-25
 
 ### Added
