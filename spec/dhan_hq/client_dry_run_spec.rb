@@ -237,6 +237,38 @@ RSpec.describe DhanHQ::Client do
           .with { |req| JSON.parse(req.body)["correlationId"].length <= 25 })
       end
 
+      # In normal use BaseAPI camelizes before Client sees the payload, so a caller's
+      # id arrives as correlationId and is passed straight through.
+      [:correlationId, "correlationId"].each do |key|
+        it "preserves an explicit id supplied as #{key.inspect}" do
+          stub_request(:post, "https://api.dhan.co/v2/orders")
+            .to_return(status: 200, body: { orderId: "1" }.to_json,
+                       headers: { "Content-Type" => "application/json" })
+
+          client.request(:post, "/v2/orders", order_payload.merge(key => "mine-123"))
+
+          expect(WebMock).to(have_requested(:post, "https://api.dhan.co/v2/orders")
+            .with { |req| JSON.parse(req.body)["correlationId"] == "mine-123" })
+        end
+      end
+
+      # A snake_case id only reaches here when someone calls Client#request directly,
+      # bypassing BaseAPI. The guard still recognises it and declines to generate a
+      # second id — but it does not rewrite the caller's key, which would be a
+      # surprising mutation of their payload.
+      [:correlation_id, "correlation_id"].each do |key|
+        it "generates nothing when the caller already passed #{key.inspect}" do
+          stub_request(:post, "https://api.dhan.co/v2/orders")
+            .to_return(status: 200, body: { orderId: "1" }.to_json,
+                       headers: { "Content-Type" => "application/json" })
+
+          client.request(:post, "/v2/orders", order_payload.merge(key => "mine-123"))
+
+          expect(WebMock).to(have_requested(:post, "https://api.dhan.co/v2/orders")
+            .with { |req| !JSON.parse(req.body).key?("correlationId") })
+        end
+      end
+
       it "does not touch non-order writes" do
         stub_request(:delete, "https://api.dhan.co/v2/orders/123")
           .to_return(status: 200, body: { orderStatus: "CANCELLED" }.to_json,

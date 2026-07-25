@@ -230,9 +230,23 @@ module DhanHQ
       return payload unless WritePaths.order_placement?(method, path)
       return payload unless payload.is_a?(Hash)
       return payload unless DhanHQ.configuration&.auto_correlation_id?
-      return payload if payload.key?(:correlationId) || payload.key?("correlationId") ||
-                        payload.key?(:correlation_id) || payload.key?("correlation_id")
+      return payload if correlation_id?(payload)
 
+      inject_correlation_id(payload)
+    end
+
+    # Keys a caller may already have used for the correlation id, in either casing.
+    CORRELATION_ID_KEYS = %i[correlationId correlation_id].flat_map { |key| [key, key.to_s] }.freeze
+    private_constant :CORRELATION_ID_KEYS
+
+    # @return [Boolean] True when the caller supplied their own correlation id.
+    def correlation_id?(payload)
+      CORRELATION_ID_KEYS.any? { |key| payload.key?(key) }
+    end
+
+    # Returns a copy of the payload carrying a generated correlation id, matching the
+    # key type the payload already uses.
+    def inject_correlation_id(payload)
       correlation_id = "dhq-#{SecureRandom.hex(8)}"
       out = payload.dup
       out.keys.any?(String) ? out["correlationId"] = correlation_id : out[:correlationId] = correlation_id

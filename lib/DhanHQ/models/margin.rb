@@ -142,7 +142,11 @@ module DhanHQ
         #   puts "Total margin: #{margin.total_margin}"
         #
         def calculate_multi(params)
-          # Map scripts to scrip_list and include_orders to include_order if provided
+          # Work on a copy: callers may pass a frozen or reused hash, and normalising
+          # their argument in place is a side effect they cannot see from the signature.
+          params = params.dup
+
+          # Accept either spelling of the collection and order flags.
           params[:scrip_list] ||= params[:scripts] if params.key?(:scripts)
           params[:include_order] ||= params[:include_orders] if params.key?(:include_orders)
           params[:dhan_client_id] ||= DhanHQ.configuration.client_id

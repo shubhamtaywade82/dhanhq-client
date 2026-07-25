@@ -111,6 +111,18 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
 
   describe ".calculate_multi" do
     let(:resource_double) { instance_double(DhanHQ::Resources::MarginCalculator) }
+    # A valid single-scrip basket, used by the argument-mutation examples below.
+    let(:multi_params) do
+      {
+        include_position: true,
+        include_order: true,
+        dhan_client_id: "1100003626",
+        scrip_list: [
+          { exchange_segment: "NSE_EQ", transaction_type: "BUY",
+            quantity: 100, product_type: "CNC", security_id: "1333", price: 1428.0 }
+        ]
+      }
+    end
 
     before do
       allow(described_class).to receive(:resource).and_return(resource_double)
@@ -135,6 +147,37 @@ RSpec.describe DhanHQ::Models::Margin, vcr: {
       result = described_class.calculate_multi(params)
       expect(result).to be_a(described_class)
       expect(result.total_margin).to eq("150000.00")
+      expect(resource_double).to have_received(:calculate_multi)
+    end
+
+    it "does not mutate the caller's params hash" do
+      original = Marshal.load(Marshal.dump(multi_params))
+      allow(resource_double).to receive(:calculate_multi).and_return({})
+
+      described_class.calculate_multi(multi_params)
+
+      expect(multi_params).to eq(original)
+    end
+
+    it "accepts a frozen params hash" do
+      allow(resource_double).to receive(:calculate_multi).and_return({})
+
+      expect { described_class.calculate_multi(multi_params.freeze) }.not_to raise_error
+    end
+
+    it "still normalises the scripts and include_orders aliases without touching the argument" do
+      aliased = multi_params.except(:scrip_list, :include_order)
+                            .merge(scripts: multi_params[:scrip_list], include_orders: true)
+      original = Marshal.load(Marshal.dump(aliased))
+      allow(resource_double).to receive(:calculate_multi) do |arg|
+        expect(arg).to include(includeOrder: true)
+        expect(arg[:scripList]).to be_an(Array)
+        {}
+      end
+
+      described_class.calculate_multi(aliased)
+
+      expect(aliased).to eq(original)
       expect(resource_double).to have_received(:calculate_multi)
     end
   end

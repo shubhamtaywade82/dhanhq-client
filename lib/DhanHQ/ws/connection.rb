@@ -111,12 +111,9 @@ module DhanHQ
       def handle_open(session)
         DhanHQ.logger&.info("[DhanHQ::WS] open")
 
-        # Re-subscribe snapshot on reconnect: the server keeps no subscription state
-        # across connections, so the desired set is replayed on every new session.
-        snapshot = @state.snapshot.map do |k|
-          seg, sid = k.split(":")
-          { ExchangeSegment: seg, SecurityId: sid }
-        end
+        # The server keeps no subscription state across connections, so the desired set
+        # is replayed on every new session. See SubState#resubscribe_payload.
+        snapshot = @state.resubscribe_payload
         send_sub(snapshot) unless snapshot.empty?
         @timer = EM.add_periodic_timer(0.25) { drain_and_send }
 
