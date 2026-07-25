@@ -28,6 +28,7 @@
 - `WS::Connection#initialize` accepts an optional `on_event:` keyword; the socket-open handling moved into a `handle_open` method.
 - `Configuration` reads boolean env vars through a shared helper, so an empty value is treated as unset rather than false.
 - README, ARCHITECTURE.md and CLAUDE.md document the Global Stocks book, basket orders, dry-run mode, write-path safety, and the WebSocket hooks and health API. The "Indian markets only" rule is restated as "DhanHQ v2 API only" — Delta Exchange and other brokers stay out, while DhanHQ's own Global Stocks surface is in scope.
+- **`ToolCatalogue.tool` takes keyword arguments.** It had nine positional-and-keyword parameters, so a transposed `scope` and `risk` would have produced a silently mis-gated tool, and it needed an inline `rubocop:disable Metrics/ParameterLists`. Now keyword-only with a `**attributes` splat: an unknown attribute raises rather than half-building a tool, the repeated `version: "1.0.0"` is gone from all 21 definitions in favour of a default, and the inline suppression is removed. Verified by diffing the full 32-tool metadata dump before and after — byte-for-byte identical.
 - `.rubocop_todo.yml` excludes `constants.rb` from `Metrics/ModuleLength` (a pure enumeration module whose line count tracks API coverage) and adds `models/global_stocks/order.rb` to the existing `Naming/PredicateMethod` exclusions, matching the domestic `Models::Order`.
 
 ### Fixed
@@ -40,7 +41,7 @@
 
 ### Tests
 
-- 1,039 examples, 0 failures (up from 833); RuboCop clean.
+- 1,052 examples, 0 failures (up from 833); RuboCop clean.
 - New specs for the review fixes: nested leg camelization on the wire, dry run completing through `Order.place` / `GlobalStocks::Order.place` / `MultiOrder.place` with zero network calls, `DryRun::Simulator` response shaping and read replay, `DryRun::Ledger` eviction, and `WritePaths` classification (including that read-only POSTs are not treated as writes).
 - New specs: Global Stocks resources (orders, holdings, funds, trades, market status, margin calculator) and models (order, holding, funds, trade, market status, margin, order estimate); `MultiOrder`; `Client` dry-run, retry gating and correlation-id behaviour; `WS::Client` lifecycle hooks and health tracking; `WS::Connection` subscription replay and reconnect reporting; agent tool registration and policy enforcement for the new tools; constants and configuration coverage for the new flags and path lists.
 

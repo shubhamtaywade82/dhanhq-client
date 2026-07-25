@@ -13,6 +13,9 @@ module DhanHQ
       extend ToolSchemas
       extend ToolHandlers
 
+      # Version stamped on a tool definition that does not declare its own.
+      DEFAULT_TOOL_VERSION = "1.0.0"
+
       module_function
 
       # Every tool, keyed by name.
@@ -28,48 +31,48 @@ module DhanHQ
 
       def primitive_tools
         [
-          tool("dhan_profile", "Fetch Dhan profile", "portfolio:read", "read_only",
-               object_schema, profile_handler,
-               version: "1.0.0",
+          tool(name: "dhan_profile", description: "Fetch Dhan profile",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: profile_handler,
                output_schema: { type: "object", properties: { client_id: { type: "string" } } }),
-          tool("dhan_funds", "Fetch fund limits", "portfolio:read", "read_only",
-               object_schema, funds_handler,
-               version: "1.0.0",
+          tool(name: "dhan_funds", description: "Fetch fund limits",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: funds_handler,
                output_schema: { type: "object", properties: { available_balance: { type: "number" } } }),
-          tool("dhan_holdings", "List holdings", "portfolio:read", "read_only",
-               object_schema, holdings_handler,
-               version: "1.0.0",
+          tool(name: "dhan_holdings", description: "List holdings",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: holdings_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_positions", "List positions", "portfolio:read", "read_only",
-               object_schema, positions_handler,
-               version: "1.0.0",
+          tool(name: "dhan_positions", description: "List positions",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: positions_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_orders", "List orders", "orders:read", "read_only",
-               object_schema, orders_handler,
-               version: "1.0.0",
+          tool(name: "dhan_orders", description: "List orders",
+               scope: "orders:read", risk: "read_only",
+               schema: object_schema, handler: orders_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_trades", "List trades", "orders:read", "read_only",
-               object_schema, trades_handler,
-               version: "1.0.0",
+          tool(name: "dhan_trades", description: "List trades",
+               scope: "orders:read", risk: "read_only",
+               schema: object_schema, handler: trades_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_search_instruments", "Resolve symbols to security IDs", "market:read", "read_only",
-               search_schema, search_handler,
-               version: "1.0.0",
+          tool(name: "dhan_search_instruments", description: "Resolve symbols to security IDs",
+               scope: "market:read", risk: "read_only",
+               schema: search_schema, handler: search_handler,
                output_schema: { type: "array", items: { type: "object" } },
                examples: [
                  { input: { query: "RELIANCE" }, output: "[{security_id: '2885', symbol_name: 'RELIANCE'}]" }
                ]),
-          tool("dhan_ltp", "Fetch last traded prices", "market:read", "read_only",
-               feed_schema, ltp_handler,
-               version: "1.0.0",
+          tool(name: "dhan_ltp", description: "Fetch last traded prices",
+               scope: "market:read", risk: "read_only",
+               schema: feed_schema, handler: ltp_handler,
                output_schema: { type: "object", additionalProperties: { type: "number" } }),
-          tool("dhan_quote", "Fetch market quotes", "market:read", "read_only",
-               feed_schema, quote_handler,
-               version: "1.0.0",
+          tool(name: "dhan_quote", description: "Fetch market quotes",
+               scope: "market:read", risk: "read_only",
+               schema: feed_schema, handler: quote_handler,
                output_schema: { type: "object", additionalProperties: { type: "object" } }),
-          tool("dhan_order_preview", "Validate and summarize an order without placing it", "orders:read",
-               "trade_adjacent_read", order_schema, preview_handler,
-               version: "1.0.0",
+          tool(name: "dhan_order_preview", description: "Validate and summarize an order without placing it",
+               scope: "orders:read", risk: "trade_adjacent_read",
+               schema: order_schema, handler: preview_handler,
                output_schema: {
                  type: "object",
                  properties: {
@@ -78,14 +81,17 @@ module DhanHQ
                    summary: { type: "string" }
                  }
                }),
-          tool("dhan_place_order", "Place an order after external confirmation", "orders:write", "live_write",
-               order_schema, place_order_handler,
-               version: "1.0.0",
+          tool(name: "dhan_place_order", description: "Place an order after external confirmation",
+               scope: "orders:write", risk: "live_write",
+               schema: order_schema, handler: place_order_handler,
                output_schema: { type: "object", properties: { order_id: { type: "string" } } }),
-          tool("dhan_cancel_order", "Cancel an order", "orders:cancel", "destructive_write",
-               cancel_schema, cancel_order_handler,
-               version: "1.0.0",
-               output_schema: { type: "object", properties: { order_id: { type: "string" }, status: { type: "string" } } })
+          tool(name: "dhan_cancel_order", description: "Cancel an order",
+               scope: "orders:cancel", risk: "destructive_write",
+               schema: cancel_schema, handler: cancel_order_handler,
+               output_schema: {
+                 type: "object",
+                 properties: { order_id: { type: "string" }, status: { type: "string" } }
+               })
         ]
       end
 
@@ -96,47 +102,48 @@ module DhanHQ
       # for "my holdings" should not silently mix INR and USD positions.
       def global_stocks_tools
         [
-          tool("dhan_global_holdings", "List US stock holdings", "portfolio:read", "read_only",
-               object_schema, global_holdings_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_holdings", description: "List US stock holdings",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: global_holdings_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_global_funds", "Fetch US (USD) fund limits", "portfolio:read", "read_only",
-               object_schema, global_funds_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_funds", description: "Fetch US (USD) fund limits",
+               scope: "portfolio:read", risk: "read_only",
+               schema: object_schema, handler: global_funds_handler,
                output_schema: { type: "object", properties: { available_cash: { type: "number" } } }),
-          tool("dhan_global_orders", "List US stock orders", "orders:read", "read_only",
-               object_schema, global_orders_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_orders", description: "List US stock orders",
+               scope: "orders:read", risk: "read_only",
+               schema: object_schema, handler: global_orders_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_global_trades", "List US stock trades", "orders:read", "read_only",
-               object_schema, global_trades_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_trades", description: "List US stock trades",
+               scope: "orders:read", risk: "read_only",
+               schema: object_schema, handler: global_trades_handler,
                output_schema: { type: "array", items: { type: "object" } }),
-          tool("dhan_global_market_status", "Check whether the US market is open", "market:read", "read_only",
-               object_schema, global_market_status_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_market_status", description: "Check whether the US market is open",
+               scope: "market:read", risk: "read_only",
+               schema: object_schema, handler: global_market_status_handler,
                output_schema: {
                  type: "object",
                  properties: { status: { type: "string" }, open: { type: "boolean" } }
                }),
-          tool("dhan_global_order_estimate", "Estimate charges and margin for a US stock order without placing it",
-               "orders:read", "trade_adjacent_read", global_estimate_schema, global_estimate_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_order_estimate",
+               description: "Estimate charges and margin for a US stock order without placing it",
+               scope: "orders:read", risk: "trade_adjacent_read",
+               schema: global_estimate_schema, handler: global_estimate_handler,
                output_schema: {
                  type: "object",
                  properties: { total_charges: { type: "number" }, total_margin: { type: "number" } }
                }),
-          tool("dhan_global_place_order", "Place a US stock order after external confirmation",
-               "orders:write", "live_write", global_order_schema, global_place_order_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_place_order", description: "Place a US stock order after external confirmation",
+               scope: "orders:write", risk: "live_write",
+               schema: global_order_schema, handler: global_place_order_handler,
                output_schema: { type: "object", properties: { order_id: { type: "string" } } }),
-          tool("dhan_global_cancel_order", "Cancel a US stock order", "orders:cancel", "destructive_write",
-               cancel_schema, global_cancel_order_handler,
-               version: "1.0.0",
+          tool(name: "dhan_global_cancel_order", description: "Cancel a US stock order",
+               scope: "orders:cancel", risk: "destructive_write",
+               schema: cancel_schema, handler: global_cancel_order_handler,
                output_schema: { type: "object", properties: { order_id: { type: "string" } } }),
-          tool("dhan_multi_order", "Place a basket of up to 15 domestic orders in one request",
-               "orders:write", "live_write", multi_order_schema, multi_order_handler,
-               version: "1.0.0",
+          tool(name: "dhan_multi_order", description: "Place a basket of up to 15 domestic orders in one request",
+               scope: "orders:write", risk: "live_write",
+               schema: multi_order_schema, handler: multi_order_handler,
                output_schema: {
                  type: "object",
                  properties: { orders: { type: "array", items: { type: "object" } } }
@@ -149,24 +156,25 @@ module DhanHQ
       def skill_tools
         DhanHQ::Skills::Registry.list.map do |skill|
           klass = DhanHQ::Skills::Registry.find(skill[:name])
-          tool("dhan_skill_#{skill[:name]}", skill[:description], klass.scope, klass.risk,
-               skill_input_schema(skill[:params]),
-               ->(arguments) { DhanHQ::Skills::Registry.call(skill[:name], arguments) },
-               version: "1.0.0")
+          tool(name: "dhan_skill_#{skill[:name]}", description: skill[:description],
+               scope: klass.scope, risk: klass.risk,
+               schema: skill_input_schema(skill[:params]),
+               handler: ->(arguments) { DhanHQ::Skills::Registry.call(skill[:name], arguments) })
         end
       end
 
-      # Builds a {DhanHQ::Agent::Tool}. The four leading positionals are the ones every
-      # tool must state — what it is called, what it does, and what it is allowed to do.
-      # rubocop:disable Metrics/ParameterLists
-      def tool(name, description, scope, risk, schema, handler, version: "1.0.0", output_schema: nil, examples: nil)
-        Tool.new(
-          name: name, description: description, scope: scope, risk: risk,
-          schema: schema, handler: handler, version: version,
-          output_schema: output_schema, examples: examples
-        )
+      # Builds a {DhanHQ::Agent::Tool}.
+      #
+      # Keyword-only: with nine attributes, positional order was a memory test, and a
+      # transposed scope and risk would have produced a silently mis-gated tool.
+      # An unknown attribute raises, so a typo cannot create a half-built tool.
+      #
+      # @param attributes [Hash] Any {DhanHQ::Agent::Tool} member. +version+ defaults
+      #   to {DEFAULT_TOOL_VERSION}.
+      # @return [DhanHQ::Agent::Tool]
+      def tool(**attributes)
+        Tool.new(version: DEFAULT_TOOL_VERSION, **attributes)
       end
-      # rubocop:enable Metrics/ParameterLists
     end
   end
 end
