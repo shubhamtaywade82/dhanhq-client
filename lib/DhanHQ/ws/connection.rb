@@ -23,13 +23,18 @@ module DhanHQ
       # @param bus [DhanHQ::WS::CmdBus] Command queue feeding subscription
       #   changes.
       # @param state [DhanHQ::WS::SubState] Tracks subscription status.
+      # @param on_event [Proc, nil] Optional callable invoked as
+      #   +on_event.call(event, payload)+ for lifecycle events (+:open+, +:close+,
+      #   +:error+, +:reconnect+). Lets the owning client surface connection state
+      #   to user callbacks.
       # @yield [binary]
       # @yieldparam binary [String] Raw binary frame received from the socket.
-      def initialize(url:, mode:, bus:, state:, &on_binary)
+      def initialize(url:, mode:, bus:, state:, on_event: nil, &on_binary)
         @url = url
         @mode = mode
         @bus = bus
         @state = state
+        @on_event = on_event
         @on_binary = on_binary
         @stop = false
         @stopping = false
@@ -90,11 +95,41 @@ module DhanHQ
 
       private
 
+      # Notifies the owning client of a lifecycle event. Never lets a user callback
+      # take down the connection thread.
+      def notify(event, payload = nil)
+        @on_event&.call(event, payload)
+      rescue StandardError => e
+        DhanHQ.logger&.error("[DhanHQ::WS] on_event(#{event}) raised #{e.class}: #{e.message}")
+      end
+
+      # Restores subscriptions and starts the command drain for a freshly opened
+      # socket, then reports the transition.
+      #
+      # @param session [Integer] 1-based index of this connection attempt. Anything
+      #   past the first is a reconnect.
+      def handle_open(session)
+        DhanHQ.logger&.info("[DhanHQ::WS] open")
+
+        # The server keeps no subscription state across connections, so the desired set
+        # is replayed on every new session. See SubState#resubscribe_payload.
+        snapshot = @state.resubscribe_payload
+        send_sub(snapshot) unless snapshot.empty?
+        @timer = EM.add_periodic_timer(0.25) { drain_and_send }
+
+        # :reconnect lets callers re-seed derived state (candle builders, caches)
+        # and see exactly which instruments were restored for them.
+        notify(:reconnect, { attempt: session - 1, resubscribed: snapshot }) if session > 1
+        notify(:open, { resubscribed: snapshot })
+      end
+
       def loop_run
         backoff = 2.0
+        sessions = 0
         until @stop
           failed = false
           got_429 = false
+          sessions += 1
 
           # respect any active cool-off window
           sleep (@cooloff_until - Time.now).ceil if @cooloff_until && Time.now < @cooloff_until
@@ -103,18 +138,10 @@ module DhanHQ
             EM.run do
               @ws = Faye::WebSocket::Client.new(@url, nil, headers: default_headers)
 
-              @ws.on :open do |_|
-                DhanHQ.logger&.info("[DhanHQ::WS] open")
-                # re-subscribe snapshot on reconnect
-                snapshot = @state.snapshot.map do |k|
-                  seg, sid = k.split(":")
-                  { ExchangeSegment: seg, SecurityId: sid }
-                end
-                send_sub(snapshot) unless snapshot.empty?
-                @timer = EM.add_periodic_timer(0.25) { drain_and_send }
-              end
+              @ws.on(:open) { |_| handle_open(sessions) }
 
               @ws.on :message do |ev|
+                notify(:message, nil)
                 @on_binary&.call(ev.data) # raw frames to decoder
               end
 
@@ -131,12 +158,14 @@ module DhanHQ
                   failed  = (ev.code != 1000)
                   got_429 = ev.reason.to_s.include?("429")
                 end
+                notify(:close, { code: ev.code, reason: ev.reason, reconnecting: failed })
                 EM.stop
               end
 
               @ws.on :error do |ev|
                 DhanHQ.logger&.error("[DhanHQ::WS] error #{ev.message}")
                 failed = true
+                notify(:error, ev.message)
               end
             end
           rescue StandardError => e

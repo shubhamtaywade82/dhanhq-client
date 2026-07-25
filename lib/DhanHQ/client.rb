@@ -2,6 +2,7 @@
 
 require "faraday"
 require "json"
+require "securerandom"
 require "active_support/core_ext/hash/indifferent_access"
 require_relative "errors"
 require_relative "rate_limiter"
@@ -60,12 +61,19 @@ module DhanHQ
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload, retries: 3)
+      payload = with_correlation_id(method, path, payload)
+      return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
+
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
       refresh_connection!
 
+      # A non-idempotent write is not safely retryable: the API has no idempotency
+      # key, so a request that timed out may already have reached the exchange.
+      effective_retries = retryable_write?(method, path) ? retries : 0
+
       with_auth_retry do
-        with_transient_retry(retries: retries) do
+        with_transient_retry(retries: effective_retries) do
           response = connection.send(method, path) do |req|
             req.headers.merge!(build_headers(path))
             prepare_payload(req, payload, method, path)
@@ -103,7 +111,11 @@ module DhanHQ
         retry
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
         attempt += 1
-        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
+        if attempt > retries
+          raise DhanHQ::NetworkError, "Request failed: #{e.message}" if retries.zero?
+
+          raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}"
+        end
 
         backoff = calculate_backoff(attempt)
         DhanHQ.logger&.warn(
@@ -196,6 +208,50 @@ module DhanHQ
     end
 
     private
+
+    # Simulator that answers state-changing requests locally when dry run is on.
+    #
+    # @return [DhanHQ::DryRun::Simulator]
+    def dry_run
+      @dry_run ||= DhanHQ::DryRun::Simulator.new
+    end
+
+    # A write may be auto-retried only when the user has explicitly opted in.
+    def retryable_write?(method, path)
+      return true unless WritePaths.mutating?(method, path)
+
+      DhanHQ.configuration&.retry_non_idempotent_writes? || false
+    end
+
+    # Fills in a +correlationId+ on order placements that lack one, so a caller who
+    # hits a timeout can still discover whether the order reached the exchange via
+    # GET /v2/orders/external/{correlation-id}.
+    def with_correlation_id(method, path, payload)
+      return payload unless WritePaths.order_placement?(method, path)
+      return payload unless payload.is_a?(Hash)
+      return payload unless DhanHQ.configuration&.auto_correlation_id?
+      return payload if correlation_id?(payload)
+
+      inject_correlation_id(payload)
+    end
+
+    # Keys a caller may already have used for the correlation id, in either casing.
+    CORRELATION_ID_KEYS = %i[correlationId correlation_id].flat_map { |key| [key, key.to_s] }.freeze
+    private_constant :CORRELATION_ID_KEYS
+
+    # @return [Boolean] True when the caller supplied their own correlation id.
+    def correlation_id?(payload)
+      CORRELATION_ID_KEYS.any? { |key| payload.key?(key) }
+    end
+
+    # Returns a copy of the payload carrying a generated correlation id, matching the
+    # key type the payload already uses.
+    def inject_correlation_id(payload)
+      correlation_id = "dhq-#{SecureRandom.hex(8)}"
+      out = payload.dup
+      out.keys.any?(String) ? out["correlationId"] = correlation_id : out[:correlationId] = correlation_id
+      out
+    end
 
     def refresh_connection!
       current_url = DhanHQ.configuration.base_url

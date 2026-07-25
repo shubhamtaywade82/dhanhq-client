@@ -63,6 +63,10 @@ Metrics/MethodLength:
 # Configuration parameters: CountComments, CountAsOne.
 Metrics/ModuleLength:
   Max: 158
+  Exclude:
+    # A pure enumeration module: line count grows with API coverage and says
+    # nothing about complexity.
+    - 'lib/DhanHQ/constants.rb'
 
 # Offense count: 1
 # Configuration parameters: CountKeywordArgs, MaxOptionalParameters.
@@ -90,6 +94,7 @@ Naming/MethodParameterName:
 Naming/PredicateMethod:
   Exclude:
     - 'lib/DhanHQ/models/forever_order.rb'
+    - 'lib/DhanHQ/models/global_stocks/order.rb'
     - 'lib/DhanHQ/models/iceberg_order.rb'
     - 'lib/DhanHQ/models/order.rb'
     - 'lib/DhanHQ/models/super_order.rb'

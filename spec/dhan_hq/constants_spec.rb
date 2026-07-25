@@ -61,4 +61,63 @@ RSpec.describe DhanHQ::Constants do
       expect(described_class.all_for(:UnknownThing)).to eq([])
     end
   end
+
+  describe "Global Stocks" do
+    it "keeps INX_EQ out of the domestic segment list" do
+      expect(described_class::ExchangeSegment::ALL).not_to include("INX_EQ")
+      expect(described_class::ExchangeSegment::GLOBAL_ALL).to eq(["INX_EQ"])
+    end
+
+    it "exposes the AMOUNT order type only on the global enum" do
+      expect(described_class::GlobalStocks::OrderType::ALL).to include("AMOUNT")
+      expect(described_class::OrderType::ALL).not_to include("AMOUNT")
+    end
+
+    it "exposes the documented feed limits" do
+      expect(described_class::GlobalStocks::EXCHANGE_SEGMENT_CODE).to eq(14)
+      expect(described_class::GlobalStocks::MAX_INSTRUMENTS_PER_REQUEST).to eq(100)
+      expect(described_class::GlobalStocks::MAX_CONNECTIONS_PER_CLIENT).to eq(5)
+    end
+
+    it "exposes the global stocks feed URL" do
+      expect(described_class::Urls::WS_GLOBAL_STOCKS_FEED).to eq("wss://global-stocks-api-feed.dhan.co")
+    end
+  end
+
+  describe "write-path prefixes" do
+    it "treats order endpoints as mutating" do
+      expect(described_class::MUTATING_PATH_PREFIXES).to include("/v2/orders", "/v2/globalstocks/orders")
+    end
+
+    it "does not treat read-only POST endpoints as mutating" do
+      %w[/v2/optionchain /v2/charts /v2/marketfeed /v2/margincalculator].each do |path|
+        expect(described_class::MUTATING_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }).to be(false)
+      end
+    end
+
+    it "lists order placement paths as a subset of mutating paths" do
+      expect(described_class::MUTATING_PATH_PREFIXES)
+        .to include(*described_class::ORDER_PLACEMENT_PATH_PREFIXES)
+    end
+  end
+
+  describe "dhanClientId payload injection" do
+    it "matches the versioned alerts path the resources actually use" do
+      path = "/v2/alerts/orders"
+      expect(described_class::PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES.any? { |prefix| path.start_with?(prefix) })
+        .to be(true)
+    end
+
+    it "matches the multi order path" do
+      path = "/v2/alerts/multi/orders"
+      expect(described_class::PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES.any? { |prefix| path.start_with?(prefix) })
+        .to be(true)
+    end
+
+    it "matches the global stocks order path" do
+      path = "/v2/globalstocks/orders"
+      expect(described_class::PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES.any? { |prefix| path.start_with?(prefix) })
+        .to be(true)
+    end
+  end
 end

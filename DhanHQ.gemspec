@@ -23,15 +23,27 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = "https://github.com/shubhamtaywade82/dhanhq-client"
   spec.metadata["changelog_uri"] = "https://github.com/shubhamtaywade82/dhanhq-client/blob/main/CHANGELOG.md"
 
-  # Specify which files should be added to the gem when it is released.
-  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-  gemspec = File.basename(__FILE__)
-  spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec) ||
-        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile
-                          app/ examples/ AUDIT_GAP_ANALYSIS CLAUDE TODO docs/PR_])
-    end
+  # Files shipped in the released gem.
+  #
+  # This is an allowlist on purpose. The previous reject-list shipped anything tracked
+  # that did not match a known-bad prefix, which meant a stray 36 MB core dump and a
+  # 17 MB diagram.html — 51 MB of a 52 MB gem — went out in releases. An allowlist
+  # cannot leak an unanticipated artifact: a new file is only published if a maintainer
+  # adds its directory here.
+  shipped_directories = %w[lib exe sig config docs].freeze
+  shipped_root_files = %w[README.md CHANGELOG.md ARCHITECTURE.md GUIDE.md LICENSE.txt].freeze
+  # Draft PR write-ups live under docs/ but are not user documentation.
+  excluded_patterns = [%r{\Adocs/PR_}].freeze
+
+  tracked = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
+    ls.readlines("\x0", chomp: true)
+  end || []
+
+  spec.files = tracked.select do |path|
+    next false if excluded_patterns.any? { |pattern| path.match?(pattern) }
+
+    shipped_root_files.include?(path) ||
+      shipped_directories.any? { |dir| path.start_with?("#{dir}/") }
   end
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }

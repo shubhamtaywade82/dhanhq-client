@@ -17,3 +17,16 @@
 test_failures.txt
 app/
 .devagent
+watchlist.csv
+diagram.html
+
+# Crash dumps — a 36 MB core file from an unrelated process was once committed
+# here and shipped in the published gem.
+core
+core.*
+*.core
+
+# Editor / tooling indexes
+TAGS
+tags
+.tags

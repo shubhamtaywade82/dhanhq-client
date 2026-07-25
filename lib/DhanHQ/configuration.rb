@@ -41,6 +41,47 @@ module DhanHQ
     # Whether to use the sandbox environment.
     attr_accessor :sandbox
 
+    # When true, state-changing requests (order placement, modification,
+    # cancellation, position exits, trading controls) are validated and logged but
+    # never sent to the API — the client answers with a simulated response instead.
+    #
+    # Read-only requests still hit the API, so market data, the option chain,
+    # positions and holdings remain live. That makes dry-run usable for a full
+    # strategy rehearsal against real prices.
+    #
+    # Set via +DHAN_DRY_RUN=true+ or in {DhanHQ.configure}.
+    # @return [Boolean]
+    attr_accessor :dry_run
+
+    # Whether to auto-retry non-idempotent writes (order placement, modification,
+    # cancellation) after a transient failure — a 429, a 5xx, or a network timeout.
+    #
+    # Defaults to +false+, because the DhanHQ API has no idempotency key: a POST
+    # /v2/orders that times out may well have reached the exchange, and retrying it
+    # can place a second, duplicate order. With this off, the transient error is
+    # raised to the caller, who can reconcile using the correlation id (see
+    # {#auto_correlation_id} and +DhanHQ::Models::Order.find_by_correlation_id+)
+    # before deciding to resubmit.
+    #
+    # Read requests are always retried regardless of this setting.
+    #
+    # Set via +DHAN_RETRY_WRITES=true+ or in {DhanHQ.configure}.
+    # @return [Boolean]
+    attr_accessor :retry_non_idempotent_writes
+
+    # Whether to generate a +correlationId+ for order placements that do not carry
+    # one. The correlation id is the only way to answer "did my order actually go
+    # through?" after a timeout, via GET /v2/orders/external/{correlation-id}.
+    #
+    # Defaults to +false+ because it changes the request body, which would break
+    # callers matching recorded fixtures on the exact payload. Turn it on to get
+    # timeout-reconcilable orders for free. Only fills the field when absent; an
+    # explicit correlation id is always preserved.
+    #
+    # Set via +DHAN_AUTO_CORRELATION_ID=true+ or in {DhanHQ.configure}.
+    # @return [Boolean]
+    attr_accessor :auto_correlation_id
+
     # URL for the compact CSV format of instruments.
     # @return [String] URL for compact CSV.
     attr_accessor :compact_csv_url
@@ -124,6 +165,21 @@ module DhanHQ
       @sandbox == true
     end
 
+    # @return [Boolean] True when state-changing requests should be simulated.
+    def dry_run?
+      @dry_run == true
+    end
+
+    # @return [Boolean] True when non-idempotent writes may be auto-retried.
+    def retry_non_idempotent_writes?
+      @retry_non_idempotent_writes == true
+    end
+
+    # @return [Boolean] True when a correlation id should be generated for orders.
+    def auto_correlation_id?
+      @auto_correlation_id == true
+    end
+
     # Initializes a new configuration instance with default values.
     #
     # @example
@@ -133,7 +189,10 @@ module DhanHQ
     def initialize
       @client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
       @access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
-      @sandbox        = ENV.fetch("DHAN_SANDBOX", "false").to_s.casecmp("true").zero?
+      @sandbox        = env_flag("DHAN_SANDBOX", default: false)
+      @dry_run        = env_flag("DHAN_DRY_RUN", default: false)
+      @retry_non_idempotent_writes = env_flag("DHAN_RETRY_WRITES", default: false)
+      @auto_correlation_id = env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
       @base_url       = ENV.fetch("DHAN_BASE_URL", nil)
       @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
       @ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", nil)
@@ -143,6 +202,16 @@ module DhanHQ
       @ws_user_type   = ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
       @partner_id     = ENV.fetch("DHAN_PARTNER_ID", nil)
       @partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", nil)
+    end
+
+    private
+
+    # Reads a boolean-ish environment variable, falling back to +default+ when unset.
+    def env_flag(name, default:)
+      raw = ENV.fetch(name, nil)
+      return default if raw.nil? || raw.to_s.strip.empty?
+
+      raw.to_s.casecmp("true").zero?
     end
   end
 end

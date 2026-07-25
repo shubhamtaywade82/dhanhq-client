@@ -11,6 +11,29 @@ module DhanHQ
       hash.transform_keys { |key| key.to_s.camelize(:lower) }
     end
 
+    # Recursively convert keys from snake_case to camelCase, descending into nested
+    # hashes and through arrays.
+    #
+    # {#camelize_keys} only rewrites the top level, which is correct for the flat
+    # payloads most endpoints take. Endpoints whose body nests objects — the basket
+    # order `orders` array, an alert's `condition` — need this instead, or the nested
+    # fields reach the API still in snake_case and are rejected.
+    #
+    # @param value [Hash, Array, Object] The value to convert
+    # @return [Hash, Array, Object] The converted value; non-collections pass through
+    def deep_camelize_keys(value)
+      case value
+      when Hash
+        value.each_with_object({}) do |(key, nested), out|
+          out[key.to_s.camelize(:lower)] = deep_camelize_keys(nested)
+        end
+      when Array
+        value.map { |nested| deep_camelize_keys(nested) }
+      else
+        value
+      end
+    end
+
     # Convert keys from snake_case to TitleCase
     #
     # @param hash [Hash] The hash to convert

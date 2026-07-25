@@ -51,6 +51,20 @@ module DhanHQ
         @mutex.synchronize { @set.to_a }
       end
 
+      # The desired subscriptions rendered as instrument hashes, ready to be sent as a
+      # subscribe frame.
+      #
+      # The server keeps no subscription state across connections, so a reconnecting
+      # client replays this on every new session.
+      #
+      # @return [Array<Hash>] Instruments with +:ExchangeSegment+ and +:SecurityId+.
+      def resubscribe_payload
+        snapshot.map do |key|
+          segment, security_id = key.split(":")
+          { ExchangeSegment: segment, SecurityId: security_id }
+        end
+      end
+
       private
 
       def key_for(instrument) = "#{instrument[:ExchangeSegment]}:#{instrument[:SecurityId]}"

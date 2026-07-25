@@ -45,7 +45,10 @@ module DhanHQ
         def create(params)
           normalized = snake_case(params)
           validate_params!(normalized, DhanHQ::Contracts::AlertOrderContract)
-          response = resource.create(camelize_keys(normalized))
+          # `condition` and every entry of `orders` are nested objects whose fields the
+          # API expects in camelCase (AlertCondition#comparisonType, #securityId, …), so
+          # a shallow camelize would leave them snake_cased on the wire.
+          response = resource.create(deep_camelize_keys(normalized))
           return nil unless response.is_a?(Hash) && response["alertId"]
 
           find(response["alertId"])
@@ -69,7 +72,7 @@ module DhanHQ
           normalized = snake_case(params)
           validate_params!(normalized, DhanHQ::Contracts::AlertOrderContract)
           payload = normalized.merge(alert_id: alert_id)
-          response = resource.update(alert_id, camelize_keys(payload))
+          response = resource.update(alert_id, deep_camelize_keys(payload))
           return nil unless success_response?(response)
 
           find(alert_id)

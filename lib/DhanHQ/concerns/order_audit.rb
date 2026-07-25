@@ -50,14 +50,21 @@ module DhanHQ
       #
       # Extracts +security_id+ and +exchange_segment+ from the params,
       # resolves the instrument, and calls {DhanHQ::Risk::Pipeline.run!}.
-      # If the instrument cannot be resolved the check is skipped silently
-      # rather than blocking the order.
+      # If the instrument cannot be resolved the check is skipped rather than
+      # blocking the order, since a transient scrip-master lookup failure should not
+      # stop a valid trade.
+      #
+      # Anything other than a lookup failure is logged before being swallowed. This
+      # method used to rescue StandardError silently, which is how a wrong-arity call
+      # to `Instrument.find` went unnoticed long enough for the risk pipeline to never
+      # run for any real order (see CHANGELOG 3.1.0). A skipped check is tolerable; a
+      # skipped check nobody can see is not.
       def run_risk_checks!(params)
         security_id = extract_param(params, :securityId, :security_id)
         exchange_segment = extract_param(params, :exchangeSegment, :exchange_segment)
         return unless security_id && exchange_segment
 
-        instrument = DhanHQ::Models::Instrument.find_by_security_id(exchange_segment, security_id)
+        instrument = resolve_instrument_for_risk(exchange_segment, security_id)
         return unless instrument
 
         DhanHQ::Risk::Pipeline.run!(
@@ -68,8 +75,32 @@ module DhanHQ
         )
       rescue DhanHQ::RiskViolation
         raise
-      rescue StandardError
+      rescue StandardError => e
+        log_risk_check_skipped(e, security_id, exchange_segment)
         nil
+      end
+
+      # Resolves the instrument the risk pipeline needs, tolerating a lookup failure.
+      #
+      # @return [DhanHQ::Models::Instrument, nil]
+      def resolve_instrument_for_risk(exchange_segment, security_id)
+        DhanHQ::Models::Instrument.find_by_security_id(exchange_segment, security_id)
+      rescue StandardError => e
+        log_risk_check_skipped(e, security_id, exchange_segment)
+        nil
+      end
+
+      # Records that pre-trade risk checks did not run, and why.
+      def log_risk_check_skipped(error, security_id, exchange_segment)
+        DhanHQ.logger&.error(
+          JSON.generate(
+            event: "DHAN_RISK_CHECK_SKIPPED",
+            security_id: security_id,
+            exchange_segment: exchange_segment,
+            error: error.class.name,
+            message: error.message
+          )
+        )
       end
 
       # Maps an exchange segment string to a pipeline trade type.
