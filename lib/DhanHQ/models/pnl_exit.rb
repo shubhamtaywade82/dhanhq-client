@@ -33,6 +33,9 @@ module DhanHQ
     #
     class PnlExit < BaseModel
       extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :configure, :stop
 
       bang_class_writes :configure, :stop
 

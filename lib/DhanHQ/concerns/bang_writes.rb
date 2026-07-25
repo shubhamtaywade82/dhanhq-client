@@ -49,7 +49,11 @@ module DhanHQ
       def bang_write_module(name, error_class)
         Module.new do
           define_method(:"#{name}!") do |*args, **kwargs, &block|
-            result = public_send(name, *args, **kwargs, &block)
+            # A caller already using the bang variant does not need a deprecation
+            # notice telling them to use the bang variant.
+            result = DhanHQ::WriteResult.suppressing_deprecation do
+              public_send(name, *args, **kwargs, &block)
+            end
 
             DhanHQ::WriteResult.unwrap!(
               result,

@@ -347,6 +347,22 @@ rescue DhanHQ::OrderError => e
 end
 ```
 
+When a non-bang write reports failure, the SDK logs once per call site to help you find
+what needs migrating before 4.0.0 changes the return value:
+
+```
+[DhanHQ] DEPRECATION: DhanHQ::Models::Order.place reported failure as nil. ...
+Use DhanHQ::Models::Order.place! to get a DhanHQ::OrderError instead, or set
+config.warn_on_ambiguous_write_failure = false to silence this.
+```
+
+It fires once per call site per process, never alters a return value, never raises, and
+goes quiet once you switch that site to the bang variant. To silence it entirely:
+
+```ruby
+DhanHQ.configure { |c| c.warn_on_ambiguous_write_failure = false }   # or DHAN_WARN_AMBIGUOUS_WRITE_FAILURE=false
+```
+
 Available on `Order`, `SuperOrder`, `ForeverOrder`, `IcebergOrder`, `TwapOrder`,
 `AlertOrder`, `PnlExit`, `MultiOrder` and `GlobalStocks::Order`. The non-bang methods are
 planned to converge on `ErrorObject` in 4.0.0 — see the CHANGELOG for the staged plan.

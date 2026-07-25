@@ -27,6 +27,9 @@ module DhanHQ
     #
     class MultiOrder < BaseModel
       extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :place
 
       bang_class_writes :place
 

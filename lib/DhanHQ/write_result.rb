@@ -19,6 +19,9 @@ module DhanHQ
   #   # instead of
   #   order = DhanHQ::Models::Order.place(params)    # nil on failure
   module WriteResult
+    # Thread-local flag set while a bang variant is calling through.
+    SUPPRESSION_KEY = :dhanhq_suppress_write_deprecation
+
     module_function
 
     # Whether a write result represents a rejected or failed operation.
@@ -51,6 +54,68 @@ module DhanHQ
       return result if success?(result)
 
       raise error_class, "#{operation} failed: #{describe(result, errors)}"
+    end
+
+    # Reports, once per call site, that a non-bang write signalled failure through a
+    # value whose shape is going to change in 4.0.0.
+    #
+    # Step two of the migration: the notice tells a maintainer which of their call
+    # sites still branch on the old return value, so they can move to the bang variant
+    # before the non-bang contract unifies on {DhanHQ::ErrorObject}. Returns the result
+    # untouched — this observes, it never alters behaviour.
+    #
+    # Silent when the write succeeded, when the caller opted out via
+    # +config.warn_on_ambiguous_write_failure = false+, or when reached through a bang
+    # variant (those callers have already migrated — see {.suppressing_deprecation}).
+    #
+    # @param result [Object] Return value of a non-bang write method.
+    # @param operation [String] Operation label from {.operation_label}.
+    # @return [Object] The result, unchanged.
+    def report_ambiguous_failure(result, operation:)
+      return result unless failure?(result)
+      return result if suppressed?
+      return result unless DhanHQ.configuration&.warn_on_ambiguous_write_failure?
+
+      DhanHQ::Deprecation.warn_once(
+        operation,
+        "#{operation} reported failure as #{shape_of(result)}. Write methods return " \
+        "nil, false or a DhanHQ::ErrorObject inconsistently today and will all return " \
+        "DhanHQ::ErrorObject in 4.0.0, which is truthy — an `if result` failure branch " \
+        "will invert. Use #{operation}! to get a DhanHQ::OrderError instead, or set " \
+        "config.warn_on_ambiguous_write_failure = false to silence this."
+      )
+
+      result
+    end
+
+    # Runs the block with {.report_ambiguous_failure} disabled on this thread.
+    #
+    # Used by the bang variants: they call the non-bang method to get its result, and a
+    # caller who has already moved to `place!` does not need telling to move to
+    # `place!`. Thread-local so a concurrent thread still gets its own notices.
+    #
+    # @return [Object] The block's value.
+    def suppressing_deprecation
+      previous = Thread.current[SUPPRESSION_KEY]
+      Thread.current[SUPPRESSION_KEY] = true
+      yield
+    ensure
+      Thread.current[SUPPRESSION_KEY] = previous
+    end
+
+    # @return [Boolean]
+    def suppressed?
+      Thread.current[SUPPRESSION_KEY] == true
+    end
+
+    # Names the shape a failure arrived in, for the notice.
+    #
+    # @return [String]
+    def shape_of(result)
+      return "nil" if result.nil?
+      return "false" if result == false
+
+      "a DhanHQ::ErrorObject"
     end
 
     # Label identifying the operation that failed, for the exception message.

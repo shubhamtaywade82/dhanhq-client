@@ -9,9 +9,24 @@
   This is step one of unifying the write return contracts. Today those contracts disagree: depending on the class and the failure, a rejected write comes back as `nil`, as `false`, or as a `DhanHQ::ErrorObject`, and `AlertOrder.modify` can return either of the first two from the same method. A caller cannot write one error branch. Unifying them outright would be a silent breaking change for dependent applications, because `nil` and `false` are falsy while `ErrorObject` is truthy — every `if result` failure branch in a dependent would quietly invert. So the migration is staged:
 
   1. **This release** — additive bang variants. Opt in per call site.
-  2. **Next** — log a deprecation whenever a non-bang write returns a falsy failure, to find the remaining call sites from dependents' logs.
+  2. **This release** — log a deprecation whenever a non-bang write returns a falsy failure, to find the remaining call sites from dependents' logs.
   3. **4.0.0** — non-bang methods return `ErrorObject` uniformly, gated on step 2 going quiet.
 
+- **Deprecation notices for ambiguous write failures** (step two). When a non-bang write returns `nil`, `false` or a `DhanHQ::ErrorObject`, the SDK now logs once per call site:
+
+  ```
+  [DhanHQ] DEPRECATION: DhanHQ::Models::Order.place reported failure as nil. Write
+  methods return nil, false or a DhanHQ::ErrorObject inconsistently today and will all
+  return DhanHQ::ErrorObject in 4.0.0, which is truthy — an `if result` failure branch
+  will invert. Use DhanHQ::Models::Order.place! to get a DhanHQ::OrderError instead...
+  ```
+
+  The point is to surface the remaining call sites from dependent applications' logs before 4.0.0 changes any return value. Once per call site per process, not once per failure — a session that rejects hundreds of orders would otherwise produce noise that gets filtered out, defeating the purpose.
+
+  This layer only observes: it never alters a return value and never raises. It is silent on success, silent when reached through a bang variant (those callers have already migrated), and silent when you set `config.warn_on_ambiguous_write_failure = false` / `DHAN_WARN_AMBIGUOUS_WRITE_FAILURE=false`. Defaults to on, because a notice nobody sees finds nothing.
+
+- **`DhanHQ::Concerns::TrackedWrites`** — installs the observation. Uses `prepend` rather than `include`, since the write methods are defined directly on the model classes and an included module would sit behind them in the ancestor chain and never be reached.
+- **`DhanHQ::Deprecation`** — once-per-key notice registry, thread-safe, with `warned_keys` and `reset!` for tests.
 - **`DhanHQ::WriteResult`** — puts the knowledge of what a write failure looks like in one place (`failure?`, `success?`, `unwrap!`). `BaseModel#save!` now uses it instead of duplicating the same three-way check inline.
 - **`DhanHQ::Concerns::BangWrites`** — generates the bang variants by delegating to their non-bang counterparts, so the two cannot drift: no duplicated request building, validation or logging. Generated as a module, so a hand-written `place!` can still override and call `super`.
 

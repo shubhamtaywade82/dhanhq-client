@@ -47,6 +47,10 @@ module DhanHQ
     #
     class Order < BaseModel
       extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :place, :create
+      track_writes :modify, :cancel
 
       bang_class_writes :place, :create
       bang_writes :modify, :cancel, :refresh
