@@ -259,6 +259,16 @@ Note that a POST is not automatically a write on this API: the option chain, mar
 historical charts and the margin calculators are read-only POSTs, and dry-run leaves them
 alone.
 
+This works through the high-level models too, not just `Client#request`. Because
+`Order.place` re-fetches after placing, the SDK records each simulated order and replays reads
+for its `DRYRUN-…` id locally — so a rehearsal issues no request for a fake order, and the
+model you get back carries the fields you submitted:
+
+```ruby
+order.order_id    # => "DRYRUN-9F7BEB55D0F9"
+order.security_id # => "11536"
+```
+
 `dry_run` complements `Agent::OrderPreview` — preview validates a single order and returns a
 summary, while `dry_run` covers every write path in the SDK, including skills and the MCP
 tools.

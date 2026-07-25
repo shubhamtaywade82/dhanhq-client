@@ -17,9 +17,13 @@
 - **9 new agent/MCP tools** (32 total) — `dhan_global_holdings`, `dhan_global_funds`, `dhan_global_orders`, `dhan_global_trades`, `dhan_global_market_status`, `dhan_global_order_estimate` (combines charges and margin in one call), `dhan_global_place_order`, `dhan_global_cancel_order`, `dhan_multi_order`. Each gated by `Agent::Policy` on the same scopes and risk levels as the domestic equivalents.
 - **Global Stocks constants** — `Constants::ExchangeSegment::INX_EQ` (kept out of `ALL` so it can never satisfy a domestic order contract) plus `Constants::GlobalStocks` with the `AMOUNT` order type, feed limits (segment code 14, 100 instruments per frame, 5,000 per connection, 5 connections per client), market-status values and feed message codes. `Urls::WS_GLOBAL_STOCKS_FEED` added.
 - **Mutating-path constants** — `Constants::MUTATING_PATH_PREFIXES` and `ORDER_PLACEMENT_PATH_PREFIXES` distinguish real writes from the API's several read-only POSTs, driving both dry-run and retry gating.
+- **`DhanHQ::WritePaths`** — path taxonomy (`mutating?`, `order_placement?`, `multi_order?`) extracted out of `Client`, which no longer needs to know it.
+- **`DhanHQ::DryRun::Simulator` and `::Ledger`** — the dry-run concern extracted out of `Client` as collaborators. The ledger retains up to 500 simulated orders per process, evicting oldest first.
+- **`AttributeHelper#deep_camelize_keys`** — recursive key camelization for the endpoints whose bodies nest objects (basket order legs, alert conditions).
 
 ### Changed
 
+- **The published gem shrank from 52.5 MB to 1.15 MB.** Four tracked files nobody intended to ship were being published: `core` (a 36.5 MB ELF core dump from an unrelated `light-locker` process), `diagram.html` (17.3 MB), `TAGS`, and `watchlist.csv` — 51.3 MB of the payload, so every `gem install DhanHQ` downloaded a stranger's crash dump. They entered via `f46fde1 "Squashed commit"` and `.gitignore` matched none of them. Removed from tracking, `.gitignore` patterns added, and `spec.files` switched from a reject-list to an explicit allowlist so an unanticipated artifact cannot leak into a release again. All 217 `lib/` files and both executables are unchanged. (The blobs remain in git history; shrinking clones would need a separate history rewrite.)
 - **Non-idempotent writes are no longer auto-retried** (behaviour change). `Client#with_transient_retry` previously retried order placement, modification and cancellation on 429s, 5xxs and network timeouts. The DhanHQ API has no idempotency key, so a `POST /v2/orders` that timed out may already have reached the exchange — retrying it could place a second, real order. Transient failures on mutating paths now raise to the caller, who can reconcile before resubmitting. Reads and read-only POSTs keep their exponential backoff unchanged. Set `config.retry_non_idempotent_writes = true` (or `DHAN_RETRY_WRITES=true`) to restore the old behaviour, accepting the duplicate risk.
 - `WS::Connection#initialize` accepts an optional `on_event:` keyword; the socket-open handling moved into a `handle_open` method.
 - `Configuration` reads boolean env vars through a shared helper, so an empty value is treated as unset rather than false.
@@ -28,12 +32,16 @@
 
 ### Fixed
 
+- **Basket order legs were sent in snake_case.** `BaseAPI` camelizes only the top level of a payload, so the nested `orders` entries reached the API as `transaction_type`/`exchange_segment`/`security_id` instead of `transactionType`/`exchangeSegment`/`securityId` — every basket order placed through the wrapper would have been rejected. Added `AttributeHelper#deep_camelize_keys` and applied it to the legs. Caught in review by Codex; the original spec only asserted top-level keys, which is why it passed.
+- **The same bug pre-existed in alert orders.** `Models::AlertOrder.create` and `.modify` shallow-camelized a payload whose `condition` and `orders` are nested objects, so `AlertCondition` fields (`comparisonType`, `securityId`, `timeFrame`, …) went out snake_cased. Now uses `deep_camelize_keys`.
+- **Dry run did not work through the model APIs.** `Models::Order.place` and `GlobalStocks::Order.place` re-fetch after placing, so a simulated `DRYRUN-…` id was carried into a live `GET /v2/orders/{id}` — a real network call and a guaranteed miss. `MultiOrder.place` received no `orders` array and returned an `ErrorObject`. Dry run therefore only worked for direct `Client#request` calls, contradicting the "rehearse a full strategy" claim. Fixed by extracting `DryRun::Simulator` and `DryRun::Ledger`: placements are recorded, reads for a `DRYRUN-` id are replayed locally, and the basket endpoint gets a per-leg response. Caught in review by Codex.
 - **`dhanClientId` was never injected for alert orders.** `PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES` listed `/alerts/orders`, but `Resources::AlertOrders` uses `HTTP_PATH = "/v2/alerts/orders"`, so the `start_with?` check never matched and the field the API documents as **required** was omitted from every conditional-order payload unless the caller passed it explicitly. Fixed by adding the versioned `/v2/alerts` prefix, which also covers the new multi-order path.
 - `DhanHQ::NetworkError` no longer reports "Request failed after 0 retries" when retries are disabled.
 
 ### Tests
 
-- 1,005 examples, 0 failures (up from 833); RuboCop clean.
+- 1,039 examples, 0 failures (up from 833); RuboCop clean.
+- New specs for the review fixes: nested leg camelization on the wire, dry run completing through `Order.place` / `GlobalStocks::Order.place` / `MultiOrder.place` with zero network calls, `DryRun::Simulator` response shaping and read replay, `DryRun::Ledger` eviction, and `WritePaths` classification (including that read-only POSTs are not treated as writes).
 - New specs: Global Stocks resources (orders, holdings, funds, trades, market status, margin calculator) and models (order, holding, funds, trade, market status, margin, order estimate); `MultiOrder`; `Client` dry-run, retry gating and correlation-id behaviour; `WS::Client` lifecycle hooks and health tracking; `WS::Connection` subscription replay and reconnect reporting; agent tool registration and policy enforcement for the new tools; constants and configuration coverage for the new flags and path lists.
 
 ## [3.1.0] - 2026-07-20

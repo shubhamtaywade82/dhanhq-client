@@ -56,6 +56,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 | `auth/` | Token lifecycle | Token generator/renewal/manager for dynamic tokens. |
 | `concerns/` | Shared behavior | Modules included across layers (e.g. `OrderAudit` for live trading guard + audit logging, included in all order resources). |
 | `utils/` | Utilities | Cross-cutting utilities not tied to a single layer (e.g. `NetworkInspector` for IP/hostname/env lookup used by order audit logging). |
+| `dry_run/`, `write_paths.rb` | Write-path collaborators | `WritePaths` classifies a request as mutating / order-placing; `DryRun::Simulator` answers mutating requests locally and `DryRun::Ledger` remembers simulated orders so the models' refetch resolves without a live call. Extracted from `Client`, which was accumulating HTTP, auth retry, transient retry, rate limiting, path taxonomy and simulation. |
 | `ws/` | WebSocket | Connection, packets, decoder, market depth, orders client — isolated from REST. |
 | `mcp/` | MCP server | `DhanHQ::MCP::Server` — hand-rolled JSON-RPC 2.0 stdio server. Exposes `tools/list`, `tools/call`, `resources/*`, `prompts/*` to any MCP client (Claude Desktop, Claude Code, etc.). Launched via `exe/dhanhq-mcp`. |
 | `agent/` | AI tool registry | `Agent::ToolRegistry` — 12 domestic primitives (`dhan_profile`, `dhan_place_order`, …), 9 Global Stocks / basket tools (`dhan_global_*`, `dhan_multi_order`), plus one `dhan_skill_*` tool per registered `Skills::Registry` entry (32 total). `Agent::Policy` gates every call by scope + `LIVE_TRADING`/`DHANHQ_MCP_ENABLE_WRITES`. `Agent::OrderPreview` validates without submitting. |
@@ -117,12 +118,17 @@ So: **Models → Resources → Client**; **Contracts** are used by Models (and o
 The distinction that matters on this API is **mutating vs read-only**, not GET vs POST — the
 option chain, market feed, historical charts and margin calculators are all read-only POSTs.
 `Constants::MUTATING_PATH_PREFIXES` names the paths whose non-GET requests actually change
-account state, and `ORDER_PLACEMENT_PATH_PREFIXES` narrows that to order creation. Two client
-behaviours key off those lists:
+account state, and `ORDER_PLACEMENT_PATH_PREFIXES` narrows that to order creation.
+`DhanHQ::WritePaths` wraps those lists as predicates so `Client` does not carry the taxonomy
+itself. Two behaviours key off it:
 
-- **Dry run** (`config.dry_run`): mutating requests are logged and answered locally with a
-  simulated response; reads still hit the API, so a strategy can be rehearsed against live
-  prices. Order placements get a `DRYRUN-…` order id so caller code paths complete.
+- **Dry run** (`config.dry_run`): `DryRun::Simulator` logs mutating requests and answers them
+  locally; reads still hit the API, so a strategy can be rehearsed against live prices.
+  Because the models place-then-refetch, each simulated placement is recorded in
+  `DryRun::Ledger` and reads for a `DRYRUN-…` id are replayed from it — otherwise the refetch
+  would carry a fabricated id to the live API. Responses are shaped per endpoint family: a
+  placement needs an `orderId` for the models to treat it as successful, and the basket
+  endpoint needs a per-leg `orders` array.
 - **Retry gating**: the API has no idempotency key, so a `POST /v2/orders` that times out may
   already have reached the exchange. Mutating writes are therefore **not** auto-retried by
   default (`config.retry_non_idempotent_writes`), while reads keep their exponential backoff.

@@ -62,7 +62,7 @@ module DhanHQ
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload, retries: 3)
       payload = with_correlation_id(method, path, payload)
-      return simulate_write(method, path, payload) if simulate_write?(method, path)
+      return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
 
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
@@ -209,68 +209,25 @@ module DhanHQ
 
     private
 
-    # HTTP methods that can change server-side state.
-    WRITE_METHODS = %i[post put patch delete].freeze
-    private_constant :WRITE_METHODS
-
-    # True when this request mutates real account state, as opposed to the several
-    # read-only POST endpoints (option chain, market feed, charts, margin calculators).
-    def mutating_request?(method, path)
-      return false unless WRITE_METHODS.include?(method)
-      return false if path.nil?
-
-      DhanHQ::Constants::MUTATING_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
-    end
-
-    # True when this request places an order.
-    def order_placement?(method, path)
-      return false unless method == :post
-      return false if path.nil?
-
-      DhanHQ::Constants::ORDER_PLACEMENT_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
+    # Simulator that answers state-changing requests locally when dry run is on.
+    #
+    # @return [DhanHQ::DryRun::Simulator]
+    def dry_run
+      @dry_run ||= DhanHQ::DryRun::Simulator.new
     end
 
     # A write may be auto-retried only when the user has explicitly opted in.
     def retryable_write?(method, path)
-      return true unless mutating_request?(method, path)
+      return true unless WritePaths.mutating?(method, path)
 
       DhanHQ.configuration&.retry_non_idempotent_writes? || false
-    end
-
-    def simulate_write?(method, path)
-      DhanHQ.configuration&.dry_run? && mutating_request?(method, path)
-    end
-
-    # Answers a mutating request locally instead of sending it.
-    #
-    # The response carries +dryRun: true+ alongside a simulated +orderId+ and
-    # +orderStatus+ for order placements, so existing model code paths (which look
-    # for an order id to decide success) run to completion unchanged.
-    #
-    # @return [HashWithIndifferentAccess]
-    def simulate_write(method, path, payload)
-      DhanHQ.logger&.warn(
-        JSON.generate(
-          event: "DHAN_DRY_RUN",
-          method: method.to_s.upcase,
-          path: path,
-          payload: payload.is_a?(Hash) ? payload : nil
-        )
-      )
-
-      simulated = { "dryRun" => true, "method" => method.to_s.upcase, "path" => path }
-      if order_placement?(method, path)
-        simulated["orderId"] = "DRYRUN-#{SecureRandom.hex(6).upcase}"
-        simulated["orderStatus"] = DhanHQ::Constants::OrderStatus::TRANSIT
-      end
-      simulated.with_indifferent_access
     end
 
     # Fills in a +correlationId+ on order placements that lack one, so a caller who
     # hits a timeout can still discover whether the order reached the exchange via
     # GET /v2/orders/external/{correlation-id}.
     def with_correlation_id(method, path, payload)
-      return payload unless order_placement?(method, path)
+      return payload unless WritePaths.order_placement?(method, path)
       return payload unless payload.is_a?(Hash)
       return payload unless DhanHQ.configuration&.auto_correlation_id?
       return payload if payload.key?(:correlationId) || payload.key?("correlationId") ||

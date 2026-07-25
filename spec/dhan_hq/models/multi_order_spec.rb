@@ -43,6 +43,33 @@ RSpec.describe DhanHQ::Models::MultiOrder do
         .with(body: hash_including("dhanClientId" => DhanHQ.configuration.client_id))
     end
 
+    it "camelizes the nested leg fields, which the API requires" do
+      stub_request(:post, url)
+        .to_return(status: 200, body: { orders: [] }.to_json,
+                   headers: { "Content-Type" => "application/json" })
+
+      described_class.place(legs)
+
+      expect(WebMock).to(have_requested(:post, url).with do |req|
+        leg = JSON.parse(req.body)["orders"].first
+        leg.key?("transactionType") && leg.key?("exchangeSegment") && leg.key?("securityId") &&
+          leg.key?("productType") && leg.key?("orderType") &&
+          %w[transaction_type exchange_segment security_id product_type order_type].none? { |k| leg.key?(k) }
+      end)
+    end
+
+    it "preserves the caller's sequence on each leg" do
+      stub_request(:post, url)
+        .to_return(status: 200, body: { orders: [] }.to_json,
+                   headers: { "Content-Type" => "application/json" })
+
+      described_class.place(legs)
+
+      expect(WebMock).to(have_requested(:post, url).with do |req|
+        JSON.parse(req.body)["orders"].map { |leg| leg["sequence"] } == %w[1 2]
+      end)
+    end
+
     it "accepts a bare array response" do
       stub_request(:post, url)
         .to_return(status: 200, body: [{ orderId: "1", sequence: "1", orderStatus: "TRANSIT" }].to_json,

@@ -15,7 +15,16 @@ RSpec.describe DhanHQ::Client do
     }
   end
 
-  before { DhanHQ.configure_with_env }
+  before do
+    DhanHQ.configure_with_env
+    DhanHQ::Utils::NetworkInspector.reset_cache!
+    stub_request(:get, "https://api.ipify.org").to_return(body: "1.2.3.4")
+    stub_request(:get, "https://api64.ipify.org").to_return(body: "::1")
+    allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(nil)
+    stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
+  end
+
+  after { DhanHQ::Utils::NetworkInspector.reset_cache! }
 
   describe "dry-run mode" do
     before { DhanHQ.configuration.dry_run = true }
@@ -89,6 +98,29 @@ RSpec.describe DhanHQ::Client do
       client.request(:post, "/v2/margincalculator", order_payload)
 
       expect(WebMock).to have_requested(:post, "https://api.dhan.co/v2/margincalculator")
+    end
+
+    it "lets the model APIs complete without any live request" do
+      order = DhanHQ::Models::Order.place(
+        transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "INTRADAY",
+        order_type: "MARKET", validity: "DAY", security_id: "11536", quantity: 5
+      )
+
+      expect(order).to be_a(DhanHQ::Models::Order)
+      expect(order.order_id).to start_with("DRYRUN-")
+      expect(order.security_id).to eq("11536")
+      expect(WebMock).not_to have_requested(:get, %r{/v2/orders/DRYRUN-})
+    end
+
+    it "lets a basket rehearsal return a MultiOrder rather than an error" do
+      result = DhanHQ::Models::MultiOrder.place([
+                                                  { sequence: "1", transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "CNC",
+                                                    order_type: "LIMIT", validity: "DAY", security_id: "11536", quantity: 1, price: 1500.0 }
+                                                ])
+
+      expect(result).to be_a(DhanHQ::Models::MultiOrder)
+      expect(result).to be_all_accepted
+      expect(result.for_sequence("1").order_id).to start_with("DRYRUN-")
     end
 
     it "logs the suppressed payload for auditing" do

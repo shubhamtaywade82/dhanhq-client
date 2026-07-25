@@ -35,7 +35,9 @@ module DhanHQ
         legs.each { |leg| run_risk_checks!(leg) }
         log_multi_order_context(legs)
 
-        post("", params: payload)
+        # BaseAPI camelizes only the top level, which would leave the leg fields as
+        # `transaction_type`/`security_id` inside `orders` and get the basket rejected.
+        post("", params: payload.merge(orders: deep_camelize_keys(legs)))
       end
 
       private
