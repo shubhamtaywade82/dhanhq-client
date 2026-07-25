@@ -193,19 +193,12 @@ module DhanHQ
     # @return [DhanHQ::BaseModel]
     # @raise [DhanHQ::Error] When the record cannot be saved.
     def save!
-      result = save
-      return result unless result == false || result.nil? || result.is_a?(DhanHQ::ErrorObject)
-
-      error_details =
-        if result.is_a?(DhanHQ::ErrorObject)
-          result.errors
-        elsif @errors && !@errors.empty?
-          @errors
-        else
-          "Unknown error"
-        end
-
-      raise DhanHQ::Error, "Failed to save the record: #{error_details}"
+      DhanHQ::WriteResult.unwrap!(
+        save,
+        operation: "#{self.class}#save",
+        error_class: DhanHQ::Error,
+        errors: @errors
+      )
     end
 
     # Delete the resource

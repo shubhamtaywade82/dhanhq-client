@@ -36,6 +36,11 @@ module DhanHQ
       #   end
       #
       class Order < BaseModel
+        extend DhanHQ::Concerns::BangWrites
+
+        bang_class_writes :place
+        bang_writes :modify, :cancel
+
         HTTP_PATH = "/v2/globalstocks/orders"
 
         attributes :dhan_client_id, :order_id, :exchange_order_id, :correlation_id,

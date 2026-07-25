@@ -314,6 +314,43 @@ risk:
 DhanHQ.configure { |config| config.retry_non_idempotent_writes = true }
 ```
 
+### Explicit Failures: Bang Variants
+
+Every write method has a `!` variant that raises instead of returning a falsy value:
+
+```ruby
+order = DhanHQ::Models::Order.place!(params)   # raises DhanHQ::OrderError on failure
+order.cancel!                                  # raises if the exchange did not cancel
+```
+
+This exists because the non-bang methods do not agree on how to report failure — some
+return `nil`, some `false`, some a `DhanHQ::ErrorObject` — so a caller cannot write one
+error branch:
+
+```ruby
+# Before: which falsy thing came back depends on which method and which failure
+order = DhanHQ::Models::Order.place(params)
+return unless order            # nil on rejection
+
+result = DhanHQ::Models::MultiOrder.place(legs)
+return if result.is_a?(DhanHQ::ErrorObject)   # truthy! `unless result` would not catch this
+```
+
+`DhanHQ::OrderError` descends from `DhanHQ::Error`, so an existing `rescue DhanHQ::Error`
+keeps working. The non-bang methods are unchanged, so adopting this is per call site:
+
+```ruby
+begin
+  DhanHQ::Models::Order.place!(params)
+rescue DhanHQ::OrderError => e
+  logger.error(e.message)   # carries the API's diagnostics
+end
+```
+
+Available on `Order`, `SuperOrder`, `ForeverOrder`, `IcebergOrder`, `TwapOrder`,
+`AlertOrder`, `PnlExit`, `MultiOrder` and `GlobalStocks::Order`. The non-bang methods are
+planned to converge on `ErrorObject` in 4.0.0 — see the CHANGELOG for the staged plan.
+
 ### Order Audit Logging
 
 Every order attempt (place, modify, slice) automatically logs a structured JSON line at WARN level:

@@ -46,6 +46,11 @@ module DhanHQ
     #   puts "Pending orders: #{pending_orders.count}"
     #
     class Order < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+
+      bang_class_writes :place, :create
+      bang_writes :modify, :cancel, :refresh
+
       include Concerns::ApiResponseHandler
 
       # Attributes eligible for modification requests.

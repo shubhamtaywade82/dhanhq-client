@@ -1,3 +1,24 @@
+## [Unreleased]
+
+### Added
+
+- **Bang variants for every write method with a falsy failure contract** — `Order.place!`, `Order#modify!`/`#cancel!`/`#refresh!`, `SuperOrder.create!`/`#modify!`/`#cancel!`, `ForeverOrder.create!`, `IcebergOrder.create!`, `TwapOrder.create!`, `AlertOrder.create!`/`.modify!`, `PnlExit.configure!`/`.stop!`, `MultiOrder.place!`, `GlobalStocks::Order.place!`/`#modify!`/`#cancel!`.
+
+  Each raises `DhanHQ::OrderError` — which descends from `DhanHQ::Error`, so an existing `rescue DhanHQ::Error` handler still catches it — carrying whatever diagnostics the failure held. The non-bang methods are **untouched**: they return exactly what they returned before, so no existing caller changes behaviour.
+
+  This is step one of unifying the write return contracts. Today those contracts disagree: depending on the class and the failure, a rejected write comes back as `nil`, as `false`, or as a `DhanHQ::ErrorObject`, and `AlertOrder.modify` can return either of the first two from the same method. A caller cannot write one error branch. Unifying them outright would be a silent breaking change for dependent applications, because `nil` and `false` are falsy while `ErrorObject` is truthy — every `if result` failure branch in a dependent would quietly invert. So the migration is staged:
+
+  1. **This release** — additive bang variants. Opt in per call site.
+  2. **Next** — log a deprecation whenever a non-bang write returns a falsy failure, to find the remaining call sites from dependents' logs.
+  3. **4.0.0** — non-bang methods return `ErrorObject` uniformly, gated on step 2 going quiet.
+
+- **`DhanHQ::WriteResult`** — puts the knowledge of what a write failure looks like in one place (`failure?`, `success?`, `unwrap!`). `BaseModel#save!` now uses it instead of duplicating the same three-way check inline.
+- **`DhanHQ::Concerns::BangWrites`** — generates the bang variants by delegating to their non-bang counterparts, so the two cannot drift: no duplicated request building, validation or logging. Generated as a module, so a hand-written `place!` can still override and call `super`.
+
+### Changed
+
+- `BaseModel#save!`'s exception message is now `"<Class>#save failed: <details>"` rather than `"Failed to save the record: <details>"`. The exception class is unchanged (`DhanHQ::Error`), and nothing in the gem, specs or docs asserted the old text.
+
 ## [3.2.0] - 2026-07-25
 
 ### Added

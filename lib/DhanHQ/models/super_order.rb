@@ -48,6 +48,11 @@ module DhanHQ
     #   order.cancel("STOP_LOSS_LEG")
     #
     class SuperOrder < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+
+      bang_class_writes :create
+      bang_writes :modify, :cancel
+
       include Concerns::ApiResponseHandler
 
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
