@@ -50,6 +50,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 | `core/` | Base abstractions | BaseAPI (HTTP verbs, path building, param formatting), BaseModel (attributes, resource, validation, CRUD helpers), BaseResource (CRUD on BaseAPI), AuthAPI, ErrorHandler |
 | `helpers/` | Cross-cutting | APIHelper, AttributeHelper (keys, normalization), ValidationHelper (validate_params!, validate!), RequestHelper (headers, payload, build_from_response), ResponseHelper (parse_json, handle_response, error mapping) |
 | `models/` | Domain / facade | Typed wrappers (Order, Position, Holding, etc.). Define `resource`, optional `validation_contract`, and domain methods. Validate then delegate to resource. |
+| `models/global_stocks/`, `resources/global_stocks/` | US equities book | DhanHQ's Global Stocks API (`/v2/globalstocks/*`) — its own Order, Trade, Holding, Funds (USD), Margin, OrderEstimate and MarketStatus. Namespaced so a USD position is never mistaken for an INR one. Orders here have no exchange segment / product type / validity, quantity is a float (fractional shares), and `AMOUNT` adds notional orders. The India-specific `Risk::Pipeline` does not apply. |
 | `resources/` | REST wrappers | One class per API surface (Orders, Positions, MarketFeed, OptionChain, …). Set `HTTP_PATH`, `API_TYPE`; implement get/post/put/delete via BaseAPI. |
 | `contracts/` | Request/response validation | Dry::Validation contracts (PlaceOrderContract, ModifyOrderContract, OptionChainContract, etc.). BaseContract provides shared macros (e.g. lot_size, tick_size). |
 | `auth/` | Token lifecycle | Token generator/renewal/manager for dynamic tokens. |
@@ -57,7 +58,7 @@ This document describes the architecture of the DhanHQ v2 API client gem: layers
 | `utils/` | Utilities | Cross-cutting utilities not tied to a single layer (e.g. `NetworkInspector` for IP/hostname/env lookup used by order audit logging). |
 | `ws/` | WebSocket | Connection, packets, decoder, market depth, orders client — isolated from REST. |
 | `mcp/` | MCP server | `DhanHQ::MCP::Server` — hand-rolled JSON-RPC 2.0 stdio server. Exposes `tools/list`, `tools/call`, `resources/*`, `prompts/*` to any MCP client (Claude Desktop, Claude Code, etc.). Launched via `exe/dhanhq-mcp`. |
-| `agent/` | AI tool registry | `Agent::ToolRegistry` — 12 primitive tools (`dhan_profile`, `dhan_place_order`, …) plus one `dhan_skill_*` tool per registered `Skills::Registry` entry (23 total). `Agent::Policy` gates every call by scope + `LIVE_TRADING`/`DHANHQ_MCP_ENABLE_WRITES`. `Agent::OrderPreview` validates without submitting. |
+| `agent/` | AI tool registry | `Agent::ToolRegistry` — 12 domestic primitives (`dhan_profile`, `dhan_place_order`, …), 9 Global Stocks / basket tools (`dhan_global_*`, `dhan_multi_order`), plus one `dhan_skill_*` tool per registered `Skills::Registry` entry (32 total). `Agent::Policy` gates every call by scope + `LIVE_TRADING`/`DHANHQ_MCP_ENABLE_WRITES`. `Agent::OrderPreview` validates without submitting. |
 | `skills/` | Composable strategies | `Skills::Base` DSL (`param`, `step`, `risk`, `scope`, `description`) + `Skills::Registry`. 11 builtin skills (`iron_condor`, `straddle`, `strangle`, `buy_atm_call`, `covered_call`, `protective_put`, `bull_put_spread`, `bear_call_spread`, `square_off_all`, `square_off_position`, `market_data_summarizer`) under `skills/builtin/`. |
 | `risk/` | Pre-trade risk gate | `Risk::Pipeline.run!` — runs `TradingPermission`, `AsmGsm`, `ProductSupport`, `OrderType`, `Quantity`, `MarketHours`, `PositionLimits`, `Concentration`, `Options` (options-only), `MaxLoss` (daily) under `risk/checks/`. Wired into every order-placing resource via `Concerns::OrderAudit#run_risk_checks!` and into the `dhan_place_order` MCP tool. |
 | `ai/` | LLM prompt helpers | `AI::PromptHelpers` — human-readable portfolio summaries and risk reports, consumed by the MCP server's `prompts/get`. |
@@ -107,13 +108,41 @@ So: **Models → Resources → Client**; **Contracts** are used by Models (and o
 
 - Credentials and URLs live in `DhanHQ::Configuration` (access_token, client_id, base_url, sandbox, optional access_token_provider).
 - `DhanHQ.configure { }`, `configure_with_env`, and `configure_from_token_endpoint` set configuration. Never hardcode credentials; use env vars or token endpoint.
+- Write-path behaviour is also configuration: `dry_run`, `retry_non_idempotent_writes`, `auto_correlation_id` (see below).
+
+---
+
+## Write-path safety
+
+The distinction that matters on this API is **mutating vs read-only**, not GET vs POST — the
+option chain, market feed, historical charts and margin calculators are all read-only POSTs.
+`Constants::MUTATING_PATH_PREFIXES` names the paths whose non-GET requests actually change
+account state, and `ORDER_PLACEMENT_PATH_PREFIXES` narrows that to order creation. Two client
+behaviours key off those lists:
+
+- **Dry run** (`config.dry_run`): mutating requests are logged and answered locally with a
+  simulated response; reads still hit the API, so a strategy can be rehearsed against live
+  prices. Order placements get a `DRYRUN-…` order id so caller code paths complete.
+- **Retry gating**: the API has no idempotency key, so a `POST /v2/orders` that times out may
+  already have reached the exchange. Mutating writes are therefore **not** auto-retried by
+  default (`config.retry_non_idempotent_writes`), while reads keep their exponential backoff.
+  `config.auto_correlation_id` fills in a `correlationId` so a caller can reconcile a timed-out
+  placement through `GET /v2/orders/external/{correlation-id}`.
 
 ---
 
 ## WebSocket (WS)
 
 - Separate subsystem under `DhanHQ::WS`: own connection, packet types, decoder, market depth, orders client.
-- Shares configuration (e.g. access token) but not the REST Client or Resources. Documented in code and specs; not expanded here.
+- Shares configuration (e.g. access token) but not the REST Client or Resources.
+- `WS::Connection` owns the socket, the reconnect loop with backoff, and subscription replay:
+  the server keeps no subscription state across connections, so `SubState`'s snapshot is
+  re-sent on every new session. It reports lifecycle transitions to its owner through an
+  `on_event` callable rather than knowing about callbacks itself.
+- `WS::Client` bridges those transitions onto its public callback bus (`:open`, `:reconnect`,
+  `:close`, `:error`, plus decoded `:tick`s) and maintains health counters — `last_message_at`,
+  `reconnect_count`, `healthy?`, `health`. Frame arrival is tracked separately from socket
+  state because a feed can stay connected while the server stops publishing.
 
 ---
 

@@ -339,4 +339,60 @@ RSpec.describe DhanHQ::Configuration do
       end
     end
   end
+
+  describe "dry-run and retry flags" do
+    around do |example|
+      saved = ENV.to_h.slice("DHAN_DRY_RUN", "DHAN_RETRY_WRITES", "DHAN_AUTO_CORRELATION_ID")
+      example.run
+      %w[DHAN_DRY_RUN DHAN_RETRY_WRITES DHAN_AUTO_CORRELATION_ID].each { |key| ENV.delete(key) }
+      saved.each { |key, value| ENV[key] = value }
+    end
+
+    it "defaults to the safe settings" do
+      %w[DHAN_DRY_RUN DHAN_RETRY_WRITES DHAN_AUTO_CORRELATION_ID].each { |key| ENV.delete(key) }
+      config = described_class.new
+
+      expect(config.dry_run?).to be(false)
+      expect(config.retry_non_idempotent_writes?).to be(false)
+      expect(config.auto_correlation_id?).to be(false)
+    end
+
+    it "reads DHAN_DRY_RUN" do
+      ENV["DHAN_DRY_RUN"] = "true"
+
+      expect(described_class.new.dry_run?).to be(true)
+    end
+
+    it "reads DHAN_RETRY_WRITES" do
+      ENV["DHAN_RETRY_WRITES"] = "true"
+
+      expect(described_class.new.retry_non_idempotent_writes?).to be(true)
+    end
+
+    it "reads DHAN_AUTO_CORRELATION_ID" do
+      ENV["DHAN_AUTO_CORRELATION_ID"] = "true"
+
+      expect(described_class.new.auto_correlation_id?).to be(true)
+    end
+
+    it "treats an empty value as unset" do
+      ENV["DHAN_DRY_RUN"] = ""
+
+      expect(described_class.new.dry_run?).to be(false)
+    end
+
+    it "is case-insensitive" do
+      ENV["DHAN_DRY_RUN"] = "TRUE"
+
+      expect(described_class.new.dry_run?).to be(true)
+    end
+
+    it "can be toggled through DhanHQ.configure" do
+      DhanHQ.configure { |config| config.dry_run = true }
+
+      expect(DhanHQ.configuration.dry_run?).to be(true)
+    ensure
+      DhanHQ.configuration.dry_run = false
+    end
+  end
 end

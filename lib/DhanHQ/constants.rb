@@ -16,8 +16,14 @@ module DhanHQ
       MCX_COMM = "MCX_COMM"
       BSE_CURRENCY = "BSE_CURRENCY"
       BSE_FNO = "BSE_FNO"
+      # US / international equities, traded through the Global Stocks APIs
+      # (`/v2/globalstocks/*`). Deliberately excluded from {ALL} so it can never
+      # satisfy the domestic order contracts.
+      INX_EQ = "INX_EQ"
 
       ALL = [IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, NSE_COMM, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO].freeze
+      # Segments served by the Global Stocks APIs.
+      GLOBAL_ALL = [INX_EQ].freeze
       # Segments allowed by POST /v2/margincalculator (single and multi).
       MARGIN_CALC_ALL = [NSE_EQ, NSE_FNO, BSE_EQ, BSE_FNO, MCX_COMM].freeze
       # Segments allowed by POST /v2/forever/orders (create).
@@ -218,6 +224,64 @@ module DhanHQ
       ].freeze
     end
 
+    # Enumerations specific to the Global Stocks (US equities) APIs served under
+    # `/v2/globalstocks/*`. These orders carry no exchange segment, product type
+    # or validity — the domestic {ProductType}/{Validity} enums do not apply.
+    #
+    # @see https://dhanhq.co/docs/v2/ Global Stocks section
+    module GlobalStocks
+      # The only exchange segment currently supported by the Global Stocks feed.
+      EXCHANGE_SEGMENT = ExchangeSegment::INX_EQ
+      # Numeric exchange-segment code used in the binary WebSocket header.
+      EXCHANGE_SEGMENT_CODE = 14
+      # Maximum instruments accepted per Global Stocks feed subscription frame.
+      MAX_INSTRUMENTS_PER_REQUEST = 100
+      # Maximum concurrent subscriptions on a single Global Stocks connection.
+      MAX_SUBSCRIPTIONS_PER_CONNECTION = 5_000
+      # Maximum concurrent Global Stocks feed connections per client.
+      MAX_CONNECTIONS_PER_CLIENT = 5
+
+      # Order types accepted by POST /v2/globalstocks/orders. Adds +AMOUNT+
+      # (notional/dollar-value orders) on top of the domestic order types.
+      module OrderType
+        MARKET = "MARKET"
+        LIMIT = "LIMIT"
+        STOP_LOSS = "STOP_LOSS"
+        STOP_LOSS_MARKET = "STOP_LOSS_MARKET"
+        AMOUNT = "AMOUNT"
+
+        ALL = [MARKET, LIMIT, STOP_LOSS, STOP_LOSS_MARKET, AMOUNT].freeze
+      end
+
+      # Leg names accepted when modifying a Global Stocks super order.
+      module LegName
+        ENTRY_LEG = "ENTRY_LEG"
+        STOP_LOSS_LEG = "STOP_LOSS_LEG"
+        TARGET_LEG = "TARGET_LEG"
+        NA = "NA"
+
+        ALL = [ENTRY_LEG, STOP_LOSS_LEG, TARGET_LEG, NA].freeze
+      end
+
+      # Values returned by GET /v2/globalstocks/marketstatus.
+      module MarketStatus
+        OPEN = "open"
+        CLOSED = "closed"
+
+        ALL = [OPEN, CLOSED].freeze
+      end
+
+      # Message codes on the Global Stocks binary feed.
+      module MsgCode
+        TRADE = 1
+        PREV_CLOSE = 32
+        CIRCUIT_LIMIT = 33
+        FIFTY_TWO_WEEK = 36
+
+        ALL = [TRADE, PREV_CLOSE, CIRCUIT_LIMIT, FIFTY_TWO_WEEK].freeze
+      end
+    end
+
     # Comparison types for conditional trigger alerts.
     module ComparisonType
       TECHNICAL_WITH_VALUE = "TECHNICAL_WITH_VALUE"
@@ -399,6 +463,7 @@ module DhanHQ
       WS_ORDER_UPDATE = "wss://api-order-update.dhan.co"
       WS_DEPTH_20 = "wss://depth-api-feed.dhan.co/twentydepth"
       WS_DEPTH_200 = "wss://full-depth-api.dhan.co/twohundreddepth"
+      WS_GLOBAL_STOCKS_FEED = "wss://global-stocks-api-feed.dhan.co"
       INSTRUMENT_CSV_COMPACT = "https://images.dhan.co/api-data/api-scrip-master.csv"
       INSTRUMENT_CSV_DETAILED = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
       DOCS = "https://dhanhq.co/docs/v2"
@@ -424,6 +489,9 @@ module DhanHQ
     COMPARISON_TYPES = ComparisonType::ALL
     OPERATORS = Operator::ALL
     ALERT_CONDITION_SEGMENTS = ExchangeSegment::ALERT_CONDITION_ALL
+    GLOBAL_STOCKS_SEGMENTS = ExchangeSegment::GLOBAL_ALL
+    GLOBAL_STOCKS_ORDER_TYPES = GlobalStocks::OrderType::ALL
+    GLOBAL_STOCKS_LEG_NAMES = GlobalStocks::LegName::ALL
     ALERT_TIMEFRAMES = %w[DATE ONE_MIN FIVE_MIN FIFTEEN_MIN DAY].freeze
 
     # Exchange aliases used when building subscription payloads.
@@ -475,6 +543,7 @@ module DhanHQ
     # Injection is done in the client layer when building the payload.
     PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES = %w[
       /alerts/orders
+      /v2/alerts
       /v2/orders
       /v2/orders/iceberg
       /v2/orders/twap
@@ -485,6 +554,38 @@ module DhanHQ
       /v2/margincalculator
       /v2/killswitch
       /v2/ip
+      /v2/globalstocks
+    ].freeze
+
+    # Path prefixes whose non-GET requests change real account state — they place,
+    # modify or cancel orders, exit positions, or alter trading controls.
+    #
+    # Note that a POST is not automatically a mutation on this API: option chain,
+    # market feed, historical charts and the margin calculators are all read-only
+    # POSTs. Dry-run mode and non-idempotent retry protection consult this list so
+    # they act on real writes only and leave data fetches alone.
+    MUTATING_PATH_PREFIXES = %w[
+      /v2/orders
+      /v2/super/orders
+      /v2/forever
+      /v2/alerts
+      /v2/globalstocks/orders
+      /v2/positions
+      /v2/killswitch
+      /v2/pnlExit
+      /v2/edis
+      /v2/ip
+    ].freeze
+
+    # Subset of {MUTATING_PATH_PREFIXES} that create orders. A retried POST to one
+    # of these can produce a duplicate order, and dry-run mode answers these with a
+    # simulated order id so caller code paths still complete.
+    ORDER_PLACEMENT_PATH_PREFIXES = %w[
+      /v2/orders
+      /v2/super/orders
+      /v2/forever
+      /v2/alerts
+      /v2/globalstocks/orders
     ].freeze
 
     # Mapping of exchange and segment combinations to canonical exchange segment names.

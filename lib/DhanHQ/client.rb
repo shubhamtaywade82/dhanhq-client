@@ -2,6 +2,7 @@
 
 require "faraday"
 require "json"
+require "securerandom"
 require "active_support/core_ext/hash/indifferent_access"
 require_relative "errors"
 require_relative "rate_limiter"
@@ -60,12 +61,19 @@ module DhanHQ
     # @return [HashWithIndifferentAccess, Array<HashWithIndifferentAccess>] Parsed JSON response.
     # @raise [DhanHQ::Error] If an HTTP error occurs.
     def request(method, path, payload, retries: 3)
+      payload = with_correlation_id(method, path, payload)
+      return simulate_write(method, path, payload) if simulate_write?(method, path)
+
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
       refresh_connection!
 
+      # A non-idempotent write is not safely retryable: the API has no idempotency
+      # key, so a request that timed out may already have reached the exchange.
+      effective_retries = retryable_write?(method, path) ? retries : 0
+
       with_auth_retry do
-        with_transient_retry(retries: retries) do
+        with_transient_retry(retries: effective_retries) do
           response = connection.send(method, path) do |req|
             req.headers.merge!(build_headers(path))
             prepare_payload(req, payload, method, path)
@@ -103,7 +111,11 @@ module DhanHQ
         retry
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
         attempt += 1
-        raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}" if attempt > retries
+        if attempt > retries
+          raise DhanHQ::NetworkError, "Request failed: #{e.message}" if retries.zero?
+
+          raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}"
+        end
 
         backoff = calculate_backoff(attempt)
         DhanHQ.logger&.warn(
@@ -196,6 +208,79 @@ module DhanHQ
     end
 
     private
+
+    # HTTP methods that can change server-side state.
+    WRITE_METHODS = %i[post put patch delete].freeze
+    private_constant :WRITE_METHODS
+
+    # True when this request mutates real account state, as opposed to the several
+    # read-only POST endpoints (option chain, market feed, charts, margin calculators).
+    def mutating_request?(method, path)
+      return false unless WRITE_METHODS.include?(method)
+      return false if path.nil?
+
+      DhanHQ::Constants::MUTATING_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
+    end
+
+    # True when this request places an order.
+    def order_placement?(method, path)
+      return false unless method == :post
+      return false if path.nil?
+
+      DhanHQ::Constants::ORDER_PLACEMENT_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
+    end
+
+    # A write may be auto-retried only when the user has explicitly opted in.
+    def retryable_write?(method, path)
+      return true unless mutating_request?(method, path)
+
+      DhanHQ.configuration&.retry_non_idempotent_writes? || false
+    end
+
+    def simulate_write?(method, path)
+      DhanHQ.configuration&.dry_run? && mutating_request?(method, path)
+    end
+
+    # Answers a mutating request locally instead of sending it.
+    #
+    # The response carries +dryRun: true+ alongside a simulated +orderId+ and
+    # +orderStatus+ for order placements, so existing model code paths (which look
+    # for an order id to decide success) run to completion unchanged.
+    #
+    # @return [HashWithIndifferentAccess]
+    def simulate_write(method, path, payload)
+      DhanHQ.logger&.warn(
+        JSON.generate(
+          event: "DHAN_DRY_RUN",
+          method: method.to_s.upcase,
+          path: path,
+          payload: payload.is_a?(Hash) ? payload : nil
+        )
+      )
+
+      simulated = { "dryRun" => true, "method" => method.to_s.upcase, "path" => path }
+      if order_placement?(method, path)
+        simulated["orderId"] = "DRYRUN-#{SecureRandom.hex(6).upcase}"
+        simulated["orderStatus"] = DhanHQ::Constants::OrderStatus::TRANSIT
+      end
+      simulated.with_indifferent_access
+    end
+
+    # Fills in a +correlationId+ on order placements that lack one, so a caller who
+    # hits a timeout can still discover whether the order reached the exchange via
+    # GET /v2/orders/external/{correlation-id}.
+    def with_correlation_id(method, path, payload)
+      return payload unless order_placement?(method, path)
+      return payload unless payload.is_a?(Hash)
+      return payload unless DhanHQ.configuration&.auto_correlation_id?
+      return payload if payload.key?(:correlationId) || payload.key?("correlationId") ||
+                        payload.key?(:correlation_id) || payload.key?("correlation_id")
+
+      correlation_id = "dhq-#{SecureRandom.hex(8)}"
+      out = payload.dup
+      out.keys.any?(String) ? out["correlationId"] = correlation_id : out[:correlationId] = correlation_id
+      out
+    end
 
     def refresh_connection!
       current_url = DhanHQ.configuration.base_url

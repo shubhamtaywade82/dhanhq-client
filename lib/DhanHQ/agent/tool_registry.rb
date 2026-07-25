@@ -65,7 +65,7 @@ module DhanHQ
       end
 
       def build_tools
-        (primitive_tools + skill_tools).to_h { |tool_item| [tool_item.name, tool_item] }
+        (primitive_tools + global_stocks_tools + skill_tools).to_h { |tool_item| [tool_item.name, tool_item] }
       end
 
       def primitive_tools
@@ -128,6 +128,61 @@ module DhanHQ
                cancel_schema, cancel_order_handler,
                version: "1.0.0",
                output_schema: { type: "object", properties: { order_id: { type: "string" }, status: { type: "string" } } })
+        ]
+      end
+
+      # Tools for the Global Stocks (US equities) book, plus basket orders.
+      #
+      # Global Stocks are a separate book from domestic NSE/BSE trading, so they get
+      # their own tools rather than extra flags on the domestic ones — an agent asked
+      # for "my holdings" should not silently mix INR and USD positions.
+      def global_stocks_tools
+        [
+          tool("dhan_global_holdings", "List US stock holdings", "portfolio:read", "read_only",
+               object_schema, global_holdings_handler,
+               version: "1.0.0",
+               output_schema: { type: "array", items: { type: "object" } }),
+          tool("dhan_global_funds", "Fetch US (USD) fund limits", "portfolio:read", "read_only",
+               object_schema, global_funds_handler,
+               version: "1.0.0",
+               output_schema: { type: "object", properties: { available_cash: { type: "number" } } }),
+          tool("dhan_global_orders", "List US stock orders", "orders:read", "read_only",
+               object_schema, global_orders_handler,
+               version: "1.0.0",
+               output_schema: { type: "array", items: { type: "object" } }),
+          tool("dhan_global_trades", "List US stock trades", "orders:read", "read_only",
+               object_schema, global_trades_handler,
+               version: "1.0.0",
+               output_schema: { type: "array", items: { type: "object" } }),
+          tool("dhan_global_market_status", "Check whether the US market is open", "market:read", "read_only",
+               object_schema, global_market_status_handler,
+               version: "1.0.0",
+               output_schema: {
+                 type: "object",
+                 properties: { status: { type: "string" }, open: { type: "boolean" } }
+               }),
+          tool("dhan_global_order_estimate", "Estimate charges and margin for a US stock order without placing it",
+               "orders:read", "trade_adjacent_read", global_estimate_schema, global_estimate_handler,
+               version: "1.0.0",
+               output_schema: {
+                 type: "object",
+                 properties: { total_charges: { type: "number" }, total_margin: { type: "number" } }
+               }),
+          tool("dhan_global_place_order", "Place a US stock order after external confirmation",
+               "orders:write", "live_write", global_order_schema, global_place_order_handler,
+               version: "1.0.0",
+               output_schema: { type: "object", properties: { order_id: { type: "string" } } }),
+          tool("dhan_global_cancel_order", "Cancel a US stock order", "orders:cancel", "destructive_write",
+               cancel_schema, global_cancel_order_handler,
+               version: "1.0.0",
+               output_schema: { type: "object", properties: { order_id: { type: "string" } } }),
+          tool("dhan_multi_order", "Place a basket of up to 15 domestic orders in one request",
+               "orders:write", "live_write", multi_order_schema, multi_order_handler,
+               version: "1.0.0",
+               output_schema: {
+                 type: "object",
+                 properties: { orders: { type: "array", items: { type: "object" } } }
+               })
         ]
       end
 
@@ -226,6 +281,74 @@ module DhanHQ
         }
       end
 
+      # Global Stocks orders carry no exchange segment, product type or validity, and
+      # quantity is fractional. AMOUNT orders replace quantity with a dollar amount.
+      def global_order_schema
+        {
+          type: "object",
+          required: %w[transaction_type order_type security_id],
+          properties: {
+            transaction_type: enum(%w[BUY SELL]),
+            order_type: enum(DhanHQ::Constants::GlobalStocks::OrderType::ALL),
+            security_id: { type: "string" },
+            quantity: { type: "number", exclusiveMinimum: 0 },
+            price: { type: "number", minimum: 0 },
+            trigger_price: { type: "number" },
+            stop_loss_price: { type: "number" },
+            target_price: { type: "number" },
+            amount: { type: "number", description: "Dollar value for AMOUNT orders" },
+            correlation_id: { type: "string" }
+          },
+          additionalProperties: true
+        }
+      end
+
+      def global_estimate_schema
+        {
+          type: "object",
+          required: %w[security_id transaction_type price quantity],
+          properties: {
+            security_id: { type: "string" },
+            transaction_type: enum(%w[BUY SELL]),
+            price: { type: "number", minimum: 0 },
+            quantity: { type: "number", exclusiveMinimum: 0 }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def multi_order_schema
+        {
+          type: "object",
+          required: ["orders"],
+          properties: {
+            orders: {
+              type: "array",
+              minItems: 1,
+              maxItems: DhanHQ::Contracts::MultiOrderContract::MAX_ORDERS,
+              items: {
+                type: "object",
+                required: %w[sequence transaction_type exchange_segment],
+                properties: {
+                  sequence: { type: "string" },
+                  transaction_type: enum(%w[BUY SELL]),
+                  exchange_segment: { type: "string" },
+                  product_type: { type: "string" },
+                  order_type: { type: "string" },
+                  validity: { type: "string" },
+                  security_id: { type: "string" },
+                  quantity: { type: "integer", minimum: 1 },
+                  price: { type: "number" },
+                  trigger_price: { type: "number" }
+                },
+                additionalProperties: true
+              }
+            }
+          },
+          additionalProperties: false
+        }
+      end
+
       def enum(values)
         { type: "string", enum: values }
       end
@@ -277,6 +400,58 @@ module DhanHQ
           order&.cancel || false
         end
       end
+
+      def global_holdings_handler = ->(_) { DhanHQ::Models::GlobalStocks::Holding.all }
+
+      def global_funds_handler = ->(_) { DhanHQ::Models::GlobalStocks::Funds.fetch }
+
+      def global_orders_handler = ->(_) { DhanHQ::Models::GlobalStocks::Order.all }
+
+      def global_trades_handler = ->(_) { DhanHQ::Models::GlobalStocks::Trade.all }
+
+      def global_market_status_handler
+        lambda do |_|
+          status = DhanHQ::Models::GlobalStocks::MarketStatus.fetch
+          {
+            status: status.status,
+            open: status.open?,
+            holiday: status.holiday?,
+            market_open_time: status.market_open_time,
+            market_close_time: status.market_close_time
+          }
+        end
+      end
+
+      # Combines the charge estimate and the margin requirement so an agent can decide
+      # affordability in one call rather than two.
+      def global_estimate_handler
+        lambda do |arguments|
+          estimate = DhanHQ::Models::GlobalStocks::OrderEstimate.calculate(arguments)
+          margin = DhanHQ::Models::GlobalStocks::Margin.calculate(arguments)
+          {
+            total_charges: estimate.total_charges,
+            brokerage: estimate.brokerage,
+            total_margin: margin.total_margin,
+            available_balance: margin.available_bal,
+            sufficient: margin.sufficient?
+          }
+        end
+      end
+
+      # No {DhanHQ::Risk::Pipeline} run here: its checks resolve instruments from the
+      # Indian scrip master and encode NSE/BSE rules, neither of which applies to US
+      # equities. The LIVE_TRADING gate and audit logging in the resource still apply,
+      # as does {Policy#require_write!}.
+      def global_place_order_handler = ->(arguments) { DhanHQ::Models::GlobalStocks::Order.place(arguments) }
+
+      def global_cancel_order_handler
+        lambda do |arguments|
+          order_id = arguments[:order_id]
+          { order_id: order_id, cancelled: DhanHQ::Models::GlobalStocks::Order.cancel(order_id) }
+        end
+      end
+
+      def multi_order_handler = ->(arguments) { DhanHQ::Models::MultiOrder.place(arguments[:orders]) }
 
       def symbolize(value)
         case value

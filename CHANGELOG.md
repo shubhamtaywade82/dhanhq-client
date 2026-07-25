@@ -1,3 +1,41 @@
+## [3.2.0] - 2026-07-25
+
+### Added
+
+- **Global Stocks (US equities) API** — full coverage of the 11 `/v2/globalstocks/*` endpoints, previously absent:
+  - Resources: `Resources::GlobalStocks::Orders` (place/modify/cancel/find/all), `Trades` (all + by security id), `Holdings`, `Funds`, `MarginCalculator` (margin + charge estimate), `MarketStatus`.
+  - Models: `Models::GlobalStocks::Order`, `Trade`, `Holding`, `Funds`, `Margin`, `OrderEstimate`, `MarketStatus`.
+  - Contracts: `GlobalStocksPlaceOrderContract`, `GlobalStocksModifyOrderContract`, `GlobalStocksEstimatorContract`.
+  - Namespaced under `GlobalStocks` so a USD position can never be mistaken for an INR one.
+  - Handles the ways this book differs from domestic trading: no exchange segment / product type / validity on orders, float quantities (fractional shares), and the `AMOUNT` notional order type. `MarginCalculator` renders `price`/`quantity` as the strings the API documents while validating them as numbers.
+  - Writes are gated by `LIVE_TRADING` and audit-logged like any other order path. `Risk::Pipeline` is deliberately not applied — its checks resolve instruments from the Indian scrip master and encode NSE/BSE rules.
+- **Multi Order (basket) endpoint** — `POST /v2/alerts/multi/orders` via `Resources::MultiOrders` and `Models::MultiOrder`, with `MultiOrderContract` enforcing the documented 15-leg cap, unique `sequence` values, and per-leg price/trigger rules. `MultiOrder` exposes `order_ids`, `accepted`, `rejected`, `all_accepted?`, `partially_accepted?` and `for_sequence` so partial acceptance is visible. Previously undocumented as missing — earlier feature tables claimed it was covered.
+- **SDK-level dry-run mode** — `config.dry_run` / `DHAN_DRY_RUN=true`. Suppresses every state-changing request (orders, position exits, kill switch, P&L exit, EDIS, IP setup), logs the full payload as `DHAN_DRY_RUN`, and answers order placements with a simulated `DRYRUN-…` order id so caller code paths run to completion. Reads — including read-only POSTs like the option chain, market feed, charts and margin calculators — still hit the API, so a full strategy can be rehearsed against live prices. Complements `Agent::OrderPreview`, which covers a single order.
+- **Correlation-id reconciliation** — `config.auto_correlation_id` / `DHAN_AUTO_CORRELATION_ID=true` fills in a `correlationId` (`dhq-<hex>`) on order placements that lack one, so a timed-out placement can be resolved through `GET /v2/orders/external/{correlation-id}`. Off by default because it changes the request body; an explicit correlation id is always preserved.
+- **WebSocket lifecycle hooks** — `WS::Client#on` now emits `:open`, `:reconnect`, `:close` and `:error` in addition to `:tick`. `:reconnect` carries `{ attempt:, resubscribed: }` so callers can re-seed derived state (candle builders, caches) after a gap and see which instruments were restored. `WS::Connection` reports transitions through a new `on_event:` callable.
+- **WebSocket health checks** — `WS::Client#last_message_at`, `#seconds_since_last_message`, `#healthy?(stale_after: 45)`, `#connected_at`, `#reconnect_count`, `#subscriptions` and `#health`, for monitoring long-running daemons. Frame arrival is tracked separately from socket state because a feed can stay connected while the server stops publishing.
+- **9 new agent/MCP tools** (32 total) — `dhan_global_holdings`, `dhan_global_funds`, `dhan_global_orders`, `dhan_global_trades`, `dhan_global_market_status`, `dhan_global_order_estimate` (combines charges and margin in one call), `dhan_global_place_order`, `dhan_global_cancel_order`, `dhan_multi_order`. Each gated by `Agent::Policy` on the same scopes and risk levels as the domestic equivalents.
+- **Global Stocks constants** — `Constants::ExchangeSegment::INX_EQ` (kept out of `ALL` so it can never satisfy a domestic order contract) plus `Constants::GlobalStocks` with the `AMOUNT` order type, feed limits (segment code 14, 100 instruments per frame, 5,000 per connection, 5 connections per client), market-status values and feed message codes. `Urls::WS_GLOBAL_STOCKS_FEED` added.
+- **Mutating-path constants** — `Constants::MUTATING_PATH_PREFIXES` and `ORDER_PLACEMENT_PATH_PREFIXES` distinguish real writes from the API's several read-only POSTs, driving both dry-run and retry gating.
+
+### Changed
+
+- **Non-idempotent writes are no longer auto-retried** (behaviour change). `Client#with_transient_retry` previously retried order placement, modification and cancellation on 429s, 5xxs and network timeouts. The DhanHQ API has no idempotency key, so a `POST /v2/orders` that timed out may already have reached the exchange — retrying it could place a second, real order. Transient failures on mutating paths now raise to the caller, who can reconcile before resubmitting. Reads and read-only POSTs keep their exponential backoff unchanged. Set `config.retry_non_idempotent_writes = true` (or `DHAN_RETRY_WRITES=true`) to restore the old behaviour, accepting the duplicate risk.
+- `WS::Connection#initialize` accepts an optional `on_event:` keyword; the socket-open handling moved into a `handle_open` method.
+- `Configuration` reads boolean env vars through a shared helper, so an empty value is treated as unset rather than false.
+- README, ARCHITECTURE.md and CLAUDE.md document the Global Stocks book, basket orders, dry-run mode, write-path safety, and the WebSocket hooks and health API. The "Indian markets only" rule is restated as "DhanHQ v2 API only" — Delta Exchange and other brokers stay out, while DhanHQ's own Global Stocks surface is in scope.
+- `.rubocop_todo.yml` excludes `constants.rb` from `Metrics/ModuleLength` (a pure enumeration module whose line count tracks API coverage) and adds `models/global_stocks/order.rb` to the existing `Naming/PredicateMethod` exclusions, matching the domestic `Models::Order`.
+
+### Fixed
+
+- **`dhanClientId` was never injected for alert orders.** `PAYLOAD_REQUIRES_DHAN_CLIENT_ID_PREFIXES` listed `/alerts/orders`, but `Resources::AlertOrders` uses `HTTP_PATH = "/v2/alerts/orders"`, so the `start_with?` check never matched and the field the API documents as **required** was omitted from every conditional-order payload unless the caller passed it explicitly. Fixed by adding the versioned `/v2/alerts` prefix, which also covers the new multi-order path.
+- `DhanHQ::NetworkError` no longer reports "Request failed after 0 retries" when retries are disabled.
+
+### Tests
+
+- 1,005 examples, 0 failures (up from 833); RuboCop clean.
+- New specs: Global Stocks resources (orders, holdings, funds, trades, market status, margin calculator) and models (order, holding, funds, trade, market status, margin, order estimate); `MultiOrder`; `Client` dry-run, retry gating and correlation-id behaviour; `WS::Client` lifecycle hooks and health tracking; `WS::Connection` subscription replay and reconnect reporting; agent tool registration and policy enforcement for the new tools; constants and configuration coverage for the new flags and path lists.
+
 ## [3.1.0] - 2026-07-20
 
 ### Added

@@ -117,7 +117,11 @@ For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHIT
 - **Instrument convenience methods** — `.ltp`, `.ohlc`, `.option_chain` directly on instruments
 - **Order audit logging** — every order attempt logs machine, IP, environment, and correlation ID as structured JSON
 - **Live trading guard** — prevents accidental order placement unless `ENV["LIVE_TRADING"]="true"`
-- **Full REST coverage** — Orders, Trades, Forever Orders, Super Orders, Positions, Holdings, Funds, HistoricalData, OptionChain, MarketFeed, EDIS, Kill Switch, P&L Exit, Alert Orders, Margin Calculator
+- **Dry-run mode** — `config.dry_run = true` validates and logs every write while reads stay live, so a full strategy can be rehearsed against real prices
+- **No duplicate orders on retry** — transient failures on order writes are surfaced, not blindly retried
+- **Global Stocks (US equities)** — separate order book, holdings, trades, USD funds, market status, charge estimator and margin calculator
+- **Basket orders** — up to 15 orders in a single request, with per-leg acceptance results
+- **Full REST coverage** — Orders, Trades, Forever Orders, Super Orders, Multi (basket) Orders, Positions, Holdings, Funds, HistoricalData, OptionChain, MarketFeed, EDIS, Kill Switch, P&L Exit, Alert Orders, Margin Calculator, IP Setup, Global Stocks
 - **P&L Based Exit** — automatic position exit on profit/loss thresholds
 - **Postback parser** — parse Dhan webhook payloads with `Postback.parse` and status predicates
 - **EDIS model** — ORM-style T-PIN, form, and status inquiry for delivery instruction slips
@@ -127,10 +131,12 @@ For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHIT
 ## Reliability & Safety
 
 - retry-on-401 with token refresh
-- WebSocket auto-reconnect and backoff
+- WebSocket auto-reconnect, backoff, and automatic re-subscription
 - 429 rate-limit protection
 - live trading guard via `LIVE_TRADING=true`
 - structured order audit logs
+- dry-run mode via `DHAN_DRY_RUN=true`
+- order writes are never silently retried, so a timeout cannot become two orders
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md), and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the deeper implementation details.
 
@@ -218,6 +224,85 @@ LIVE_TRADING=false   # or simply omit
 ```
 
 Attempting to place an order without `LIVE_TRADING=true` raises `DhanHQ::LiveTradingDisabledError`.
+
+### Dry-Run Mode
+
+`dry_run` suppresses every request that would change account state — order placement,
+modification, cancellation, position exits, kill switch, P&L exit — while letting reads
+through untouched. Market data, the option chain, positions and holdings stay live, so a
+strategy can be rehearsed end-to-end against real prices without any risk of an order
+reaching the exchange.
+
+```ruby
+DhanHQ.configure do |config|
+  config.dry_run = true      # or DHAN_DRY_RUN=true
+end
+
+order = DhanHQ::Models::Order.place(
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type: DhanHQ::Constants::ProductType::INTRADAY,
+  order_type: DhanHQ::Constants::OrderType::LIMIT,
+  validity: DhanHQ::Constants::Validity::DAY,
+  security_id: "11536", quantity: 5, price: 1500.0
+)
+```
+
+Suppressed writes are logged at WARN level with the full payload, and order placements come
+back with a simulated `orderId` so downstream code paths run to completion:
+
+```json
+{ "event": "DHAN_DRY_RUN", "method": "POST", "path": "/v2/orders", "payload": { "…": "…" } }
+```
+
+Note that a POST is not automatically a write on this API: the option chain, market feed,
+historical charts and the margin calculators are read-only POSTs, and dry-run leaves them
+alone.
+
+`dry_run` complements `Agent::OrderPreview` — preview validates a single order and returns a
+summary, while `dry_run` covers every write path in the SDK, including skills and the MCP
+tools.
+
+### Order Retries and Duplicate Protection
+
+The DhanHQ API has no idempotency key. A `POST /v2/orders` that times out may well have
+reached the exchange, so retrying it can place a second, real order. By default this SDK
+therefore **does not** retry non-idempotent writes — the transient error is raised to you:
+
+```ruby
+begin
+  DhanHQ::Models::Order.place(...)
+rescue DhanHQ::NetworkError
+  # The order may or may not have been accepted. Reconcile before resubmitting.
+end
+```
+
+Reads, and read-only POSTs like the option chain, are still retried with exponential backoff.
+
+To reconcile after a timeout, place orders with a correlation id and look the order up by it:
+
+```ruby
+DhanHQ.configure do |config|
+  config.auto_correlation_id = true   # or DHAN_AUTO_CORRELATION_ID=true
+end
+```
+
+With this on, any order placement missing a `correlationId` gets one (`dhq-<hex>`), which you
+can then resolve via `GET /v2/orders/external/{correlation-id}`:
+
+```ruby
+DhanHQ::Resources::Orders.new.by_correlation("dhq-2f9c1a…")
+```
+
+It is off by default because it changes the request body, which would break callers that match
+recorded fixtures on the exact payload. An explicit `correlation_id` is always preserved.
+
+If you would rather have the old auto-retry behaviour, opt back in — accepting the duplicate
+risk:
+
+```ruby
+DhanHQ.configure { |config| config.retry_non_idempotent_writes = true }
+```
 
 ### Order Audit Logging
 
@@ -342,6 +427,45 @@ DhanHQ::WS::MarketDepth.connect(symbols: [
 end
 ```
 
+### Lifecycle Hooks and Health Checks
+
+Subscriptions are restored automatically on reconnect — the server keeps no subscription state
+across connections, so the client replays the desired set on every new session. Hook `:reconnect`
+when you need to re-seed derived state (candle builders, caches) after a gap:
+
+```ruby
+client = DhanHQ::WS.connect(mode: :ticker) { |tick| handle(tick) }
+
+client.on(:open)      { |info| logger.info "feed open, #{info[:resubscribed].size} restored" }
+client.on(:reconnect) { |info| logger.warn "reconnect ##{info[:attempt]}"; candles.reset! }
+client.on(:close)     { |info| logger.warn "closed #{info[:code]} #{info[:reason]}" }
+client.on(:error)     { |message| logger.error message }
+```
+
+A feed can be connected and still be dead — the socket stays open while the server stops
+publishing. For long-running daemons, watch frame arrival rather than the socket alone:
+
+```ruby
+client.connected?                  # socket state
+client.healthy?                    # connected AND delivering frames (default: within 45s)
+client.healthy?(stale_after: 20)   # tighter threshold
+client.last_message_at             # Time of the most recent frame
+client.seconds_since_last_message
+client.reconnect_count
+client.subscriptions               # ["NSE_EQ:11536", …] — survives reconnects
+
+client.health
+# => { mode: :ticker, started: true, connected: true, healthy: true,
+#      connected_at: …, last_message_at: …, seconds_since_last_message: 0.4,
+#      reconnect_count: 2, subscription_count: 37 }
+```
+
+`health` is shaped for a monitoring endpoint or a periodic log line.
+
+> **Connection limit:** Dhan allows **5 concurrent WebSocket connections per client id**, with
+> 5,000 instruments per connection and 100 instruments per subscribe frame. Running several
+> strategies in separate processes counts against the same limit — a 6th connection is refused.
+
 ### Cleanup
 
 ```ruby
@@ -370,6 +494,110 @@ DhanHQ::Models::SuperOrder.create(
 ```
 
 > **Full API reference** (modify, cancel, list, response schemas): [docs/SUPER_ORDERS.md](docs/SUPER_ORDERS.md)
+
+---
+
+## Basket Orders (Multi Order)
+
+Place up to 15 unconditional orders in a single request. Each leg carries a `sequence` that
+identifies it in the response, so partial acceptance is visible:
+
+```ruby
+result = DhanHQ::Models::MultiOrder.place([
+  { sequence: "1", transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "CNC",
+    order_type: "LIMIT", validity: "DAY", security_id: "11536", quantity: 1, price: 1500.0 },
+  { sequence: "2", transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "CNC",
+    order_type: "MARKET", validity: "DAY", security_id: "1333", quantity: 2 }
+])
+
+result.all_accepted?              # => true
+result.order_ids                  # => ["112111182198", "112111182199"]
+result.rejected                   # legs the exchange refused
+result.partially_accepted?        # some in, some out
+result.for_sequence("1").order_id # look a leg up by its sequence
+```
+
+Every leg is validated before anything is sent, and each one gets its own audit log line.
+Requires `LIVE_TRADING=true` like any other order path.
+
+---
+
+## Global Stocks (US Equities)
+
+US stocks are a **separate book** from domestic NSE/BSE trading: their own order book,
+holdings, trades, and a USD fund limit. They are namespaced under `GlobalStocks` so a USD
+position can never be mistaken for an INR one.
+
+```ruby
+# Is the US market open?
+DhanHQ::Models::GlobalStocks::MarketStatus.fetch.open?
+
+# USD balance and portfolio
+DhanHQ::Models::GlobalStocks::Funds.fetch.available_cash
+DhanHQ::Models::GlobalStocks::Holding.all.each do |h|
+  puts "#{h.trading_symbol}: #{h.quantity} @ $#{h.avg_cost_price} (#{h.gain_percentage}%)"
+end
+DhanHQ::Models::GlobalStocks::Holding.total_current_value
+```
+
+### Placing US orders
+
+Global Stocks orders carry **no exchange segment, product type, or validity** — and quantity
+is a float, because fractional shares are supported:
+
+```ruby
+DhanHQ::Models::GlobalStocks::Order.place(
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  order_type:       DhanHQ::Constants::GlobalStocks::OrderType::LIMIT,
+  security_id:      "AAPL",
+  quantity:         0.5,          # fractional shares
+  price:            180.0
+)
+```
+
+`AMOUNT` is a notional order type unique to this book — you name a dollar value instead of a
+share count:
+
+```ruby
+DhanHQ::Models::GlobalStocks::Order.place(
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  order_type:       DhanHQ::Constants::GlobalStocks::OrderType::AMOUNT,
+  security_id:      "AAPL",
+  amount:           500.0         # buy $500 worth
+)
+```
+
+### Pre-trade checks
+
+```ruby
+params = { security_id: "AAPL", transaction_type: "BUY", price: 180.0, quantity: 10 }
+
+estimate = DhanHQ::Models::GlobalStocks::OrderEstimate.calculate(params)
+estimate.total_charges           # brokerage + exchange + GST + turnover + other
+
+margin = DhanHQ::Models::GlobalStocks::Margin.calculate(params)
+margin.sufficient?               # false when the account is short
+margin.total_margin
+```
+
+### Order and trade books
+
+```ruby
+DhanHQ::Models::GlobalStocks::Order.all              # today's US order book
+DhanHQ::Models::GlobalStocks::Order.find(order_id)
+DhanHQ::Models::GlobalStocks::Trade.all              # today's US fills
+DhanHQ::Models::GlobalStocks::Trade.find_by_security_id("AAPL")
+```
+
+Writes go through the same `LIVE_TRADING` gate, audit logging, and dry-run handling as
+domestic orders. The pre-trade `Risk::Pipeline` is deliberately **not** applied: its checks
+resolve instruments from the Indian scrip master and encode NSE/BSE rules (lot sizes, ASM/GSM
+surveillance, F&O product support, IST market hours), none of which apply to US equities. Use
+`Margin#sufficient?` and `OrderEstimate` as the pre-trade gate here instead.
+
+The Global Stocks live feed (`wss://global-stocks-api-feed.dhan.co`, segment `INX_EQ`, code
+`14`) is documented in `DhanHQ::Constants::GlobalStocks`; its binary packet decoder is not yet
+implemented.
 
 ---
 
@@ -512,7 +740,7 @@ Claude Desktop config (`claude_desktop_config.json`):
 
 | Feature | Description |
 | ------- | ----------- |
-| **Tools** | 12 primitive tools (profile, funds, holdings, positions, order history, order preview/place/cancel, instruments, market feed) + 11 skill-derived tools (`dhan_skill_*` — one per builtin strategy in [Skills System](#skills-system) below) |
+| **Tools** | 32 total: 12 domestic primitives (profile, funds, holdings, positions, order history, order preview/place/cancel, instruments, market feed) + 9 Global Stocks and basket tools (`dhan_global_*`, `dhan_multi_order`) + 11 skill-derived tools (`dhan_skill_*` — one per builtin strategy in [Skills System](#skills-system) below) |
 | **Resources** | 6 URI-addressable data endpoints: `dhanhq://account/profile`, `dhanhq://account/funds`, `dhanhq://account/holdings`, `dhanhq://account/positions`, `dhanhq://account/orders`, `dhanhq://market/capabilities` |
 | **Prompts** | 5 pre-built AI prompts: `portfolio_summary`, `market_analysis`, `risk_report`, `order_preview`, `suggest_strategy` |
 

@@ -26,6 +26,9 @@ module DhanHQ
         @state = SubState.new
         @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
         @started = Concurrent::AtomicBoolean.new(false)
+        @last_message_at = Concurrent::AtomicReference.new(nil)
+        @connected_at = Concurrent::AtomicReference.new(nil)
+        @reconnects = Concurrent::AtomicFixnum.new(0)
 
         token = DhanHQ.configuration.resolved_access_token
         raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
@@ -43,7 +46,8 @@ module DhanHQ
         return self if @started.true?
 
         @started.make_true
-        @conn = Connection.new(url: @url, mode: @mode, bus: @bus, state: @state) do |binary|
+        @conn = Connection.new(url: @url, mode: @mode, bus: @bus, state: @state,
+                               on_event: method(:handle_connection_event)) do |binary|
           tick = Decoder.decode(binary)
           emit(:tick, tick) if tick
         end
@@ -88,6 +92,80 @@ module DhanHQ
         return false unless @started.true?
 
         @conn&.open? || false
+      end
+
+      # Timestamp of the most recently received frame.
+      #
+      # A feed can be "connected" and still be dead — the socket stays open while
+      # the server has stopped publishing. Long-running daemons should watch this
+      # rather than {#connected?} alone.
+      #
+      # @return [Time, nil] nil until the first frame arrives.
+      def last_message_at
+        @last_message_at.get
+      end
+
+      # Seconds since the last frame arrived.
+      #
+      # @return [Float, nil] nil until the first frame arrives.
+      def seconds_since_last_message
+        stamp = last_message_at
+        return nil unless stamp
+
+        Time.now - stamp
+      end
+
+      # Whether the feed looks alive: connected and delivering frames recently.
+      #
+      # @param stale_after [Numeric] Seconds of silence after which the feed is
+      #   considered stale. The server pings roughly every 10 seconds, so the
+      #   default allows several missed intervals.
+      # @return [Boolean]
+      def healthy?(stale_after: 45)
+        return false unless connected?
+
+        idle = seconds_since_last_message
+        idle.nil? || idle <= stale_after
+      end
+
+      # Timestamp of the current connection's establishment.
+      #
+      # @return [Time, nil]
+      def connected_at
+        @connected_at.get
+      end
+
+      # Number of times the connection has been re-established since {#start}.
+      #
+      # @return [Integer]
+      def reconnect_count
+        @reconnects.value
+      end
+
+      # Instruments currently subscribed, as `"SEGMENT:SECURITY_ID"` strings.
+      #
+      # Survives reconnects: the connection replays this set on every new session.
+      #
+      # @return [Array<String>]
+      def subscriptions
+        @state.snapshot
+      end
+
+      # Point-in-time health snapshot, suitable for a monitoring endpoint or log line.
+      #
+      # @return [Hash]
+      def health
+        {
+          mode: @mode,
+          started: @started.true?,
+          connected: connected?,
+          healthy: healthy?,
+          connected_at: connected_at,
+          last_message_at: last_message_at,
+          seconds_since_last_message: seconds_since_last_message,
+          reconnect_count: reconnect_count,
+          subscription_count: subscriptions.size
+        }
       end
 
       # Subscribes to updates for a single instrument.
@@ -154,15 +232,52 @@ module DhanHQ
 
       # Registers a callback for a given event.
       #
-      # @param event [Symbol] Event name (:tick, :open, :close, :error).
+      # Supported events:
+      #
+      # - +:tick+ — a decoded market data packet.
+      # - +:open+ — the socket connected. Payload: `{ resubscribed: [...] }`.
+      # - +:reconnect+ — the socket re-connected after a drop. Payload:
+      #   `{ attempt: Integer, resubscribed: [...] }`. Subscriptions are replayed
+      #   automatically before this fires; use it to re-seed derived state such as
+      #   candle builders or to alert.
+      # - +:close+ — the socket closed. Payload:
+      #   `{ code:, reason:, reconnecting: Boolean }`.
+      # - +:error+ — a socket-level error. Payload: the error message.
+      #
+      # @param event [Symbol] Event name.
       # @yieldparam payload [Object] Event payload.
       # @return [DhanHQ::WS::Client] self.
+      #
+      # @example React to a reconnect
+      #   client.on(:reconnect) do |info|
+      #     logger.warn "feed reconnected (attempt #{info[:attempt]}), " \
+      #                 "#{info[:resubscribed].size} instruments restored"
+      #   end
       def on(event, &blk)
         @callbacks[event] << blk
         self
       end
 
       private
+
+      # Bridges connection-level lifecycle events onto the client's callback bus and
+      # updates the health counters. +:message+ is internal bookkeeping only — the
+      # decoded payload reaches users as +:tick+.
+      def handle_connection_event(event, payload)
+        case event
+        when :message
+          @last_message_at.set(Time.now)
+          return
+        when :open
+          @connected_at.set(Time.now)
+        when :reconnect
+          @reconnects.increment
+        when :close
+          @connected_at.set(nil)
+        end
+
+        emit(event, payload)
+      end
 
       def prune(hash) = { ExchangeSegment: hash[:ExchangeSegment], SecurityId: hash[:SecurityId] }
 

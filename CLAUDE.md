@@ -32,14 +32,16 @@ lib/DhanHQ/
   core/          # BaseAPI, BaseModel, BaseResource
   helpers/       # APIHelper, AttributeHelper, ValidationHelper, RequestHelper, ResponseHelper
   models/        # Typed AR-like model classes (Order, Position, Holding, etc.)
+    global_stocks/ # US equities book — separate order/holding/trade/funds models
   resources/     # REST resource wrappers
+    global_stocks/ # /v2/globalstocks/* endpoints
   contracts/     # Request/response contract validators
   concerns/      # Shared behavior modules (OrderAudit — runs the risk pipeline before every order)
   auth/          # Auth flow
   utils/         # Cross-cutting utilities (NetworkInspector)
   ws/            # WebSocket client and feed
   mcp/           # MCP server (JSON-RPC over stdio) — launched via exe/dhanhq-mcp
-  agent/         # ToolRegistry (23 MCP tools), Policy (scope + live-trading gate), OrderPreview
+  agent/         # ToolRegistry (32 MCP tools), Policy (scope + live-trading gate), OrderPreview
   skills/        # Composable trading strategies — Skills::Base DSL + 11 builtin skills
   risk/          # Risk::Pipeline — pre-trade checks wired into every order path + dhan_place_order
   ai/            # AI::PromptHelpers — portfolio summaries / risk reports for MCP prompts
@@ -58,7 +60,7 @@ Entry point: `lib/dhan_hq.rb` — sets up Zeitwerk loader, eager-requires core f
 | `DhanHQ::Configuration` | Client ID, access token, env setup |
 | `DhanHQ::Utils::NetworkInspector` | Public IP, hostname, env for order audit logging |
 | `DhanHQ::MCP::Server` | JSON-RPC 2.0 stdio server exposing tools/resources/prompts to MCP clients |
-| `DhanHQ::Agent::ToolRegistry` | 12 primitive tools + 11 `dhan_skill_*` tools (23 total), each gated by `Agent::Policy` |
+| `DhanHQ::Agent::ToolRegistry` | 12 domestic primitives + 9 `dhan_global_*`/`dhan_multi_order` tools + 11 `dhan_skill_*` tools (32 total), each gated by `Agent::Policy` |
 | `DhanHQ::Skills::Registry` | Composable trading strategies (`iron_condor`, `straddle`, `square_off_all`, …) |
 | `DhanHQ::Risk::Pipeline` | Pre-trade risk checks — wired into every order-placing resource and `dhan_place_order` |
 
@@ -75,7 +77,8 @@ Never hardcode credentials. Always use env vars.
 
 ## Critical rules
 
-- **This gem is Indian markets only** (NSE/BSE). No Delta Exchange code ever enters here.
+- **This gem wraps the DhanHQ v2 API and nothing else.** No Delta Exchange code, and no other broker's API, ever enters here. Domestic trading is NSE/BSE; the one non-Indian surface is DhanHQ's own Global Stocks (US equities) API under `/v2/globalstocks/*`, kept in the `GlobalStocks` namespace so USD and INR books never mix.
+- The India-specific `Risk::Pipeline` does **not** apply to Global Stocks — its checks resolve instruments from the Indian scrip master and encode NSE/BSE rules. Global Stocks writes are still gated by `LIVE_TRADING` and audit-logged.
 - Method signatures are the API contract depended on by `algo_trading_api`, `algo_scalper_api`, `vyapari`, etc. Never rename or remove public methods without checking dependents.
 - DhanHQ order IDs are **not sequential** — never sort by them or use them as primary ordering.
 - All specs use WebMock — never hit the real API in tests.
