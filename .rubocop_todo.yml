@@ -159,10 +159,12 @@ RSpec/RepeatedExample:
   Exclude:
     - 'spec/dhan_hq/contracts/expired_options_data_contract_spec.rb'
 
-# Packaging is not a class, so there is nothing for `describe` to name.
+# Packaging and autoload reachability are not classes, so there is nothing for
+# `describe` to name.
 RSpec/DescribeClass:
   Exclude:
     - 'spec/dhan_hq/gem_packaging_spec.rb'
+    - 'spec/dhan_hq/zeitwerk_autoload_spec.rb'
 
 # Offense count: 1
 # Configuration parameters: CustomTransform, IgnoreMethods, IgnoreMetadata, InflectorPath, EnforcedInflector.

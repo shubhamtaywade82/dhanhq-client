@@ -35,6 +35,11 @@ module DhanHQ
     "base_api" => "BaseAPI",
     "ip_setup" => "IPSetup",
     "json_loader" => "JSONLoader",
+    # Same failure as "ai" above: mcp.rb defines DhanHQ::MCP while Zeitwerk expected
+    # DhanHQ::Mcp, so DhanHQ::MCP::Server raised NameError after a bare `require
+    # "dhan_hq"` — it only worked via exe/dhanhq-mcp and lib/dhan_hq/mcp.rb, which
+    # require_relative the file directly instead of going through the autoloader.
+    "mcp" => "MCP",
     "ws" => "WS"
   )
   LOADER.push_dir(File.join(__dir__, "DhanHQ"), namespace: self)
