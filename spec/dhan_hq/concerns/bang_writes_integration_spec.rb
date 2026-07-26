@@ -42,6 +42,24 @@ RSpec.describe DhanHQ::Concerns::BangWrites do
       it "raises something an existing rescue DhanHQ::Error handler catches" do
         expect { DhanHQ::Models::Order.place!(order_params) }.to raise_error(DhanHQ::Error)
       end
+
+      # `.create` always returns the built Order, even when `#save` failed -- existing
+      # callers rely on that to inspect an unsaved order. `.create!` cannot reuse the
+      # generated wrapper for this reason: an Order instance is truthy regardless of
+      # whether it was actually persisted, so the generated `unwrap!` would never
+      # raise. Codex flagged this (PR #47 review) against an earlier version of this
+      # method; these two examples pin the fix.
+      it "still returns the unsaved order from .create, unchanged for existing callers" do
+        order = DhanHQ::Models::Order.create(order_params)
+
+        expect(order).to be_a(DhanHQ::Models::Order)
+        expect(order.persisted?).to be(false)
+      end
+
+      it "raises OrderError from .create! instead of returning the unsaved order" do
+        expect { DhanHQ::Models::Order.create!(order_params) }
+          .to raise_error(DhanHQ::OrderError, /Order\.create failed/)
+      end
     end
 
     context "when the order is accepted" do
@@ -57,6 +75,11 @@ RSpec.describe DhanHQ::Concerns::BangWrites do
       it "returns the same order from .place and .place!" do
         expect(DhanHQ::Models::Order.place(order_params).order_id).to eq("999")
         expect(DhanHQ::Models::Order.place!(order_params).order_id).to eq("999")
+      end
+
+      it "returns the persisted order from .create and .create!" do
+        expect(DhanHQ::Models::Order.create(order_params).order_id).to eq("999")
+        expect(DhanHQ::Models::Order.create!(order_params).order_id).to eq("999")
       end
     end
 

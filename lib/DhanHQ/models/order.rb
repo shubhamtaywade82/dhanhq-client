@@ -439,6 +439,25 @@ module DhanHQ
           order.save # calls resource create or update
           order
         end
+
+        # `create` always returns the built `Order`, even when `#save` returned
+        # `false` -- existing callers rely on that to inspect an unsaved order's
+        # `errors`, so `create` cannot change. The generated `create!` would
+        # therefore call `unwrap!` on an object that is truthy regardless of
+        # whether the placement actually succeeded, and never raise. This
+        # hand-written override supersedes it (see {BangWrites} for why a
+        # class-body definition takes precedence) and unwraps on `persisted?`
+        # instead, which reflects whether the API actually accepted the order.
+        def create!(params)
+          order = DhanHQ::WriteResult.suppressing_deprecation { create(params) }
+
+          DhanHQ::WriteResult.unwrap!(
+            order.persisted? ? order : false,
+            operation: DhanHQ::WriteResult.operation_label(self, :create),
+            error_class: DhanHQ::OrderError,
+            errors: DhanHQ::WriteResult.errors_from(order)
+          )
+        end
       end
 
       ##
