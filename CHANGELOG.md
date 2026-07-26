@@ -8,8 +8,17 @@
 
   These are commands that report whether they succeeded, not predicates — `cancel?` would read as "should I cancel?", which is worse than the name it replaces, so adding `?` aliases would have been the wrong fix. The unambiguous-failure path for them is the bang variant (`cancel!`, `modify!`). Scoping by name rather than by file also means a genuinely mis-named predicate elsewhere in those same files is still caught, and it surfaced a now-redundant inline `rubocop:disable` in `risk/pipeline.rb`.
 
+### Fixed
+
+- **`DhanHQ::AI` was unreachable on a bare `require "dhan_hq"`.** The Zeitwerk inflector had no `ai → AI` acronym, so it looked for `DhanHQ::Ai` while `ai.rb` defines `DhanHQ::AI`; both spellings raised `NameError`. The documented `DhanHQ::AI::PromptHelpers` and `DhanHQ::AI::ContextBuilder` entry points therefore only worked if something had already loaded the file by hand, which only `mcp/server.rb` did. Found while writing the first specs for that module.
+
+### Changed
+
+- `AI::PromptHelpers.portfolio_summary` computed the open-position set twice (`count(&:open?)` then `select(&:open?)`); it now derives it once. Both it and `.risk_report` wrap their collections in `Array()`, so a nil from a failed fetch renders an empty section instead of raising from inside a prompt helper — `funds` was already guarded, the collections were not.
+
 ### Added
 
+- First specs for `AI::PromptHelpers` (13 examples), covering portfolio summaries, the risk report's P&L arithmetic — summed across every position, counted only for open ones — and order confirmation rendering. Built on real model instances rather than doubles, because `BaseModel` defines attribute readers per instance and `instance_double` cannot verify them.
 - Specs for the lazily-built connection (not opened on construction, memoised, rebuilt on a base-URL change) and for retry exhaustion (transport errors translated, SDK errors re-raised unchanged, reads still retried).
 
 ## [3.2.0] - 2026-07-25
