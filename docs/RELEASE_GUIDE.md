@@ -434,7 +434,7 @@ git push origin main v2.1.12
 
 - **Gem Name:** DhanHQ
 - **Current Version:** Check `lib/DhanHQ/version.rb`
-- **Required Ruby:** >= 3.1.0
+- **Required Ruby:** >= 3.2.0
 - **License:** MIT
 - **Homepage:** https://github.com/shubhamtaywade82/dhanhq-client
 

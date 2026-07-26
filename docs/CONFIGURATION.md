@@ -24,7 +24,6 @@ Set these _before_ calling `configure_with_env` to override defaults:
 
 | Variable                         | Default    | Description                                             |
 | -------------------------------- | ---------- | ------------------------------------------------------- |
-| `DHAN_LOG_LEVEL`                 | `INFO`     | Logger verbosity (`DEBUG`, `INFO`, `WARN`, `ERROR`)     |
 | `DHAN_SANDBOX`                   | `false`    | Set `"true"` to route REST calls to `https://sandbox.dhan.co/v2` instead of production. Note: Dhan's sandbox validates request/response plumbing only — it does not execute real order fills/matching. Placed orders stay `PENDING` indefinitely. See [ENDPOINTS_AND_SANDBOX.md](ENDPOINTS_AND_SANDBOX.md). |
 | `DHAN_BASE_URL`                  | Dhan prod  | Point REST calls to a different API hostname. Takes precedence over `DHAN_SANDBOX` only when explicitly set to something other than the production default. |
 | `DHAN_WS_VERSION`                | latest     | Pin WebSocket connections to a specific API version     |
@@ -32,11 +31,26 @@ Set these _before_ calling `configure_with_env` to override defaults:
 | `DHAN_WS_USER_TYPE`              | `SELF`     | Switch between `SELF` and `PARTNER` streaming modes     |
 | `DHAN_PARTNER_ID`                | —          | Required when `DHAN_WS_USER_TYPE=PARTNER`               |
 | `DHAN_PARTNER_SECRET`            | —          | Required when `DHAN_WS_USER_TYPE=PARTNER`               |
+| `DHAN_MARKET_DEPTH_LEVEL`        | `20`       | WebSocket market depth levels to subscribe to           |
 | `DHAN_CONNECT_TIMEOUT`           | `10`       | Connection timeout in seconds                           |
 | `DHAN_READ_TIMEOUT`              | `30`       | Read timeout in seconds                                 |
 | `DHAN_WRITE_TIMEOUT`             | `30`       | Write timeout in seconds                                |
 | `DHAN_WS_MAX_TRACKED_ORDERS`     | `10000`    | Maximum orders to track in WebSocket                    |
 | `DHAN_WS_MAX_ORDER_AGE`          | `604800`   | Maximum order age in seconds before cleanup (7 days)    |
+
+`DHAN_LOG_LEVEL` is **not** read automatically — see [Logging](#logging) below for the one-line snippet that wires it up.
+
+## Behavior Flags
+
+These change what a write request *does*, not just where it goes. All default to the safe/conservative behavior and are off unless set.
+
+| Variable                             | Config attribute                    | Default | Effect |
+| ------------------------------------- | ------------------------------------ | ------- | ------ |
+| `LIVE_TRADING=true`                   | —                                    | unset   | **Required to place, modify, or cancel any real order, position exit, kill switch, EDIS, or P&L exit.** Without it, every write-path resource raises `DhanHQ::LiveTradingDisabledError` before making the request. This is the primary safety gate — see [ARCHITECTURE.md](../ARCHITECTURE.md) and the risk pipeline. |
+| `DHAN_DRY_RUN=true`                    | `config.dry_run`                     | `false` | Suppresses every state-changing request, logs the payload as `DHAN_DRY_RUN`, and answers order placements with a simulated `DRYRUN-…` id so caller code paths still run to completion. Reads still hit the API. |
+| `DHAN_RETRY_WRITES=true`               | `config.retry_non_idempotent_writes` | `false` | Auto-retries a non-idempotent write (order placement, modify, cancel) after a transient failure (429, 5xx, timeout). Off by default because the API has no idempotency key — a timed-out POST may have already reached the exchange, and retrying it can place a duplicate order. |
+| `DHAN_AUTO_CORRELATION_ID=true`        | `config.auto_correlation_id`         | `false` | Fills in a `correlationId` (`dhq-<hex>`) on order placements that lack one, so a timed-out placement can be reconciled via `GET /v2/orders/external/{correlation-id}`. Off by default because it changes the request body; an explicit correlation id is always preserved. |
+| `DHAN_WARN_AMBIGUOUS_WRITE_FAILURE=false` | `config.warn_on_ambiguous_write_failure` | `true` (on) | Logs a once-per-call-site deprecation notice when a non-bang write method (`Order.place`, `#modify`, …) reports failure as `nil`, `false`, or a `DhanHQ::ErrorObject` — these disagree today and unify on `ErrorObject` in 4.0.0. Use the `!` variant (`place!`, `#modify!`) to get a raised `DhanHQ::OrderError` instead of the ambiguous return value. |
 
 ## `.env` File Setup
 
@@ -95,16 +109,26 @@ For detailed authentication flows, see [AUTHENTICATION.md](AUTHENTICATION.md).
 
 ## Available Resources
 
-| Resource                 | Model                                  | Actions                                             |
-| ------------------------ | -------------------------------------- | --------------------------------------------------- |
-| Orders                   | `DhanHQ::Models::Order`                | `find`, `all`, `where`, `place`, `update`, `cancel` |
-| Trades                   | `DhanHQ::Models::Trade`                | `all`, `find_by_order_id`                           |
-| Forever Orders           | `DhanHQ::Models::ForeverOrder`         | `create`, `find`, `modify`, `cancel`, `all`         |
-| Holdings                 | `DhanHQ::Models::Holding`              | `all`                                               |
-| Positions                | `DhanHQ::Models::Position`             | `all`, `find`, `exit!`                              |
-| Funds & Margin           | `DhanHQ::Models::Fund`                 | `fund_limit`, `margin_calculator`                   |
-| Ledger                   | `DhanHQ::Models::Ledger`               | `all`                                               |
-| Market Feeds             | `DhanHQ::Models::MarketFeed`           | `ltp`, `ohlc`, `quote`                              |
-| Historical Data (Charts) | `DhanHQ::Models::HistoricalData`       | `daily`, `intraday`                                 |
-| Option Chain             | `DhanHQ::Models::OptionChain`          | `fetch`, `fetch_expiry_list`                        |
-| Super Orders             | `DhanHQ::Models::SuperOrder`           | `create`, `modify`, `cancel`, `all`                 |
+| Resource                 | Model                                   | Actions                                                                       |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| Orders                   | `DhanHQ::Models::Order`                 | `place`, `find`, `all`, `where`, `#modify`, `#cancel`, `#destroy` (`!` variants raise) |
+| Trades                   | `DhanHQ::Models::Trade`                 | `all`, `find_by_order_id`                                                     |
+| Forever Orders           | `DhanHQ::Models::ForeverOrder`          | `create`, `find`, `all`, `#modify`, `#cancel`                                 |
+| Iceberg Orders           | `DhanHQ::Models::IcebergOrder`          | `create`, `find`, `all`, `#modify`, `#cancel`                                 |
+| TWAP Orders              | `DhanHQ::Models::TwapOrder`             | `create`, `find`, `all`, `#modify`, `#cancel`                                 |
+| Alert Orders             | `DhanHQ::Models::AlertOrder`            | `create`, `find`, `all`, `modify(alert_id, params)`, `#destroy`               |
+| Super Orders             | `DhanHQ::Models::SuperOrder`            | `create`, `all`, `#modify`, `#cancel(leg_name)`                               |
+| Multi Order (basket)     | `DhanHQ::Models::MultiOrder`            | `place(orders, dhan_client_id:)` — up to 15 legs                              |
+| P&L Exit                 | `DhanHQ::Models::PnlExit`               | `configure`, `stop`, `status`                                                 |
+| Holdings                 | `DhanHQ::Models::Holding`               | `all`                                                                         |
+| Positions                | `DhanHQ::Models::Position`              | `all`, `active`, `#convert(params)`, `.exit_all!`                             |
+| Funds                    | `DhanHQ::Models::Funds`                 | `fetch`, `balance`                                                            |
+| Margin Calculator        | `DhanHQ::Models::Margin`                | `calculate(params)`, `calculate_multi(params)`                                |
+| Ledger                   | `DhanHQ::Models::LedgerEntry`           | `all(from_date:, to_date:)`                                                   |
+| eDIS                     | `DhanHQ::Models::Edis`                  | `generate_tpin`, `generate_form`, `generate_bulk_form`, `inquire(isin:)`      |
+| Market Feeds             | `DhanHQ::Models::MarketFeed`            | `ltp`, `ohlc`, `quote`                                                        |
+| Historical Data (Charts) | `DhanHQ::Models::HistoricalData`        | `daily`, `intraday`                                                           |
+| Option Chain             | `DhanHQ::Models::OptionChain`           | `fetch`, `fetch_expiry_list`                                                  |
+| Global Stocks Orders     | `DhanHQ::Models::GlobalStocks::Order`   | `place`, `find`, `all`, `#cancel` — see [ARCHITECTURE.md](../ARCHITECTURE.md) |
+
+`#method` denotes an instance method (called on a fetched or created record); everything else is a class method. Every write method above also has a `!` variant (`place!`, `#modify!`, `#cancel!`, …) that raises `DhanHQ::OrderError` instead of returning a falsy value or an `ErrorObject` — see the [CHANGELOG](../CHANGELOG.md) for the write-return-contract migration this is part of.

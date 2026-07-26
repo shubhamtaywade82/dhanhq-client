@@ -66,6 +66,15 @@ module DhanHQ
     #   orders.each { |order| puts order.order_status }
     #
     class ForeverOrder < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :create
+      track_writes :modify, :cancel
+
+      bang_class_writes :create
+      bang_writes :modify, :cancel
+
       include Concerns::ApiResponseHandler
 
       attributes :dhan_client_id, :order_id, :correlation_id, :order_status,

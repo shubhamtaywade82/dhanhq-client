@@ -26,6 +26,13 @@ module DhanHQ
     #   result.for_sequence("1").order_id
     #
     class MultiOrder < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :place
+
+      bang_class_writes :place
+
       HTTP_PATH = "/v2/alerts/multi/orders"
 
       attributes :orders

@@ -32,6 +32,13 @@ module DhanHQ
     #   puts response[:pnl_exit_status] # => "DISABLED"
     #
     class PnlExit < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :configure, :stop
+
+      bang_class_writes :configure, :stop
+
       HTTP_PATH = "/v2/pnlExit"
 
       attributes :pnl_exit_status, :profit, :loss, :segments, :enable_kill_switch

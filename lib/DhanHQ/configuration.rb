@@ -60,7 +60,7 @@ module DhanHQ
     # /v2/orders that times out may well have reached the exchange, and retrying it
     # can place a second, duplicate order. With this off, the transient error is
     # raised to the caller, who can reconcile using the correlation id (see
-    # {#auto_correlation_id} and +DhanHQ::Models::Order.find_by_correlation_id+)
+    # {#auto_correlation_id} and +DhanHQ::Models::Order.find_by_correlation+)
     # before deciding to resubmit.
     #
     # Read requests are always retried regardless of this setting.
@@ -68,6 +68,19 @@ module DhanHQ
     # Set via +DHAN_RETRY_WRITES=true+ or in {DhanHQ.configure}.
     # @return [Boolean]
     attr_accessor :retry_non_idempotent_writes
+
+    # Whether to log a deprecation notice, once per call site, when a non-bang write
+    # method reports failure through +nil+, +false+ or a {DhanHQ::ErrorObject}.
+    #
+    # Those contracts disagree today and will unify on {DhanHQ::ErrorObject} in 4.0.0,
+    # which is truthy — so an `if result` failure branch written against +nil+ or
+    # +false+ will silently invert. The notice names the call sites that need moving to
+    # a bang variant before then.
+    #
+    # Defaults to +true+: a notice nobody sees finds nothing. Set to +false+ once the
+    # call sites are migrated, or via +DHAN_WARN_AMBIGUOUS_WRITE_FAILURE=false+.
+    # @return [Boolean]
+    attr_accessor :warn_on_ambiguous_write_failure
 
     # Whether to generate a +correlationId+ for order placements that do not carry
     # one. The correlation id is the only way to answer "did my order actually go
@@ -175,6 +188,11 @@ module DhanHQ
       @retry_non_idempotent_writes == true
     end
 
+    # @return [Boolean] True when ambiguous write failures should be reported.
+    def warn_on_ambiguous_write_failure?
+      @warn_on_ambiguous_write_failure == true
+    end
+
     # @return [Boolean] True when a correlation id should be generated for orders.
     def auto_correlation_id?
       @auto_correlation_id == true
@@ -193,6 +211,7 @@ module DhanHQ
       @dry_run        = env_flag("DHAN_DRY_RUN", default: false)
       @retry_non_idempotent_writes = env_flag("DHAN_RETRY_WRITES", default: false)
       @auto_correlation_id = env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
+      @warn_on_ambiguous_write_failure = env_flag("DHAN_WARN_AMBIGUOUS_WRITE_FAILURE", default: true)
       @base_url       = ENV.fetch("DHAN_BASE_URL", nil)
       @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
       @ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", nil)

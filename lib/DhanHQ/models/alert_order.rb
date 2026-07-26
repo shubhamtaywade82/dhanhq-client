@@ -6,6 +6,13 @@ module DhanHQ
   module Models
     # Model for alert/conditional orders. CRUD via AlertOrders resource; validated by AlertOrderContract.
     class AlertOrder < BaseModel
+      extend DhanHQ::Concerns::BangWrites
+      extend DhanHQ::Concerns::TrackedWrites
+
+      track_class_writes :create, :modify
+
+      bang_class_writes :create, :modify
+
       include Concerns::ApiResponseHandler
 
       HTTP_PATH = "/v2/alerts/orders"

@@ -1,3 +1,51 @@
+## [3.3.0] - 2026-07-26
+
+### Added
+
+- **Bang variants for every write method with a falsy failure contract** — `Order.place!`, `Order#modify!`/`#cancel!`/`#refresh!`, `SuperOrder.create!`/`#modify!`/`#cancel!`, `ForeverOrder.create!`, `IcebergOrder.create!`, `TwapOrder.create!`, `AlertOrder.create!`/`.modify!`, `PnlExit.configure!`/`.stop!`, `MultiOrder.place!`, `GlobalStocks::Order.place!`/`#modify!`/`#cancel!`.
+
+  Each raises `DhanHQ::OrderError` — which descends from `DhanHQ::Error`, so an existing `rescue DhanHQ::Error` handler still catches it — carrying whatever diagnostics the failure held. The non-bang methods are **untouched**: they return exactly what they returned before, so no existing caller changes behaviour.
+
+  This is step one of unifying the write return contracts. Today those contracts disagree: depending on the class and the failure, a rejected write comes back as `nil`, as `false`, or as a `DhanHQ::ErrorObject`, and `AlertOrder.modify` can return either of the first two from the same method. A caller cannot write one error branch. Unifying them outright would be a silent breaking change for dependent applications, because `nil` and `false` are falsy while `ErrorObject` is truthy — every `if result` failure branch in a dependent would quietly invert. So the migration is staged:
+
+  1. **This release** — additive bang variants. Opt in per call site.
+  2. **This release** — log a deprecation whenever a non-bang write returns a falsy failure, to find the remaining call sites from dependents' logs.
+  3. **4.0.0** — non-bang methods return `ErrorObject` uniformly, gated on step 2 going quiet.
+
+- **Deprecation notices for ambiguous write failures** (step two). When a non-bang write returns `nil`, `false` or a `DhanHQ::ErrorObject`, the SDK now logs once per call site:
+
+  ```
+  [DhanHQ] DEPRECATION: DhanHQ::Models::Order.place reported failure as nil. Write
+  methods return nil, false or a DhanHQ::ErrorObject inconsistently today and will all
+  return DhanHQ::ErrorObject in 4.0.0, which is truthy — an `if result` failure branch
+  will invert. Use DhanHQ::Models::Order.place! to get a DhanHQ::OrderError instead...
+  ```
+
+  The point is to surface the remaining call sites from dependent applications' logs before 4.0.0 changes any return value. Once per call site per process, not once per failure — a session that rejects hundreds of orders would otherwise produce noise that gets filtered out, defeating the purpose.
+
+  This layer only observes: it never alters a return value and never raises. It is silent on success, silent when reached through a bang variant (those callers have already migrated), and silent when you set `config.warn_on_ambiguous_write_failure = false` / `DHAN_WARN_AMBIGUOUS_WRITE_FAILURE=false`. Defaults to on, because a notice nobody sees finds nothing.
+
+- **`DhanHQ::Concerns::TrackedWrites`** — installs the observation. Uses `prepend` rather than `include`, since the write methods are defined directly on the model classes and an included module would sit behind them in the ancestor chain and never be reached.
+- **`DhanHQ::Deprecation`** — once-per-key notice registry, thread-safe, with `warned_keys` and `reset!` for tests.
+- **`DhanHQ::WriteResult`** — puts the knowledge of what a write failure looks like in one place (`failure?`, `success?`, `unwrap!`). `BaseModel#save!` now uses it instead of duplicating the same three-way check inline.
+- **`DhanHQ::Concerns::BangWrites`** — generates the bang variants by delegating to their non-bang counterparts, so the two cannot drift: no duplicated request building, validation or logging. Generated as a module, so a hand-written `place!` can still override and call `super`.
+
+### Fixed
+
+- **`DhanHQ::MCP` was unreachable on a bare `require "dhan_hq"`.** Same failure as the `DhanHQ::AI` fix earlier in this release: `mcp.rb` defines `DhanHQ::MCP` while Zeitwerk's inflector expected `DhanHQ::Mcp` from the filename, so `DhanHQ::MCP::Server` raised `NameError` unless something had already loaded the file by hand — which only `exe/dhanhq-mcp` and `lib/dhan_hq/mcp.rb` did. Found the same way the `AI` bug was: cross-referencing every `DhanHQ::` constant named in the docs against what actually resolves. Guarded by a new `spec/dhan_hq/zeitwerk_autoload_spec.rb`, which shells out to a subprocess so the check can't be satisfied by another spec having already loaded the file by hand.
+- **`lib/DhanHQ/configuration.rb`'s doc comment referenced `DhanHQ::Models::Order.find_by_correlation_id`, which does not exist** — the real method is `.find_by_correlation` (no `_id` suffix). Caught during the same audit.
+- A documentation pass across the gem ahead of this release, cross-checking every code example and referenced class/method against the actual codebase:
+  - `docs/CONFIGURATION.md`'s resource table named `DhanHQ::Models::Fund` (real class: `Funds`) and `DhanHQ::Models::Ledger` (real class: `LedgerEntry`), and listed `fund_limit`/`margin_calculator` as `Funds` methods — neither exists; the real methods are `Funds.fetch`/`.balance` and `Margin.calculate`/`.calculate_multi`. The table now also covers the resources 3.2.0/3.3.0 added (Iceberg/TWAP/Alert orders, Multi Order, P&L Exit, eDIS, Global Stocks) and lists the `!` write variants.
+  - `docs/CONFIGURATION.md` was missing `LIVE_TRADING`, `DHAN_DRY_RUN`, `DHAN_RETRY_WRITES`, `DHAN_AUTO_CORRELATION_ID`, `DHAN_WARN_AMBIGUOUS_WRITE_FAILURE` and `DHAN_MARKET_DEPTH_LEVEL` entirely, and documented `DHAN_LOG_LEVEL` as if the library read it automatically — it doesn't; only the existing `## Logging` snippet wires it up.
+  - `skills/dhanhq-ruby/references/portfolio.md`'s eDIS section had the class name miscased (`EDIS` vs. `Edis`), called a nonexistent `.open_browser_for_tpin`, called `.inquiry` instead of `.inquire`, and accessed the (Hash) result via method calls instead of keys.
+  - `README.md` called `DhanHQ::Models::Fund.balance` — same class-name typo as above.
+  - `docs/RELEASE_GUIDE.md` claimed `Required Ruby: >= 3.1.0`; the gemspec has required `>= 3.2.0` since 3.0.0.
+  - `GUIDE.md` had no mention of the bang write variants added in this release; added a short section pointing to the README's fuller treatment.
+
+### Changed
+
+- `BaseModel#save!`'s exception message is now `"<Class>#save failed: <details>"` rather than `"Failed to save the record: <details>"`. The exception class is unchanged (`DhanHQ::Error`), and nothing in the gem, specs or docs asserted the old text.
+
 ## [3.2.1] - 2026-07-26
 
 ### Fixed
