@@ -87,19 +87,20 @@ Naming/MethodParameterName:
     - 'lib/DhanHQ/ws/connection.rb'
     - 'lib/DhanHQ/ws/orders/connection.rb'
 
-# Offense count: 7
-# Configuration parameters: Mode, AllowedMethods, AllowedPatterns, AllowBangMethods, WaywardPredicates.
-# AllowedMethods: call
-# WaywardPredicates: nonzero?
+# `cancel`, `modify` and `destroy` are commands that report whether they succeeded,
+# not predicates — `cancel?` would read as "should I cancel?", which is worse than the
+# name it replaces. The unambiguous-failure path for these is the bang variant
+# (`cancel!`, `modify!`), which raises rather than returning false. A bang method
+# returning a boolean is idiomatic, so those are allowed too.
+#
+# Scoped by method name rather than by file, so a genuine mis-named predicate
+# elsewhere in these same files is still caught.
 Naming/PredicateMethod:
-  Exclude:
-    - 'lib/DhanHQ/models/forever_order.rb'
-    - 'lib/DhanHQ/models/global_stocks/order.rb'
-    - 'lib/DhanHQ/models/iceberg_order.rb'
-    - 'lib/DhanHQ/models/order.rb'
-    - 'lib/DhanHQ/models/super_order.rb'
-    - 'lib/DhanHQ/models/twap_order.rb'
-    - 'lib/DhanHQ/ws/singleton_lock.rb'
+  AllowBangMethods: true
+  AllowedMethods:
+    - cancel
+    - modify
+    - destroy
 
 # Offense count: 13
 # Configuration parameters: EnforcedStyle, CheckMethodNames, CheckSymbols, AllowedIdentifiers, AllowedPatterns.

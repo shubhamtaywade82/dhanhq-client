@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Changed
+
+- **`Client#with_transient_retry` no longer duplicates its retry branch.** It had two rescue clauses running near-identical backoff-log-sleep-retry logic, differing only in what they raised once retries were spent. Collapsed into one clause, with an `exhausted_error` helper naming the difference: Faraday's transport errors are translated to `DhanHQ::NetworkError` (they are not part of this gem's hierarchy, so a caller rescuing `DhanHQ::Error` would otherwise miss them), while the gem's own errors are re-raised unchanged. Clears the `Lint/DuplicateBranch` pressure on this method.
+- **`Client#initialize` no longer opens a connection.** It now establishes state and checks its one invariant; the Faraday connection is built on first use of `#connection` and rebuilt when the configured base URL changes. Behaviour is unchanged for callers — `#connection` is still public and still reflects a sandbox toggle mid-process — but constructing a client does no network setup.
+- **`Naming/PredicateMethod` is now scoped by method name instead of by file.** Seven file-level exclusions replaced with `AllowedMethods: [cancel, modify, destroy]` plus `AllowBangMethods: true`.
+
+  These are commands that report whether they succeeded, not predicates — `cancel?` would read as "should I cancel?", which is worse than the name it replaces, so adding `?` aliases would have been the wrong fix. The unambiguous-failure path for them is the bang variant (`cancel!`, `modify!`). Scoping by name rather than by file also means a genuinely mis-named predicate elsewhere in those same files is still caught, and it surfaced a now-redundant inline `rubocop:disable` in `risk/pipeline.rb`.
+
+### Added
+
+- Specs for the lazily-built connection (not opened on construction, memoised, rebuilt on a base-URL change) and for retry exhaustion (transport errors translated, SDK errors re-raised unchanged, reads still retried).
+
 ## [3.2.0] - 2026-07-25
 
 ### Added
