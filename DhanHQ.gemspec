@@ -30,8 +30,11 @@ Gem::Specification.new do |spec|
   # 17 MB diagram.html — 51 MB of a 52 MB gem — went out in releases. An allowlist
   # cannot leak an unanticipated artifact: a new file is only published if a maintainer
   # adds its directory here.
-  shipped_directories = %w[lib exe sig config docs].freeze
-  shipped_root_files = %w[README.md CHANGELOG.md ARCHITECTURE.md GUIDE.md LICENSE.txt].freeze
+  # `skills/` is the Claude Agent Skill pack (SKILL.md, references, examples,
+  # helper scripts) that ships with the gem as product content, not build output.
+  shipped_directories = %w[lib exe sig config docs skills].freeze
+  shipped_root_files = %w[README.md CHANGELOG.md ARCHITECTURE.md GUIDE.md LICENSE.txt
+                          CODE_OF_CONDUCT.md AGENTS.md].freeze
   # Draft PR write-ups live under docs/ but are not user documentation.
   excluded_patterns = [%r{\Adocs/PR_}].freeze
 
