@@ -26,6 +26,10 @@ module DhanHQ
   LOADER = Zeitwerk::Loader.new
   LOADER.tag = "dhanhq"
   LOADER.inflector.inflect(
+    # Without this, Zeitwerk looks for DhanHQ::Ai while ai.rb defines DhanHQ::AI, so
+    # DhanHQ::AI::PromptHelpers raised NameError unless something had already loaded
+    # the file by hand — which only mcp/server.rb did.
+    "ai" => "AI",
     "api_helper" => "APIHelper",
     "auth_api" => "AuthAPI",
     "base_api" => "BaseAPI",

@@ -41,14 +41,20 @@ module DhanHQ
       # @param funds [DhanHQ::Models::Funds] Funds data
       # @return [String] Portfolio summary
       def self.portfolio_summary(holdings:, positions:, funds:)
+        # Array() so a missing collection renders as an empty section instead of
+        # raising. `funds` was already guarded; these two were not, and a prompt
+        # helper failing hard on an empty portfolio is the wrong trade.
+        all_holdings = Array(holdings)
+        open_positions = Array(positions).select(&:open?)
+
         lines = ["=== Portfolio Summary ==="]
         lines << "Funds: #{funds.to_prompt}" if funds
         lines << ""
-        lines << "Holdings (#{holdings.size}):"
-        holdings.each { |h| lines << "  #{h.to_prompt}" }
+        lines << "Holdings (#{all_holdings.size}):"
+        all_holdings.each { |holding| lines << "  #{holding.to_prompt}" }
         lines << ""
-        lines << "Open Positions (#{positions.count(&:open?)}):"
-        positions.select(&:open?).each { |p| lines << "  #{p.to_prompt}" }
+        lines << "Open Positions (#{open_positions.size}):"
+        open_positions.each { |position| lines << "  #{position.to_prompt}" }
         lines.join("\n")
       end
 
@@ -95,13 +101,17 @@ module DhanHQ
       # @param risk_params [Hash] Risk parameters
       # @return [String] Risk report
       def self.risk_report(positions:, risk_params: {})
+        # P&L is summed across every position; only the count is restricted to open
+        # ones, since a closed position still contributed realised P&L today.
+        all_positions = Array(positions)
+
         lines = ["=== Risk Report ==="]
-        total_unrealized = positions.sum { |p| p.unrealized_profit.to_f }
-        total_realized = positions.sum { |p| p.realized_profit.to_f }
+        total_unrealized = all_positions.sum { |position| position.unrealized_profit.to_f }
+        total_realized = all_positions.sum { |position| position.realized_profit.to_f }
 
         lines << "Total Unrealized P&L: ₹#{total_unrealized.round(2)}"
         lines << "Total Realized P&L: ₹#{total_realized.round(2)}"
-        lines << "Open Positions: #{positions.count(&:open?)}"
+        lines << "Open Positions: #{all_positions.count(&:open?)}"
 
         lines << "Max Drawdown: #{risk_params[:max_drawdown]}%" if risk_params[:max_drawdown]
 
