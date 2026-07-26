@@ -51,14 +51,12 @@ module DhanHQ
       # @param type [Symbol] :equity or :options
       # @return [true] if all checks pass
       # @raise [DhanHQ::RiskViolation] on first failure
-      # rubocop:disable Naming/PredicateMethod
       def self.run!(instrument:, args:, now: Time.now, type: :equity)
         run_checks!(CHECKS, instrument, args, now)
         run_checks!(OPTION_CHECKS, instrument, args, now) if type == :options
         run_checks!(DAILY_CHECKS, instrument, args, now)
         true
       end
-      # rubocop:enable Naming/PredicateMethod
 
       def self.run_checks!(checks, instrument, args, now)
         checks.each do |check|

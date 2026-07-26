@@ -25,31 +25,57 @@ module DhanHQ
     include DhanHQ::RequestHelper
     include DhanHQ::ResponseHelper
 
-    # The Faraday connection object used for HTTP requests.
-    #
-    # @return [Faraday::Connection] The connection instance used for API requests.
-    attr_reader :connection
+    # Transient failures raised by this gem, worth retrying as-is.
+    RETRYABLE_SDK_ERRORS = [
+      DhanHQ::RateLimitError,
+      DhanHQ::InternalServerError,
+      DhanHQ::NetworkError
+    ].freeze
+    private_constant :RETRYABLE_SDK_ERRORS
+
+    # Transport failures raised by Faraday. Also worth retrying, but they are not part
+    # of this gem's error hierarchy, so a caller rescuing DhanHQ::Error would miss
+    # them — they are translated on the way out. See {#exhausted_error}.
+    RETRYABLE_TRANSPORT_ERRORS = [
+      Faraday::TimeoutError,
+      Faraday::ConnectionFailed
+    ].freeze
+    private_constant :RETRYABLE_TRANSPORT_ERRORS
 
     attr_reader :token_manager
 
-    # Initializes a new DhanHQ Client instance with a Faraday connection.
+    # Initializes a new DhanHQ Client.
+    #
+    # Establishes state and checks its one invariant; the HTTP connection is opened
+    # lazily on first use, so constructing a client does no network setup.
     #
     # @example Create a new client:
     #   client = DhanHQ::Client.new(api_type: :order_api)
     #
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
     # @return [DhanHQ::Client] A new client instance.
-    # @raise [DhanHQ::Error] If configuration is invalid or rate limiter initialization fails
+    # @raise [DhanHQ::Error] If the rate limiter cannot be resolved for this API type.
     def initialize(api_type:)
       DhanHQ.ensure_configuration!
-      # Use shared rate limiter instance per API type to ensure proper coordination
+      # Shared per API type, so separate clients coordinate against one limit.
       @rate_limiter = RateLimiter.for(api_type)
 
       raise DhanHQ::Error, "RateLimiter initialization failed" unless @rate_limiter
+    end
 
-      # Store initial URL to detect changes
-      @last_base_url = DhanHQ.configuration.base_url
-      @connection = build_connection(@last_base_url)
+    # The Faraday connection used for HTTP requests.
+    #
+    # Built on first use and rebuilt whenever the configured base URL changes — which
+    # happens when sandbox mode is toggled, or when a token endpoint hands back a
+    # different host mid-process.
+    #
+    # @return [Faraday::Connection]
+    def connection
+      current_url = DhanHQ.configuration.base_url
+      return @connection if @connection && @last_base_url == current_url
+
+      @last_base_url = current_url
+      @connection = build_connection(current_url)
     end
 
     # Sends an HTTP request to the API with automatic retry for transient errors.
@@ -66,7 +92,6 @@ module DhanHQ
 
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
-      refresh_connection!
 
       # A non-idempotent write is not safely retryable: the API has no idempotency
       # key, so a request that timed out may already have reached the exchange.
@@ -99,27 +124,13 @@ module DhanHQ
       attempt = 0
       begin
         yield
-      rescue DhanHQ::RateLimitError, DhanHQ::InternalServerError, DhanHQ::NetworkError => e
+      rescue *RETRYABLE_SDK_ERRORS, *RETRYABLE_TRANSPORT_ERRORS => e
         attempt += 1
-        raise if attempt > retries
+        raise exhausted_error(e, retries) if attempt > retries
 
         backoff = calculate_backoff(attempt)
         DhanHQ.logger&.warn(
-          "[DhanHQ::Client] Transient error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
-        )
-        sleep(backoff)
-        retry
-      rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
-        attempt += 1
-        if attempt > retries
-          raise DhanHQ::NetworkError, "Request failed: #{e.message}" if retries.zero?
-
-          raise DhanHQ::NetworkError, "Request failed after #{retries} retries: #{e.message}"
-        end
-
-        backoff = calculate_backoff(attempt)
-        DhanHQ.logger&.warn(
-          "[DhanHQ::Client] Network error (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
+          "[DhanHQ::Client] Transient failure (#{e.class}), retrying in #{backoff}s (attempt #{attempt}/#{retries})"
         )
         sleep(backoff)
         retry
@@ -253,12 +264,20 @@ module DhanHQ
       out
     end
 
-    def refresh_connection!
-      current_url = DhanHQ.configuration.base_url
-      return if @last_base_url == current_url
+    # The exception to raise once the retries are spent.
+    #
+    # Faraday's transport errors are translated to {DhanHQ::NetworkError}, so a caller
+    # rescuing DhanHQ::Error sees every failure this client can produce. This gem's own
+    # errors already belong to that hierarchy and are re-raised unchanged.
+    #
+    # @param error [StandardError] The failure that exhausted the retries.
+    # @param retries [Integer] How many retries were allowed.
+    # @return [StandardError] The exception to raise.
+    def exhausted_error(error, retries)
+      return error unless RETRYABLE_TRANSPORT_ERRORS.any? { |klass| error.is_a?(klass) }
 
-      @last_base_url = current_url
-      @connection = build_connection(current_url)
+      attempts = retries.zero? ? "" : " after #{retries} retries"
+      DhanHQ::NetworkError.new("Request failed#{attempts}: #{error.message}")
     end
 
     def build_connection(url)

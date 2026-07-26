@@ -7,10 +7,22 @@
   Unaffected and still shipped throughout: the MCP server (`lib/DhanHQ/mcp/`, `exe/dhanhq-mcp`), the agent tool layer (all 32 tools), the Ruby skills classes (`lib/DhanHQ/skills/`, 11 builtin skills), the risk pipeline and the WebSocket subsystem.
 
   Gem size: 3.1.0 was 5.9 MB, 3.2.0 was 292 KB, and this is 324 KB. The 20× reduction is real and almost entirely the core dump; the skill pack was collateral.
+- **`DhanHQ::AI` was unreachable on a bare `require "dhan_hq"`.** The Zeitwerk inflector had no `ai → AI` acronym, so it looked for `DhanHQ::Ai` while `ai.rb` defines `DhanHQ::AI`; both spellings raised `NameError`. The documented `DhanHQ::AI::PromptHelpers` and `DhanHQ::AI::ContextBuilder` entry points therefore only worked if something had already loaded the file by hand, which only `mcp/server.rb` did. Found while writing the first specs for that module.
 
 ### Added
 
 - **`spec/dhan_hq/gem_packaging_spec.rb`** — pins both ends of what ships, since packaging has now failed in both directions. Asserts the entry point, both executables, RBS signatures, Rails initializer, MCP server, agent tool layer, Ruby skills and the Claude Skill pack are all present; asserts the known junk, any crash dump, the spec suite and development config are all absent; and caps the uncompressed payload at 3 MB so a stray binary fails loudly rather than silently adding megabytes to a release.
+- First specs for `AI::PromptHelpers` (13 examples), covering portfolio summaries, the risk report's P&L arithmetic — summed across every position, counted only for open ones — and order confirmation rendering. Built on real model instances rather than doubles, because `BaseModel` defines attribute readers per instance and `instance_double` cannot verify them.
+- Specs for the lazily-built connection (not opened on construction, memoised, rebuilt on a base-URL change) and for retry exhaustion (transport errors translated, SDK errors re-raised unchanged, reads still retried).
+
+### Changed
+
+- **`Client#with_transient_retry` no longer duplicates its retry branch.** It had two rescue clauses running near-identical backoff-log-sleep-retry logic, differing only in what they raised once retries were spent. Collapsed into one clause, with an `exhausted_error` helper naming the difference: Faraday's transport errors are translated to `DhanHQ::NetworkError` (they are not part of this gem's hierarchy, so a caller rescuing `DhanHQ::Error` would otherwise miss them), while the gem's own errors are re-raised unchanged. Clears the `Lint/DuplicateBranch` pressure on this method.
+- **`Client#initialize` no longer opens a connection.** It now establishes state and checks its one invariant; the Faraday connection is built on first use of `#connection` and rebuilt when the configured base URL changes. Behaviour is unchanged for callers — `#connection` is still public and still reflects a sandbox toggle mid-process — but constructing a client does no network setup.
+- **`Naming/PredicateMethod` is now scoped by method name instead of by file.** Seven file-level exclusions replaced with `AllowedMethods: [cancel, modify, destroy]` plus `AllowBangMethods: true`.
+
+  These are commands that report whether they succeeded, not predicates — `cancel?` would read as "should I cancel?", which is worse than the name it replaces, so adding `?` aliases would have been the wrong fix. The unambiguous-failure path for them is the bang variant (`cancel!`, `modify!`). Scoping by name rather than by file also means a genuinely mis-named predicate elsewhere in those same files is still caught, and it surfaced a now-redundant inline `rubocop:disable` in `risk/pipeline.rb`.
+- `AI::PromptHelpers.portfolio_summary` computed the open-position set twice (`count(&:open?)` then `select(&:open?)`); it now derives it once. Both it and `.risk_report` wrap their collections in `Array()`, so a nil from a failed fetch renders an empty section instead of raising from inside a prompt helper — `funds` was already guarded, the collections were not.
 
 ## [3.2.0] - 2026-07-25
 
