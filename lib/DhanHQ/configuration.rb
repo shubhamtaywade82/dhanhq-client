@@ -60,7 +60,7 @@ module DhanHQ
     # /v2/orders that times out may well have reached the exchange, and retrying it
     # can place a second, duplicate order. With this off, the transient error is
     # raised to the caller, who can reconcile using the correlation id (see
-    # {#auto_correlation_id} and +DhanHQ::Models::Order.find_by_correlation_id+)
+    # {#auto_correlation_id} and +DhanHQ::Models::Order.find_by_correlation+)
     # before deciding to resubmit.
     #
     # Read requests are always retried regardless of this setting.

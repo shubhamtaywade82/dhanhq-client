@@ -30,6 +30,18 @@
 - **`DhanHQ::WriteResult`** — puts the knowledge of what a write failure looks like in one place (`failure?`, `success?`, `unwrap!`). `BaseModel#save!` now uses it instead of duplicating the same three-way check inline.
 - **`DhanHQ::Concerns::BangWrites`** — generates the bang variants by delegating to their non-bang counterparts, so the two cannot drift: no duplicated request building, validation or logging. Generated as a module, so a hand-written `place!` can still override and call `super`.
 
+### Fixed
+
+- **`DhanHQ::MCP` was unreachable on a bare `require "dhan_hq"`.** Same failure as the `DhanHQ::AI` fix earlier in this release: `mcp.rb` defines `DhanHQ::MCP` while Zeitwerk's inflector expected `DhanHQ::Mcp` from the filename, so `DhanHQ::MCP::Server` raised `NameError` unless something had already loaded the file by hand — which only `exe/dhanhq-mcp` and `lib/dhan_hq/mcp.rb` did. Found the same way the `AI` bug was: cross-referencing every `DhanHQ::` constant named in the docs against what actually resolves. Guarded by a new `spec/dhan_hq/zeitwerk_autoload_spec.rb`, which shells out to a subprocess so the check can't be satisfied by another spec having already loaded the file by hand.
+- **`lib/DhanHQ/configuration.rb`'s doc comment referenced `DhanHQ::Models::Order.find_by_correlation_id`, which does not exist** — the real method is `.find_by_correlation` (no `_id` suffix). Caught during the same audit.
+- A documentation pass across the gem ahead of this release, cross-checking every code example and referenced class/method against the actual codebase:
+  - `docs/CONFIGURATION.md`'s resource table named `DhanHQ::Models::Fund` (real class: `Funds`) and `DhanHQ::Models::Ledger` (real class: `LedgerEntry`), and listed `fund_limit`/`margin_calculator` as `Funds` methods — neither exists; the real methods are `Funds.fetch`/`.balance` and `Margin.calculate`/`.calculate_multi`. The table now also covers the resources 3.2.0/3.3.0 added (Iceberg/TWAP/Alert orders, Multi Order, P&L Exit, eDIS, Global Stocks) and lists the `!` write variants.
+  - `docs/CONFIGURATION.md` was missing `LIVE_TRADING`, `DHAN_DRY_RUN`, `DHAN_RETRY_WRITES`, `DHAN_AUTO_CORRELATION_ID`, `DHAN_WARN_AMBIGUOUS_WRITE_FAILURE` and `DHAN_MARKET_DEPTH_LEVEL` entirely, and documented `DHAN_LOG_LEVEL` as if the library read it automatically — it doesn't; only the existing `## Logging` snippet wires it up.
+  - `skills/dhanhq-ruby/references/portfolio.md`'s eDIS section had the class name miscased (`EDIS` vs. `Edis`), called a nonexistent `.open_browser_for_tpin`, called `.inquiry` instead of `.inquire`, and accessed the (Hash) result via method calls instead of keys.
+  - `README.md` called `DhanHQ::Models::Fund.balance` — same class-name typo as above.
+  - `docs/RELEASE_GUIDE.md` claimed `Required Ruby: >= 3.1.0`; the gemspec has required `>= 3.2.0` since 3.0.0.
+  - `GUIDE.md` had no mention of the bang write variants added in this release; added a short section pointing to the README's fuller treatment.
+
 ### Changed
 
 - `BaseModel#save!`'s exception message is now `"<Class>#save failed: <details>"` rather than `"Failed to save the record: <details>"`. The exception class is unchanged (`DhanHQ::Error`), and nothing in the gem, specs or docs asserted the old text.

@@ -427,7 +427,7 @@ order.cancel
 ```ruby
 DhanHQ::Models::Position.all
 DhanHQ::Models::Holding.all
-DhanHQ::Models::Fund.balance
+DhanHQ::Models::Funds.balance
 ```
 
 ### Historical Data

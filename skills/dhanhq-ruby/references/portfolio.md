@@ -70,24 +70,31 @@ position.convert(
 
 ## eDIS Authorization
 
-For selling delivery holdings, authorization is handled via `DhanHQ::Models::EDIS`:
+For selling delivery holdings, authorization is handled via `DhanHQ::Models::Edis`:
 
 ### Step 1: Generate TPIN
 ```ruby
-DhanHQ::Models::EDIS.generate_tpin
+DhanHQ::Models::Edis.generate_tpin
 ```
 
-### Step 2: Open Browser Authorization
+Triggers a TPIN to the user's registered mobile/email. Returns `{status: "accepted"}` — the API responds `202` for this async operation.
+
+### Step 2: Generate and Render the Authorization Form
 ```ruby
-DhanHQ::Models::EDIS.open_browser_for_tpin(
+form = DhanHQ::Models::Edis.generate_form(
   isin: "INE002A01018",
   qty: 5,
-  exchange: "NSE"
+  exchange: "NSE",
+  segment: "EQ"
 )
+# form[:edisFormHtml] is a browser-postable HTML form; render or POST it so the
+# user can complete authorization on Dhan's eDIS page.
 ```
 
-### Step 3: Inquiry eDIS Approval
+### Step 3: Inquire eDIS Approval
 ```ruby
-inquiry = DhanHQ::Models::EDIS.inquiry(isin: "INE002A01018")
-puts "Approved Qty: #{inquiry.aprvd_qty}, Status: #{inquiry.status}"
+status = DhanHQ::Models::Edis.inquire(isin: "INE002A01018") # or isin: "ALL"
+puts "Approved Qty: #{status[:aprvdQty]}, Status: #{status[:status]}"
 ```
+
+`inquire` returns the raw API response (a `HashWithIndifferentAccess`), not a model instance — key names match the API's camelCase (`aprvdQty`, `totalQty`), not the snake_case used elsewhere in this gem.

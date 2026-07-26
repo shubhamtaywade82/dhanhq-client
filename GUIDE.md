@@ -186,6 +186,22 @@ DhanHQ::Contracts::ModifyOrderContract.new.call(params).success?
 DhanHQ::Models::Order.resource.update("123", params)
 ```
 
+### Explicit Failures: Bang Variants
+
+`place`, `#modify`, `#cancel` and their equivalents across every write model do not agree on
+how they report failure — depending on the class, a rejected write comes back as `nil`,
+`false`, or a `DhanHQ::ErrorObject`. Each has a `!` variant that raises `DhanHQ::OrderError`
+instead, so one `rescue` handles every failure the same way:
+
+```ruby
+order = DhanHQ::Models::Order.place!(params)   # raises DhanHQ::OrderError on failure
+order.cancel!                                  # raises if the exchange did not cancel
+```
+
+The non-bang methods are unchanged — adopting the bang variant is opt-in, per call site.
+See the [README](README.md#explicit-failures-bang-variants) for the full list of `!` methods
+and the deprecation notice that flags remaining non-bang call sites ahead of 4.0.0.
+
 ### Slicing Orders
 
 Use the same fields as placement, but the contract allows additional validity options (`GTC`, `GTD`). The model helper accepts snake_case parameters and handles camelCase conversion as part of validation:
