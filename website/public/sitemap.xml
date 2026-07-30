@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/</loc><priority>1.0</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/getting-started</loc><priority>0.9</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/orders</loc><priority>0.8</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/super-orders</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/portfolio</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/instruments</loc><priority>0.8</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/market-feed</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/api/historical-data</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/websocket/market-feed</loc><priority>0.8</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/websocket/order-updates</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/websocket/protocol</loc><priority>0.6</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/rails</loc><priority>0.8</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/analytics/technical-analysis</loc><priority>0.7</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/testing</loc><priority>0.6</priority></url>
+  <url><loc>https://shubhamtaywade82.github.io/dhanhq-client/risk/</loc><priority>0.6</priority></url>
+</urlset>

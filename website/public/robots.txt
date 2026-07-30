@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://shubhamtaywade82.github.io/dhanhq-client/sitemap.xml
