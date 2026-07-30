@@ -8,20 +8,23 @@ Gem::Specification.new do |spec|
   spec.authors = ["Shubham Taywade"]
   spec.email = ["shubhamtaywade82@gmail.com"]
 
-  spec.summary = "The Ruby SDK for Dhan API v2 with REST, WebSocket, and trading workflows."
-  spec.description = "A production-grade Ruby SDK for Dhan API v2 built for algo trading, " \
-                     "portfolio monitoring, and live trading systems. Provides typed models, " \
-                     "token lifecycle management, dry-validation contracts, resilient WebSocket " \
-                     "streaming, and safety-focused order workflows for Ruby applications."
-  spec.homepage = "https://github.com/shubhamtaywade82/dhanhq-client"
+  spec.summary = "Production-grade Ruby SDK for Dhan API v2 with REST APIs, WebSocket market data, token lifecycle management, dry-validation contracts and trading workflows."
+  spec.description = "A production-grade Ruby SDK and Ruby client for Dhan API v2 built for algorithmic " \
+                     "trading, portfolio monitoring, and live trading systems on NSE, BSE and MCX. " \
+                     "Provides typed models, token lifecycle management, dry-validation contracts, " \
+                     "resilient WebSocket streaming with auto-reconnect, and safety-focused order " \
+                     "workflows for Ruby on Rails and standalone Ruby applications."
+  spec.homepage = "https://shubhamtaywade82.github.io/dhanhq-client/"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
-  spec.metadata["homepage_uri"] = spec.homepage
+  spec.metadata["homepage_uri"] = "https://shubhamtaywade82.github.io/dhanhq-client/"
   spec.metadata["source_code_uri"] = "https://github.com/shubhamtaywade82/dhanhq-client"
   spec.metadata["changelog_uri"] = "https://github.com/shubhamtaywade82/dhanhq-client/blob/main/CHANGELOG.md"
+  spec.metadata["documentation_uri"] = "https://shubhamtaywade82.github.io/dhanhq-client/"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   # Files shipped in the released gem.
   #
@@ -67,5 +70,4 @@ Gem::Specification.new do |spec|
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
-  spec.metadata["rubygems_mfa_required"] = "true"
 end

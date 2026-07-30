@@ -1,31 +1,44 @@
-# DhanHQ — The Ruby SDK for Dhan API v2
+# DhanHQ — Ruby SDK & Client for Dhan API v2
 
 [![Gem Version](https://badge.fury.io/rb/DhanHQ.svg)](https://rubygems.org/gems/DhanHQ)
 [![CI](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml/badge.svg)](https://github.com/shubhamtaywade82/dhanhq-client/actions/workflows/main.yml)
 [![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-ruby.svg)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-Build trading systems in Ruby without fighting raw HTTP, fragile auth flows, or unreliable market streams.
+**DhanHQ** is a production-grade **Ruby SDK for the Dhan API v2** — build algorithmic trading systems, market data pipelines, and portfolio management tools for Indian markets (NSE, BSE, MCX) with clean Ruby abstractions, resilient WebSocket streaming, typed models, dry-validation contracts, and safety-focused order workflows for Ruby on Rails and standalone Ruby applications.
 
-DhanHQ is a production-grade Ruby SDK for the [Dhan trading API](https://dhanhq.co/docs/v2/), designed for:
+If you're looking for a Ruby gem for the Dhan trading API, this is built to be the default choice.
 
-- trading bots
-- real-time market data streaming
-- portfolio and order management
-- Rails or standalone trading systems
+## Quick Start
 
-If you're looking for a Ruby SDK for Dhan API, this is built to be the default choice.
+```ruby
+# Gemfile
+gem 'DhanHQ'
+```
 
-Unlike thin wrappers, DhanHQ gives you:
+```ruby
+require 'dhan_hq'
 
-- typed models for orders, positions, holdings, and more
-- WebSocket clients with auto-reconnect and backoff
-- token lifecycle management with retry-on-401
-- safety rails for live trading
+DhanHQ.configure do |c|
+  c.client_id    = ENV["DHAN_CLIENT_ID"]
+  c.access_token = ENV["DHAN_ACCESS_TOKEN"]
+end
 
-This is closer to trading infrastructure than a simple API client.
+# You're live — no manual HTTP, no JSON parsing
+positions = DhanHQ::Models::Position.all
+```
 
-## Install and Run in 60 Seconds
+## Features
+
+- **Typed models** for orders, positions, holdings, funds, and trades
+- **WebSocket market feed** with auto-reconnect and exponential backoff
+- **WebSocket order updates** — real-time execution events
+- **Token lifecycle management** with automatic retry-on-401
+- **dry-validation contracts** for every trading request
+- **Rails integration** with ActionCable, config generators, and rake tasks
+- **Safety rails** — validation before transport, no blind retries
+- **Comprehensive docs** — 25+ guides covering auth, WebSocket, orders, super orders, TA, and testing
+- **REST API** — orders, super orders, positions, holdings, funds, instruments, option chain, historical data, and more
 
 ```ruby
 # Gemfile

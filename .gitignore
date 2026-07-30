@@ -30,3 +30,8 @@ core.*
 TAGS
 tags
 .tags
+
+# VitePress build
+website/.vitepress/dist/
+website/.vitepress/cache/
+website/node_modules/
