@@ -10,7 +10,7 @@ Place multi-leg order structures including bracket orders and cover orders.
 ## Bracket Order
 
 ```ruby
-DhanHQ::Models::SuperOrder.place_bracket(
+order = DhanHQ::Models::SuperOrder.create(
   dhan_client_id:   ENV["DHAN_CLIENT_ID"],
   exchange_segment: "NSE_EQ",
   transaction_type: "BUY",
@@ -19,16 +19,16 @@ DhanHQ::Models::SuperOrder.place_bracket(
   security_id:      "1333",
   quantity:         100,
   price:            750,
-  trigger_price:    0,
   stop_loss_price:  740,
-  target_price:     760
+  target_price:     760,
+  trailing_jump:    10
 )
 ```
 
 ## Cover Order
 
 ```ruby
-DhanHQ::Models::SuperOrder.place_cover(
+order = DhanHQ::Models::SuperOrder.create(
   dhan_client_id:   ENV["DHAN_CLIENT_ID"],
   exchange_segment: "NSE_FNO",
   transaction_type: "BUY",
@@ -37,8 +37,9 @@ DhanHQ::Models::SuperOrder.place_cover(
   security_id:      "58072",
   quantity:         50,
   price:            25000,
-  trigger_price:    24950,
-  stop_loss_price:  24900
+  stop_loss_price:  24900,
+  target_price:     25200,
+  trailing_jump:    10
 )
 ```
 

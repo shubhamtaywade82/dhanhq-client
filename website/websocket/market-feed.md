@@ -10,50 +10,28 @@ Stream real-time LTP, OHLCV, and market depth over WebSocket with auto-reconnect
 ## Connection
 
 ```ruby
-client = DhanHQ::Client.new(
-  client_id: ENV["DHAN_CLIENT_ID"],
-  access_token: ENV["DHAN_ACCESS_TOKEN"]
-)
+client = DhanHQ::WS::Client.new(mode: :ticker)
+client.start
 
-client.market_feed.start
-```
+client.subscribe_many([
+  { exchange_segment: "NSE_EQ", security_id: "1333" },
+  { exchange_segment: "NSE_FNO", security_id: "58072" },
+  { exchange_segment: "IDX_I", security_id: "13" }
+])
 
-## Subscribe to Instruments
-
-```ruby
-client.market_feed.subscribe(
-  [
-    { exchange_segment: "NSE_EQ", security_id: "1333" },
-    { exchange_segment: "NSE_FNO", security_id: "58072" },
-    { exchange_segment: "IDX_I", security_id: "13" }
-  ]
-)
-```
-
-## Tick Events
-
-```ruby
-client.market_feed.on_tick do |tick|
-  puts "#{tick.exchange_segment}:#{tick.security_id} LTP=#{tick.ltp}"
+client.on(:tick) do |tick|
+  puts "#{tick[:exchange_segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]}"
 end
-```
 
-## Auto-Reconnect
-
-The WebSocket client handles disconnections with exponential backoff:
-
-```ruby
-client.market_feed.on_reconnect do |attempt|
-  puts "Reconnecting (attempt #{attempt})..."
+client.on(:reconnect) do |info|
+  puts "Reconnected (attempt #{info[:attempt]})"
 end
 ```
 
 ## Unsubscribe
 
 ```ruby
-client.market_feed.unsubscribe(
-  [{ exchange_segment: "NSE_EQ", security_id: "1333" }]
-)
+client.unsubscribe_one(segment: "NSE_EQ", security_id: "1333")
 ```
 
 See the [WebSocket Integration guide](https://github.com/shubhamtaywade82/dhanhq-client/blob/main/docs/WEBSOCKET_INTEGRATION.md) for full documentation.

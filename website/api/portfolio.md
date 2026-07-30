@@ -20,13 +20,19 @@ positions = DhanHQ::Models::Position.all
 ## Funds
 
 ```ruby
-limits = DhanHQ::Models::FundLimit.current
+funds = DhanHQ::Models::Funds.fetch
+puts "Available: #{funds.available_balance}"
+puts "Withdrawable: #{funds.withdrawable_balance}"
 ```
 
 ## Trade Book
 
 ```ruby
-trades = DhanHQ::Models::TradeBook.where(
+# Today's trades
+trades = DhanHQ::Models::Trade.today
+
+# Historical trades with date range
+history = DhanHQ::Models::Trade.history(
   from_date: "2026-07-01",
   to_date:   "2026-07-30"
 )

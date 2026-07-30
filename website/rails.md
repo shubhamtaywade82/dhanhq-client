@@ -7,15 +7,16 @@ description: Integrate the DhanHQ Ruby gem with Ruby on Rails. ActionCable WebSo
 
 DhanHQ provides first-class Rails integration for building trading dashboards, portfolio trackers, and automated trading systems.
 
-## Install Generator
+## Manual Setup
 
-```bash
-rails generate dhan_hq:install
+Create `config/initializers/dhan_hq.rb`:
+
+```ruby
+DhanHQ.configure do |c|
+  c.client_id    = ENV["DHAN_CLIENT_ID"]
+  c.access_token = ENV["DHAN_ACCESS_TOKEN"]
+end
 ```
-
-Creates:
-- `config/initializers/dhan_hq.rb`
-- Binstub for quick access
 
 ## ActionCable Integration
 
@@ -32,20 +33,15 @@ end
 
 ```ruby
 # A background job feeding WebSocket data to ActionCable
-DhanHQ.market_feed.on_tick do |tick|
+ws_client = DhanHQ::WS::Client.new(mode: :ticker)
+ws_client.start
+
+ws_client.on(:tick) do |tick|
   ActionCable.server.broadcast(
-    "market_data_#{tick.security_id}",
-    tick.to_h
+    "market_data_#{tick[:security_id]}",
+    tick
   )
 end
-```
-
-## Rake Tasks
-
-```bash
-rails dhan_hq:positions    # Fetch current positions
-rails dhan_hq:holdings     # Fetch current holdings
-rails dhan_hq:funds        # Fetch fund limits
 ```
 
 ## Background Jobs

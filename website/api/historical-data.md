@@ -8,7 +8,7 @@ description: Fetch intraday and daily OHLC charts using the DhanHQ Ruby gem for 
 ## Intraday Charts
 
 ```ruby
-candles = DhanHQ::Models::Chart.intraday(
+candles = DhanHQ::Models::HistoricalData.intraday(
   security_id:      "1333",
   exchange_segment: "NSE_EQ",
   instrument:       "EQUITY",
@@ -21,7 +21,7 @@ candles = DhanHQ::Models::Chart.intraday(
 ## Daily Charts
 
 ```ruby
-daily = DhanHQ::Models::Chart.daily(
+daily = DhanHQ::Models::HistoricalData.daily(
   security_id:      "13",
   exchange_segment: "IDX_I",
   instrument:       "INDEX",
