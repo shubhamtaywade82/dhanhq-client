@@ -1,3 +1,31 @@
+## [3.4.0] - 2026-08-15
+
+### Added
+
+- **`DhanHQ::Backtest::Runner`** (with `Trade` and `Result`) — replays a `DhanHQ::Strategy::Base` against historical `OHLCSeries` candles and returns a trade log, a per-bar equity curve, and summary stats (`total_return_pct`, `win_rate`, `max_drawdown_pct`, `num_trades`, `avg_trade_pnl`).
+
+  Both entries and exits fill at the *next* candle's open, never the signal candle's own price — deciding to act on a candle and then filling somewhere inside that same candle is look-ahead bias, since the fill price would have to come from before the candle closed. The equity curve stays flat on the signal bar itself for the same reason: a position isn't marked-to-market until it's actually been filled on the following bar. Risk-rule violations reuse `Strategy::Base#check_risks` rather than a second DSL, and an unclosed position at the end of the dataset is force-closed at the final candle's close. Optional `max_bars_held:` guards against a strategy bug holding a position across the entire dataset.
+
+- **`QUICKSTART.md`** — the 5 most common tasks (install/config, reads, safe order placement, WS streaming, strategy building) in under 50 lines, linked from the README.
+
+- **`DHAN_WS_DEBUG=true`** (`config.ws_debug`) — hex-dumps every raw inbound WebSocket frame at `debug` level before it's parsed, for troubleshooting binary parse errors and dead-but-connected feeds. Off by default, checked before any hex-encoding work so there's no cost when disabled, and capped at 256 bytes per frame (with a `...truncated` marker and the full byte count always logged) so a market-depth feed at tick frequency can't flood the log.
+
+  There isn't a single choke point all raw frames pass through: the market-feed `DhanHQ::WS::Connection` predates `BaseConnection` and has its own `on(:message)` handler, `DhanHQ::WS::Orders::Connection` overrides `BaseConnection#handle_message` entirely without calling `super`, and only `DhanHQ::WS::MarketDepth::Client` goes through `BaseConnection` unmodified. `DhanHQ::WS.debug_frame` is wired into all three so there's one hex-dump implementation, not three that could drift.
+
+- **`rails generate dhanhq:install`** — scaffolds `config/initializers/dhanhq.rb`, an order-placing service object, a Sidekiq market-feed worker, and an ActionCable channel in one command.
+
+- **`DhanHQ::Jobs::PlaceOrderJob`** — an ActiveJob wrapper around `Order.place!`. Uses `discard_on` for `DhanHQ::OrderError`/`DhanHQ::RiskViolation` rather than a manual `rescue`: `discard_on` is handled inside ActiveJob's own `execute`, before an exception would ever reach a queue adapter's own backend-level retry (Sidekiq retries unhandled exceptions by default, independent of ActiveJob's opt-in `retry_on`) — the only adapter-agnostic way to guarantee this non-idempotent write is never silently retried.
+
+### Fixed
+
+- **`docs/RAILS_INTEGRATION.md`'s Sidekiq examples (§5, §6) called `client.wait!`, `client.subscribe(array)`, and `DhanHQ::WS::Client.new(kind: :order_updates)`** — none of which exist. `DhanHQ::WS::Client`/`DhanHQ::WS::Orders::Client` have no blocking wait method at all; `Client#start` spawns a background thread and returns immediately. Replaced with the real API (`DhanHQ::WS.connect`/`DhanHQ::WS::Orders.connect` plus a `connected?`-based liveness loop), guarded by a new spec that locks down the method names these examples call by name.
+- **`dry-validation` had no version floor in the gemspec.** A fresh `bundle install` could resolve it to `0.4.1` — a 2016-era, pre-`Dry::Validation::Contract` API generation every contract in `lib/DhanHQ/contracts/` is incompatible with. Pinned to `~> 1.11`. Found while investigating whether the Ruby floor could drop to 3.1 (it can't — see below); confirmed by forcing an actual fresh resolve under Ruby 3.1.6, which hit exactly this.
+- **`spec/dhan_hq/contracts/expired_options_data_contract_spec.rb` and `expired_options_data_spec.rb` hardcoded `from_date: "2021-08-02"`**, which is itself now more than 5 years in the past and so failed the contract's own "cannot be more than 5 years ago" rule — the shared fixture failed the exact rule it existed to exercise, cascading into every test merged onto it. Replaced every literal 2021 date with one computed relative to `Date.today`, preserving each test's original intent (span length, ordering, the exact-31-day boundary).
+
+### Investigated, not changed
+
+- **Lowering `required_ruby_version` below `3.2.0`.** This gem's own code needed only two trivial fixes (anonymous `**` keyword forwarding, genuinely 3.2-only syntax — endless methods and anonymous `&` block forwarding, the original suspects, are 3.0+ and 3.1+ respectively and were never the issue). But forcing a fresh dependency resolve under Ruby 3.1.6 — after fixing the `dry-validation` pin above — still forced `activesupport` down to 7.2.3.2 (ActiveSupport 8.x itself requires Ruby ≥ 3.2), and AS 7-vs-8 behavioral differences broke `Agent::ToolRegistry`, `MCP::Server`, and `Risk::Pipeline`: 63 failures across areas with no connection to Ruby version syntax at all. That's a materially larger compatibility surface than a floor bump, so `required_ruby_version` stays `>= 3.2.0`.
+
 ## [3.3.0] - 2026-07-26
 
 ### Added
