@@ -75,7 +75,7 @@ positions = DhanHQ::Models::Position.all
 
 ## Start Here (Pick Your Use Case)
 
-Pick the path that matches what you want to build:
+Pick the path that matches what you want to build, or just read the [Quickstart](QUICKSTART.md) top to bottom:
 
 - **Get live prices fast** → [Market Feed WebSocket](#market-feed-ticker--quote--full)
 - **Place orders safely** → [Order Safety](#order-safety)
@@ -756,6 +756,7 @@ For search-driven discovery and onboarding content, see:
 
 | Guide | What it covers |
 | ----- | -------------- |
+| [Quickstart](QUICKSTART.md) | The 5 most common tasks in under 50 lines |
 | [Architecture](ARCHITECTURE.md) | Layering, dependency flow, design patterns, extension points |
 | [Authentication](docs/AUTHENTICATION.md) | Token flows, TOTP, OAuth, auto-management |
 | [Configuration Reference](docs/CONFIGURATION.md) | Full ENV matrix, logging, timeouts, available resources |

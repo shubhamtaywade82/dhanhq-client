@@ -3,7 +3,8 @@
 require "spec_helper"
 
 RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
-  # Use weekday dates only (no weekends); from_date must be before to_date
+  # Computed relative to Date.today rather than hardcoded, so this fixture doesn't
+  # age past the contract's own "from_date cannot be more than 5 years ago" rule.
   let(:valid_params) do
     {
       exchange_segment: "IDX_I",
@@ -15,8 +16,8 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
       strike: "ATM",
       drv_option_type: "CALL",
       required_data: %w[open high low close volume],
-      from_date: "2021-08-02",
-      to_date: "2021-08-31"
+      from_date: (Date.today - 10).strftime("%Y-%m-%d"),
+      to_date: (Date.today - 1).strftime("%Y-%m-%d")
     }
   end
 
@@ -222,7 +223,9 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "validates correct date format and trading days" do
-      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-16")
+      from_date = Date.today - 20
+      to_date = from_date + 14
+      params = valid_params.merge(from_date: from_date.strftime("%Y-%m-%d"), to_date: to_date.strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
 
@@ -243,7 +246,9 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "validates date range order (from_date before to_date)" do
-      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-16")
+      from_date = Date.today - 20
+      to_date = from_date + 14
+      params = valid_params.merge(from_date: from_date.strftime("%Y-%m-%d"), to_date: to_date.strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
 
@@ -251,7 +256,7 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "rejects when from_date is after to_date" do
-      params = valid_params.merge(from_date: "2021-09-01", to_date: "2021-08-02")
+      params = valid_params.merge(from_date: (Date.today - 5).strftime("%Y-%m-%d"), to_date: (Date.today - 10).strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
 
@@ -260,7 +265,8 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "accepts when from_date equals to_date" do
-      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-08-02")
+      same_date = (Date.today - 10).strftime("%Y-%m-%d")
+      params = valid_params.merge(from_date: same_date, to_date: same_date)
       contract = described_class.new
       result = contract.call(params)
 
@@ -268,7 +274,9 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "validates date range length (31 days max, non-inclusive)" do
-      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-09-02")
+      from_date = Date.today - 40
+      to_date = from_date + 31
+      params = valid_params.merge(from_date: from_date.strftime("%Y-%m-%d"), to_date: to_date.strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
 
@@ -276,7 +284,9 @@ RSpec.describe DhanHQ::Contracts::ExpiredOptionsDataContract do
     end
 
     it "rejects date range longer than 31 days" do
-      params = valid_params.merge(from_date: "2021-08-02", to_date: "2021-09-15")
+      from_date = Date.today - 60
+      to_date = from_date + 44
+      params = valid_params.merge(from_date: from_date.strftime("%Y-%m-%d"), to_date: to_date.strftime("%Y-%m-%d"))
       contract = described_class.new
       result = contract.call(params)
 
