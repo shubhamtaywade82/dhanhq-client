@@ -37,6 +37,10 @@ gem "simplecov", "~> 0.22", require: false, groups: %i[development test]
 
 group :test do
   gem "timecop"
+  # Provides Rails::Generators::Base, needed to load and test the
+  # `dhanhq:install` generator under lib/generators/. This gem stays
+  # Rails-free at runtime -- railties is dev/test-only.
+  gem "railties"
 end
 
 # Optional tools for local technical analysis experiments (not part of the gem)

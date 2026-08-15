@@ -13,6 +13,11 @@ AllCops:
   NewCops: enable
   Exclude:
     - "skills/**/*"
+    # Generator template output -- mirrors the target Rails app's conventions
+    # (and the already-verified docs/RAILS_INTEGRATION.md patterns), not this
+    # gem's own style, and references Rails/Sidekiq/ActionCable constants that
+    # don't exist in this gem's own context.
+    - "lib/generators/**/templates/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

@@ -721,7 +721,11 @@ sleep   # keep the script alive
 
 ## Rails Integration
 
-Need initializers, service objects, ActionCable wiring, and background workers? See the [Rails Integration Guide](docs/RAILS_INTEGRATION.md).
+```bash
+rails generate dhanhq:install
+```
+
+Scaffolds `config/initializers/dhanhq.rb`, an order-placing service object, a Sidekiq market-feed worker, and an ActionCable channel in one command. For the full picture — service objects, ActionCable wiring, background workers, dynamic token providers — see the [Rails Integration Guide](docs/RAILS_INTEGRATION.md).
 
 ---
 
