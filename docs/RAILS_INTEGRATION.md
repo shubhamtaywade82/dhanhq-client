@@ -21,6 +21,11 @@ bundle install
 If you package the gem privately you can also point to a released version from
 RubyGems.
 
+**Fast path:** `rails generate dhanhq:install` scaffolds the initializer below plus
+a sample order service, a Sidekiq market-feed worker, and an ActionCable channel
+in one command. The rest of this guide covers what it generates and the options
+beyond it (dynamic tokens, order-update streaming, scheduled jobs).
+
 ## 2. Configure credentials & initializer
 
 Store the Dhan client id and access token using Rails credentials or ENV
