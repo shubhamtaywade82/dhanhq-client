@@ -50,15 +50,29 @@ client = DhanHQ::WS.connect(mode: :ticker) { |tick| puts tick[:ltp] }
 
 **Solution:**
 - The client safely drops malformed frames and keeps the event loop alive.
-- Run with `DHAN_LOG_LEVEL=DEBUG` to inspect raw frames:
+- Turn on [WebSocket Frame Debugging](#websocket-frame-debugging) below to see the actual bytes that failed to parse.
+
+---
+
+## WebSocket Frame Debugging
+
+**Symptom:** Ticks stopped arriving, or you're seeing "unknown feed kind" / parse errors and need to see what the server actually sent — a bug report of "got garbage data" is unactionable without the raw bytes.
+
+**Solution:** Set `DHAN_WS_DEBUG=true` (or `config.ws_debug = true`) alongside debug-level logging. Every raw inbound frame — market feed, order updates, market depth — is logged as a hex dump before it's parsed:
 
 ```bash
+export DHAN_WS_DEBUG=true
 export DHAN_LOG_LEVEL=DEBUG
 ```
 
 ```ruby
+DhanHQ.configure do |c|
+  c.ws_debug = true
+end
 DhanHQ.logger.level = Logger::DEBUG
 ```
+
+This is off by default and high-volume when on — the flag is checked before any hex encoding work, so leaving it off costs nothing, but a live feed with `DHAN_WS_DEBUG=true` will log every single tick. Turn it off once you have what you need. See [Configuration Reference](CONFIGURATION.md#behavior-flags) for the full flag reference.
 
 ---
 

@@ -542,6 +542,10 @@ client.health
 > 5,000 instruments per connection and 100 instruments per subscribe frame. Running several
 > strategies in separate processes counts against the same limit — a 6th connection is refused.
 
+If frames stop arriving or parsing fails and `healthy?`/logs alone aren't enough, set
+`DHAN_WS_DEBUG=true` to hex-dump every raw inbound frame at debug level — see
+[Troubleshooting](docs/TROUBLESHOOTING.md#websocket-frame-debugging).
+
 ### Cleanup
 
 ```ruby

@@ -141,6 +141,7 @@ module DhanHQ
               @ws.on(:open) { |_| handle_open(sessions) }
 
               @ws.on :message do |ev|
+                WS.debug_frame(self.class.name, ev.data)
                 notify(:message, nil)
                 @on_binary&.call(ev.data) # raw frames to decoder
               end
