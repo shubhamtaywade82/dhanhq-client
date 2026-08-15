@@ -212,6 +212,7 @@ module DhanHQ
       # Handle WebSocket message event
       # @param ev [Event] WebSocket message event
       def handle_message(ev)
+        WS.debug_frame(self.class.name, ev.data)
         emit(:raw, ev.data)
         process_message(ev.data) if respond_to?(:process_message, true)
       end

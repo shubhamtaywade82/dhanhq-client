@@ -395,4 +395,36 @@ RSpec.describe DhanHQ::Configuration do
       DhanHQ.configuration.dry_run = false
     end
   end
+
+  describe "ws_debug flag" do
+    around do |example|
+      saved = ENV.fetch("DHAN_WS_DEBUG", nil)
+      example.run
+      if saved.nil?
+        ENV.delete("DHAN_WS_DEBUG")
+      else
+        ENV["DHAN_WS_DEBUG"] = saved
+      end
+    end
+
+    it "defaults to false" do
+      ENV.delete("DHAN_WS_DEBUG")
+
+      expect(described_class.new.ws_debug?).to be(false)
+    end
+
+    it "reads DHAN_WS_DEBUG" do
+      ENV["DHAN_WS_DEBUG"] = "true"
+
+      expect(described_class.new.ws_debug?).to be(true)
+    end
+
+    it "can be toggled through DhanHQ.configure" do
+      DhanHQ.configure { |config| config.ws_debug = true }
+
+      expect(DhanHQ.configuration.ws_debug?).to be(true)
+    ensure
+      DhanHQ.configuration.ws_debug = false
+    end
+  end
 end

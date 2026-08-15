@@ -132,6 +132,15 @@ module DhanHQ
     # @return [Integer]
     attr_accessor :market_depth_level
 
+    # When true, every raw inbound WebSocket frame (market feed, order updates,
+    # market depth) is logged as a hex dump at debug level before it's parsed.
+    # Off by default -- high volume, and the check happens before any hex
+    # encoding work so there's no cost when disabled.
+    #
+    # Set via +DHAN_WS_DEBUG=true+ or in {DhanHQ.configure}.
+    # @return [Boolean]
+    attr_accessor :ws_debug
+
     # Setters for websocket URLs
     attr_writer :ws_order_url, :ws_market_feed_url, :ws_market_depth_url
 
@@ -198,6 +207,11 @@ module DhanHQ
       @auto_correlation_id == true
     end
 
+    # @return [Boolean] True when raw WebSocket frames should be hex-logged.
+    def ws_debug?
+      @ws_debug == true
+    end
+
     # Initializes a new configuration instance with default values.
     #
     # @example
@@ -218,6 +232,7 @@ module DhanHQ
       @ws_market_feed_url = ENV.fetch("DHAN_WS_MARKET_FEED_URL", nil)
       @ws_market_depth_url = ENV.fetch("DHAN_WS_MARKET_DEPTH_URL", nil)
       @market_depth_level = ENV.fetch("DHAN_MARKET_DEPTH_LEVEL", "20").to_i
+      @ws_debug       = env_flag("DHAN_WS_DEBUG", default: false)
       @ws_user_type   = ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
       @partner_id     = ENV.fetch("DHAN_PARTNER_ID", nil)
       @partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", nil)

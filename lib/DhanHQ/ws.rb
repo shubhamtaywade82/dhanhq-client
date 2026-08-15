@@ -34,5 +34,19 @@ module DhanHQ
     def self.disconnect_all_local!
       Registry.stop_all
     end
+
+    # Logs a raw inbound WebSocket frame as a hex dump when
+    # +config.ws_debug+ (+DHAN_WS_DEBUG=true+) is enabled. A no-op otherwise --
+    # the flag is checked before any hex encoding work, so there's no cost
+    # when debug logging is off.
+    #
+    # @param source [String] short tag identifying which connection the frame came from
+    # @param data [String] raw frame bytes
+    # @return [void]
+    def self.debug_frame(source, data)
+      return unless DhanHQ.configuration&.ws_debug?
+
+      DhanHQ.logger&.debug("[DhanHQ::WS::#{source}] frame (#{data.bytesize} bytes): #{data.unpack1("H*")}")
+    end
   end
 end

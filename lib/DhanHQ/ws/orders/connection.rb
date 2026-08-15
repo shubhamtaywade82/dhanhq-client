@@ -63,6 +63,7 @@ module DhanHQ
         # Process incoming WebSocket message
         # @param ev [Event] WebSocket message event
         def handle_message(ev)
+          WS.debug_frame(self.class.name, ev.data)
           msg = JSON.parse(ev.data, symbolize_names: true)
           emit(:raw, msg)
           emit(:message, msg)
