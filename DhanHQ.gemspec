@@ -61,7 +61,14 @@ Gem::Specification.new do |spec|
   spec.add_dependency "bindata"
   spec.add_dependency "concurrent-ruby"
   spec.add_dependency "csv"
-  spec.add_dependency "dry-validation"
+  # Unpinned, a fresh resolve can land on dry-validation 0.4.1 -- a pre-1.0,
+  # pre-Dry::Validation::Contract API generation from ~2016 that every
+  # contract in lib/DhanHQ/contracts/ (which all subclass BaseContract and use
+  # the modern `rule(...)` block DSL) is incompatible with. Confirmed by
+  # forcing a fresh resolve under Ruby 3.1.6: with no floor, bundler picked
+  # 0.4.1 over 1.11.1 to satisfy the wider Ruby constraint, and every contract
+  # spec failed at require-time.
+  spec.add_dependency "dry-validation", "~> 1.11"
   spec.add_dependency "eventmachine"
   spec.add_dependency "faraday", "~> 2.14"
   spec.add_dependency "faye-websocket"

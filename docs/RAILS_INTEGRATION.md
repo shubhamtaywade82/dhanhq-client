@@ -178,6 +178,32 @@ The gem exposes models for positions, holdings, trades, funds, option chains,
 historical bars, etc. Instantiate them the same way (`Model.all`, `.find`,
 `.where`, `#save`).
 
+### Placing orders in the background
+
+For order placement from a controller action or another job, `DhanHQ::Jobs::PlaceOrderJob`
+ships with the gem — no service object required:
+
+```ruby
+DhanHQ::Jobs::PlaceOrderJob.perform_later(
+  transaction_type: DhanHQ::Constants::TransactionType::BUY,
+  exchange_segment: DhanHQ::Constants::ExchangeSegment::NSE_EQ,
+  product_type:     DhanHQ::Constants::ProductType::INTRADAY,
+  order_type:       DhanHQ::Constants::OrderType::LIMIT,
+  validity:         DhanHQ::Constants::Validity::DAY,
+  security_id:      "11536",
+  quantity:         5,
+  price:            1500.0
+)
+```
+
+It calls `Order.place!` and uses ActiveJob's `discard_on` for `DhanHQ::OrderError` and
+`DhanHQ::RiskViolation` — a rejection is logged, not silently retried. This matters because
+DhanHQ order writes are **not idempotent**: most queue adapters (Sidekiq chief among them)
+retry unhandled exceptions at the backend level by default, independent of ActiveJob's own
+opt-in `retry_on`, and a timed-out `POST /v2/orders` retry can place a duplicate order. Don't
+add your own `retry_on DhanHQ::OrderError` on top of this job — that would fight the
+`discard_on` and reintroduce the exact risk it exists to prevent.
+
 ## 4. Centralise error handling
 
 Wrap the gem's exceptions in a concern so Rails controllers and jobs return
@@ -214,21 +240,26 @@ ticks through ActionCable, Redis, or a database.
 # app/workers/dhan/market_feed_worker.rb
 class Dhan::MarketFeedWorker
   include Sidekiq::Worker
+  sidekiq_options retry: false # DhanHQ::WS::Client already reconnects and re-subscribes on its own
 
-  def perform(mode = :quote, securities = [])
-    client = DhanHQ::WS::Client.new(mode: mode.to_sym)
-
-    client.on(:open) { Rails.logger.info('Dhan WS connected') }
-    client.on(:close) { Rails.logger.warn('Dhan WS closed; worker will retry') }
-    client.on(:error) { |err| Rails.logger.error("Dhan WS error: #{err}") }
-
-    client.on(:tick) do |tick|
+  def perform(mode = "quote", securities = [])
+    client = DhanHQ::WS.connect(mode: mode.to_sym) do |tick|
       ActionCable.server.broadcast('market_feed', tick)
     end
 
-    client.start
-    client.subscribe(securities) if securities.any?
-    client.wait! # blocks the worker thread while EventMachine runs
+    client.on(:reconnect) { |info| Rails.logger.warn("Dhan WS reconnect ##{info[:attempt]}") }
+    client.on(:error) { |message| Rails.logger.error("Dhan WS error: #{message}") }
+
+    securities.each { |segment, security_id| client.subscribe_one(segment: segment, security_id: security_id) }
+
+    # Client#start already spawned a background thread and returned -- there is
+    # no blocking wait! method. Hold the worker open for the life of the
+    # connection so Sidekiq doesn't consider the job "done" the instant the
+    # feed opens.
+    loop do
+      sleep 30
+      break unless client.connected?
+    end
   end
 end
 ```
@@ -260,21 +291,28 @@ Use the order-update WebSocket endpoint (configure `ws_order_url` and
 # app/workers/dhan/order_updates_worker.rb
 class Dhan::OrderUpdatesWorker
   include Sidekiq::Worker
+  sidekiq_options retry: false
 
   def perform
-    client = DhanHQ::WS::Client.new(kind: :order_updates)
-
-    client.on(:order_update) do |payload|
-      OrderStatusUpdater.call(payload)
+    client = DhanHQ::WS::Orders.connect do |order_update|
+      OrderStatusUpdater.call(order_update)
     end
 
     client.on(:error) { |err| Rails.logger.error("Dhan order WS error: #{err}") }
 
-    client.start
-    client.wait!
+    loop do
+      sleep 30
+      break unless client.connected?
+    end
   end
 end
 ```
+
+`DhanHQ::WS::Orders::Client` also tracks state for you without any extra
+wiring — `client.order_state(order_no)`, `client.orders_by_status(status)`,
+`client.pending_orders`, and friends stay in sync as updates arrive, so
+`OrderStatusUpdater` doesn't need to re-derive status transitions from raw
+payloads.
 
 Inside `OrderStatusUpdater` you can reconcile the payload with your local order
 records, notify users via ActionCable or email, etc.

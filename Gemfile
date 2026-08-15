@@ -41,6 +41,10 @@ group :test do
   # `dhanhq:install` generator under lib/generators/. This gem stays
   # Rails-free at runtime -- railties is dev/test-only.
   gem "railties"
+  # Provides ActiveJob::Base, needed to load and test
+  # DhanHQ::Jobs::PlaceOrderJob under lib/DhanHQ/jobs/. Dev/test-only, same
+  # reasoning as railties above.
+  gem "activejob"
 end
 
 # Optional tools for local technical analysis experiments (not part of the gem)
