@@ -11,7 +11,10 @@ RSpec.describe "Sandbox Connectivity", vcr: { record: :new_episodes } do
   before do
     # Clear memoized resources to ensure fresh Client initialization with new config
     DhanHQ::Models::Profile.instance_variable_set(:@api, nil)
+    DhanHQ::Models::Profile.instance_variable_set(:@resource, nil)
     DhanHQ::Models::Funds.instance_variable_set(:@api, nil)
+    DhanHQ::Models::Funds.instance_variable_set(:@resource, nil)
+    DhanHQ.reset_default_client!
 
     DhanHQ.configure_with_env
     # Force sandbox mode for this spec

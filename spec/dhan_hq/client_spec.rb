@@ -447,4 +447,55 @@ RSpec.describe DhanHQ::Client do
       end
     end
   end
+
+  describe "multi-instance isolation" do
+    let(:real_config) do
+      DhanHQ::Configuration.new do |c|
+        c.client_id = "real_client_id"
+        c.access_token = "real_token"
+        c.base_url = "https://api.dhan.co/v2"
+        c.sandbox = false
+      end
+    end
+
+    let(:sandbox_config) do
+      DhanHQ::Configuration.new do |c|
+        c.client_id = "sandbox_client_id"
+        c.access_token = "sandbox_token"
+        c.base_url = "https://sandbox.dhan.co/v2"
+        c.sandbox = true
+      end
+    end
+
+    let(:real_client) { described_class.new(config: real_config) }
+    let(:sandbox_client) { described_class.new(config: sandbox_config) }
+
+    it "maintains completely isolated connections and base URLs" do
+      expect(real_client.connection.url_prefix.to_s).to eq("https://api.dhan.co/v2")
+      expect(sandbox_client.connection.url_prefix.to_s).to eq("https://sandbox.dhan.co/v2")
+    end
+
+    it "sends requests to the respective endpoints with separate credentials" do
+      stub_request(:get, "https://api.dhan.co/v2/orders")
+        .with(headers: { "Access-Token" => "real_token" })
+        .to_return(status: 200, body: [{ orderId: "real_1" }].to_json, headers: { "Content-Type" => "application/json" })
+
+      stub_request(:get, "https://sandbox.dhan.co/v2/orders")
+        .with(headers: { "Access-Token" => "sandbox_token" })
+        .to_return(status: 200, body: [{ orderId: "sandbox_1" }].to_json, headers: { "Content-Type" => "application/json" })
+
+      real_resp = real_client.orders.all
+      sandbox_resp = sandbox_client.orders.all
+
+      expect(real_resp.first["orderId"]).to eq("real_1")
+      expect(sandbox_resp.first["orderId"]).to eq("sandbox_1")
+    end
+
+    it "exposes resource accessors bound to the instance" do
+      expect(real_client.orders.client).to eq(real_client)
+      expect(sandbox_client.orders.client).to eq(sandbox_client)
+      expect(real_client.positions.client).to eq(real_client)
+      expect(real_client.market_feed.client).to eq(real_client)
+    end
+  end
 end

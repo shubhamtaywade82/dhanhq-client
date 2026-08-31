@@ -19,11 +19,12 @@ module DhanHQ
         ##
         # Initialize Market Depth WebSocket client
         # @param symbols [Array<String, Hash>] List of symbols (or metadata hashes) to subscribe to
+        # @param config [DhanHQ::Configuration, nil] Optional configuration instance
         # @param options [Hash] Connection options
-        def initialize(symbols: [], **options)
-          cfg = DhanHQ.configuration
+        def initialize(symbols: [], config: nil, **options)
+          cfg = config || DhanHQ.configuration || DhanHQ.ensure_configuration!
           url = options[:url] || build_market_depth_url(cfg)
-          super(url: url, **options)
+          super(url: url, config: cfg, **options)
 
           @symbols = Array(symbols)
           @subscriptions = Concurrent::Map.new

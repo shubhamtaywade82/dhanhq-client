@@ -78,7 +78,7 @@ module DhanHQ
         ##
         # Authenticate with DhanHQ Orders WebSocket
         def authenticate
-          cfg = DhanHQ.configuration
+          cfg = @config || DhanHQ.configuration
 
           if cfg.ws_user_type.to_s.upcase == "PARTNER"
             payload = {

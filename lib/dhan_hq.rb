@@ -3,7 +3,11 @@
 require "json"
 require "logger"
 require "zeitwerk"
-require "dotenv/load"
+begin
+  require "dotenv/load"
+rescue LoadError
+  # Dotenv is optional in host applications
+end
 require "faraday"
 # Minimal eager requires for backward-compatible constants.
 # These are widely referenced (e.g. `DhanHQ::BaseAPI`) and should not depend on
@@ -106,8 +110,9 @@ module DhanHQ
     # @return [void]
     def configure
       self.configuration ||= Configuration.new
-      yield(configuration)
+      yield(configuration) if block_given?
       self.logger ||= Logger.new($stdout, level: Logger::INFO)
+      @default_client = Client.new(config: configuration)
     end
 
     # default logger so calls like DhanHQ.logger&.info never explode
@@ -116,6 +121,18 @@ module DhanHQ
     # @return [Logger] The configured logger, defaulting to STDOUT at INFO level.
     def logger
       @logger ||= Logger.new($stdout, level: Logger::INFO)
+    end
+
+    # Global default client (used for backward compatibility with class-level APIs)
+    #
+    # @return [DhanHQ::Client]
+    def default_client
+      @default_client ||= Client.new(config: ensure_configuration!)
+    end
+
+    # Resets the global default client
+    def reset_default_client!
+      @default_client = nil
     end
 
     # Configures the DhanHQ client using environment variables.
@@ -129,6 +146,7 @@ module DhanHQ
     # @return [void]
     def configure_with_env
       self.configuration = Configuration.new
+      @default_client = Client.new(config: configuration)
     end
 
     # Ensures configuration exists, bootstrapping from ENV when nil.
@@ -140,9 +158,10 @@ module DhanHQ
       self.configuration ||= Configuration.new
     end
 
-    # Resets the configuration to nil.
+    # Resets the configuration and default client to nil.
     def reset_configuration!
       self.configuration = nil
+      @default_client = nil
     end
 
     # Configures the DhanHQ client by fetching credentials from a token endpoint.

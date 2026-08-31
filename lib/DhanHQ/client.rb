@@ -42,41 +42,64 @@ module DhanHQ
     ].freeze
     private_constant :RETRYABLE_TRANSPORT_ERRORS
 
-    attr_reader :token_manager
+    attr_reader :config, :token_manager, :api_type
 
-    # Initializes a new DhanHQ Client.
+    # Initializes a new DhanHQ Client with instance-level configuration and rate limiting.
     #
-    # Establishes state and checks its one invariant; the HTTP connection is opened
-    # lazily on first use, so constructing a client does no network setup.
-    #
-    # @example Create a new client:
-    #   client = DhanHQ::Client.new(api_type: :order_api)
-    #
+    # @param config_or_attrs [DhanHQ::Configuration, Hash, nil] Optional configuration or attribute hash
+    # @param config [DhanHQ::Configuration, nil] Optional keyword configuration
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
-    # @return [DhanHQ::Client] A new client instance.
-    # @raise [DhanHQ::Error] If the rate limiter cannot be resolved for this API type.
-    def initialize(api_type:)
-      DhanHQ.ensure_configuration!
-      # Shared per API type, so separate clients coordinate against one limit.
+    def initialize(config_or_attrs = nil, config: nil, api_type: :order_api)
+      @config = resolve_config(config_or_attrs, config)
+      @api_type = api_type
       @rate_limiter = RateLimiter.for(api_type)
 
       raise DhanHQ::Error, "RateLimiter initialization failed" unless @rate_limiter
     end
 
     # The Faraday connection used for HTTP requests.
-    #
-    # Built on first use and rebuilt whenever the configured base URL changes — which
-    # happens when sandbox mode is toggled, or when a token endpoint hands back a
-    # different host mid-process.
+    # Built on first use and rebuilt whenever the configured base URL changes.
     #
     # @return [Faraday::Connection]
     def connection
-      current_url = DhanHQ.configuration.base_url
+      current_url = @config.base_url
       return @connection if @connection && @last_base_url == current_url
 
       @last_base_url = current_url
       @connection = build_connection(current_url)
     end
+
+    # Resource accessors bound to this client instance
+    def orders = @orders ||= Resources::Orders.new(client: self)
+    def market_feed = @market_feed ||= Resources::MarketFeed.new(client: self)
+    def positions = @positions ||= Resources::Positions.new(client: self)
+    def holdings = @holdings ||= Resources::Holdings.new(client: self)
+    def historical_data = @historical_data ||= Resources::HistoricalData.new(client: self)
+    def option_chain = @option_chain ||= Resources::OptionChain.new(client: self)
+    def funds = @funds ||= Resources::Funds.new(client: self)
+    def trades = @trades ||= Resources::Trades.new(client: self)
+    def forever_orders = @forever_orders ||= Resources::ForeverOrders.new(client: self)
+    def alert_orders = @alert_orders ||= Resources::AlertOrders.new(client: self)
+    def iceberg_orders = @iceberg_orders ||= Resources::IcebergOrders.new(client: self)
+    def super_orders = @super_orders ||= Resources::SuperOrders.new(client: self)
+    def twap_orders = @twap_orders ||= Resources::TwapOrders.new(client: self)
+    def statements = @statements ||= Resources::Statements.new(client: self)
+    def kill_switch = @kill_switch ||= Resources::KillSwitch.new(client: self)
+    def pnl_exit = @pnl_exit ||= Resources::PnlExit.new(client: self)
+    def trader_control = @trader_control ||= Resources::TraderControl.new(client: self)
+    def ip_setup = @ip_setup ||= Resources::IPSetup.new(client: self)
+    def edis = @edis ||= Resources::Edis.new(client: self)
+
+    # WebSocket streams bound to this client instance configuration
+    def ws_market_feed(mode: :ticker, url: nil, &block)
+      WS::Client.new(mode: mode, url: url, config: @config).tap do |ws|
+        ws.start if block_given?
+        ws.on(:tick, &block) if block_given?
+      end
+    end
+
+    def ws_order_update = WS::Orders.new(config: @config)
+    def ws_market_depth = WS::MarketDepth.new(config: @config)
 
     # Sends an HTTP request to the API with automatic retry for transient errors.
     #
@@ -93,8 +116,6 @@ module DhanHQ
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
 
-      # A non-idempotent write is not safely retryable: the API has no idempotency
-      # key, so a request that timed out may already have reached the exchange.
       effective_retries = retryable_write?(method, path) ? retries : 0
 
       with_auth_retry do
@@ -112,10 +133,9 @@ module DhanHQ
       yield
     rescue DhanHQ::InvalidAuthenticationError, DhanHQ::InvalidTokenError,
            DhanHQ::TokenExpiredError, DhanHQ::AuthenticationFailedError => e
-      config = DhanHQ.configuration
-      raise unless config&.access_token_provider
+      raise unless @config&.access_token_provider
 
-      config.on_token_expired&.call(e)
+      @config.on_token_expired&.call(e)
       DhanHQ.logger&.warn("[DhanHQ::Client] Auth failure (#{e.class}), retrying once with fresh token")
       yield
     end
@@ -220,6 +240,18 @@ module DhanHQ
 
     private
 
+    def resolve_config(config_or_attrs, keyword_config)
+      if config_or_attrs.is_a?(DhanHQ::Configuration)
+        config_or_attrs
+      elsif config_or_attrs.is_a?(Hash)
+        DhanHQ::Configuration.new(config_or_attrs)
+      elsif keyword_config
+        keyword_config
+      else
+        DhanHQ.ensure_configuration!
+      end
+    end
+
     # Simulator that answers state-changing requests locally when dry run is on.
     #
     # @return [DhanHQ::DryRun::Simulator]
@@ -231,7 +263,7 @@ module DhanHQ
     def retryable_write?(method, path)
       return true unless WritePaths.mutating?(method, path)
 
-      DhanHQ.configuration&.retry_non_idempotent_writes? || false
+      @config&.retry_non_idempotent_writes? || false
     end
 
     # Fills in a +correlationId+ on order placements that lack one, so a caller who
@@ -240,7 +272,7 @@ module DhanHQ
     def with_correlation_id(method, path, payload)
       return payload unless WritePaths.order_placement?(method, path)
       return payload unless payload.is_a?(Hash)
-      return payload unless DhanHQ.configuration&.auto_correlation_id?
+      return payload unless @config&.auto_correlation_id?
       return payload if correlation_id?(payload)
 
       inject_correlation_id(payload)
