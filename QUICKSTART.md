@@ -20,6 +20,8 @@ end
 
 Rails app? Put the block in `config/initializers/dhanhq.rb` and read credentials via `Rails.application.credentials.dig(:dhanhq)` — see [docs/RAILS_INTEGRATION.md](docs/RAILS_INTEGRATION.md).
 
+Managing multiple accounts or sandboxes concurrently? Instantiate isolated clients: `client = DhanHQ::Client.new(client_id: "...", access_token: "...")` and call resources directly via `client.positions.all`, `client.orders.place(...)`.
+
 ## 2. Read data (positions, holdings, funds)
 
 ```ruby

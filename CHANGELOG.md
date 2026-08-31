@@ -1,3 +1,22 @@
+## [4.0.0] - 2026-08-31
+
+### Added
+
+- **Multi-Instance Client Isolation (`DhanHQ::Client.new`)** — run multiple isolated client instances in the same process with separate configurations, credentials, sandbox environments, and rate limiters. Ideal for multi-tenant applications, managing multiple trading accounts concurrently, or comparing sandbox vs. production environments side-by-side.
+  ```ruby
+  client_a = DhanHQ::Client.new(client_id: "ACC_A", access_token: "TOKEN_A")
+  client_b = DhanHQ::Client.new(client_id: "ACC_B", access_token: "TOKEN_B", sandbox: true)
+
+  orders_a = client_a.orders.all
+  orders_b = client_b.orders.all
+  ```
+- **Instance-bound Resource Accessors** — direct accessors on `DhanHQ::Client` instances (`client.orders`, `client.positions`, `client.holdings`, `client.funds`, `client.trades`, `client.market_feed`, `client.option_chain`, `client.historical_data`, `client.forever_orders`, `client.alert_orders`, `client.iceberg_orders`, `client.super_orders`, `client.twap_orders`, `client.statements`, `client.kill_switch`, `client.pnl_exit`, `client.trader_control`, `client.ip_setup`, `client.edis`) bound to that client's configuration and routed to matching rate-limiting tiers (`client_for(API_TYPE)`).
+- **Instance-bound WebSocket Helpers** — `client.ws_market_feed`, `client.ws_order_update`, and `client.ws_market_depth` configured automatically with the client instance's credentials and URLs.
+- **Keyword Argument Initialization** — `DhanHQ::Client.new` accepts keyword configuration parameters (`dry_run: true`, `sandbox: true`, `client_id: "..."`, `access_token: "..."`) or a `Configuration` instance.
+- **Per-Instance Dry-Run Mode** — `DhanHQ::Client.new(dry_run: true)` simulates state-changing writes locally for that instance regardless of the global configuration.
+- **Dynamic Model Resource Invalidation** — `DhanHQ.reset_model_resources!` automatically refreshes class-level model caches (`Models::Order.resource`, etc.) whenever `DhanHQ.configure`, `configure_with_env`, `configuration=`, or `reset_configuration!` is invoked.
+- **Per-Client Auto Token Management** — `client.enable_auto_token_management!(dhan_client_id: ..., pin: ..., totp_secret: ...)` for automated TOTP-based token lifecycle management per client instance.
+
 ## [3.4.0] - 2026-08-15
 
 ### Added

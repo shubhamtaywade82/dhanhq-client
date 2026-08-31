@@ -130,6 +130,33 @@ RSpec.describe DhanHQ::Client do
 
       expect(DhanHQ.logger).to have_received(:warn).with(/DHAN_DRY_RUN/)
     end
+
+    context "with per-instance configuration" do
+      let(:dry_run_client) { described_class.new(dry_run: true) }
+      let(:live_client) { described_class.new(dry_run: false) }
+
+      before { DhanHQ.configuration.dry_run = false }
+
+      it "simulates requests on the dry-run instance despite global dry_run being false" do
+        response = dry_run_client.request(:post, "/v2/orders", order_payload)
+
+        expect(response["dryRun"]).to be(true)
+        expect(response["orderId"]).to start_with("DRYRUN-")
+        expect(WebMock).not_to have_requested(:post, "https://api.dhan.co/v2/orders")
+      end
+
+      it "sends live requests on the non-dry-run instance when global dry_run is true" do
+        DhanHQ.configuration.dry_run = true
+        stub_request(:post, "https://api.dhan.co/v2/orders")
+          .to_return(status: 200, body: { orderId: "live-1" }.to_json,
+                     headers: { "Content-Type" => "application/json" })
+
+        response = live_client.request(:post, "/v2/orders", order_payload)
+
+        expect(response["orderId"]).to eq("live-1")
+        expect(WebMock).to have_requested(:post, "https://api.dhan.co/v2/orders")
+      end
+    end
   end
 
   describe "transient retries on non-idempotent writes" do

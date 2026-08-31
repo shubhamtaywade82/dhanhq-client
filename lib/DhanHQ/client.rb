@@ -49,8 +49,9 @@ module DhanHQ
     # @param config_or_attrs [DhanHQ::Configuration, Hash, nil] Optional configuration or attribute hash
     # @param config [DhanHQ::Configuration, nil] Optional keyword configuration
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
-    def initialize(config_or_attrs = nil, config: nil, api_type: :order_api)
-      @config = resolve_config(config_or_attrs, config)
+    # @param attrs [Hash] Additional keyword configuration attributes
+    def initialize(config_or_attrs = nil, config: nil, api_type: :order_api, **attrs)
+      @config = resolve_config(config_or_attrs, config, attrs)
       @api_type = api_type
       @rate_limiter = RateLimiter.for(api_type)
 
@@ -240,11 +241,12 @@ module DhanHQ
       @token_manager.generate!
     end
 
-    private
-
     # A client sharing this one's config but rate-limited for a different API tier.
     # RateLimiter.for(api_type) is a shared instance per type, so sibling clients still
     # throttle against the same counters as any other client using that tier.
+    #
+    # @param api_type [Symbol] Target API tier (:order_api, :data_api, :non_trading_api, :option_chain)
+    # @return [DhanHQ::Client]
     def client_for(api_type)
       return self if api_type == @api_type
 
@@ -252,13 +254,17 @@ module DhanHQ
       @sibling_clients[api_type] ||= self.class.new(config: @config, api_type: api_type)
     end
 
-    def resolve_config(config_or_attrs, keyword_config)
+    private
+
+    def resolve_config(config_or_attrs, keyword_config, attrs = {})
       if config_or_attrs.is_a?(DhanHQ::Configuration)
         config_or_attrs
       elsif config_or_attrs.is_a?(Hash)
-        DhanHQ::Configuration.new(config_or_attrs)
+        DhanHQ::Configuration.new(config_or_attrs.merge(attrs))
       elsif keyword_config
         keyword_config
+      elsif attrs.any?
+        DhanHQ::Configuration.new(attrs)
       else
         DhanHQ.ensure_configuration!
       end

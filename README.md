@@ -218,6 +218,34 @@ end
 
 When the API returns 401, the client retries **once** with a fresh token from your provider.
 
+### Multi-Instance Clients (Multi-Account / Multi-Tenant)
+
+For multi-tenant applications, managing multiple trading accounts concurrently, or isolating sandbox from production within the same process, construct explicit `DhanHQ::Client` instances:
+
+```ruby
+# Account 1 (Live Trading)
+client1 = DhanHQ::Client.new(
+  client_id: "ACC_1_ID",
+  access_token: "ACC_1_TOKEN"
+)
+
+# Account 2 (Sandbox / Testing)
+client2 = DhanHQ::Client.new(
+  client_id: "ACC_2_ID",
+  access_token: "ACC_2_TOKEN",
+  sandbox: true,
+  dry_run: true
+)
+
+# Resource accessors are bound to the client instance:
+positions = client1.positions.all
+orders    = client2.orders.all
+
+# Instance-bound WebSocket streams:
+ws_stream = client1.ws_market_feed(mode: :ticker) { |tick| puts tick[:ltp] }
+ws_orders = client1.ws_order_update
+```
+
 > **Full details**: TOTP flows, partner mode, token endpoint bootstrap, auto-management — see [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
 
 ---
