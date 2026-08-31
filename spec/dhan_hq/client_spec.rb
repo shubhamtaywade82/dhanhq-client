@@ -491,11 +491,17 @@ RSpec.describe DhanHQ::Client do
       expect(sandbox_resp.first["orderId"]).to eq("sandbox_1")
     end
 
-    it "exposes resource accessors bound to the instance" do
+    it "binds order-tier resource accessors to the same client instance" do
       expect(real_client.orders.client).to eq(real_client)
       expect(sandbox_client.orders.client).to eq(sandbox_client)
       expect(real_client.positions.client).to eq(real_client)
-      expect(real_client.market_feed.client).to eq(real_client)
+    end
+
+    it "binds data-tier resource accessors to a sibling client with the same configuration" do
+      expect(real_client.market_feed.client.config).to eq(real_config)
+      expect(real_client.market_feed.client.api_type).to eq(:data_api)
+      expect(sandbox_client.market_feed.client.config).to eq(sandbox_config)
+      expect(sandbox_client.market_feed.client.api_type).to eq(:data_api)
     end
   end
 end

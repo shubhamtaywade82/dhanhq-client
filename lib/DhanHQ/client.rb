@@ -76,27 +76,19 @@ module DhanHQ
     def market_feed = @market_feed ||= Resources::MarketFeed.new(client: client_for(Resources::MarketFeed::API_TYPE))
     def positions = @positions ||= Resources::Positions.new(client: client_for(Resources::Positions::API_TYPE))
     def holdings = @holdings ||= Resources::Holdings.new(client: client_for(Resources::Holdings::API_TYPE))
-    def historical_data
-      @historical_data ||= Resources::HistoricalData.new(client: client_for(Resources::HistoricalData::API_TYPE))
-    end
+    def historical_data = @historical_data ||= Resources::HistoricalData.new(client: client_for(Resources::HistoricalData::API_TYPE))
     def option_chain = @option_chain ||= Resources::OptionChain.new(client: client_for(Resources::OptionChain::API_TYPE))
     def funds = @funds ||= Resources::Funds.new(client: client_for(Resources::Funds::API_TYPE))
     def trades = @trades ||= Resources::Trades.new(client: client_for(Resources::Trades::API_TYPE))
-    def forever_orders
-      @forever_orders ||= Resources::ForeverOrders.new(client: client_for(Resources::ForeverOrders::API_TYPE))
-    end
+    def forever_orders = @forever_orders ||= Resources::ForeverOrders.new(client: client_for(Resources::ForeverOrders::API_TYPE))
     def alert_orders = @alert_orders ||= Resources::AlertOrders.new(client: client_for(Resources::AlertOrders::API_TYPE))
-    def iceberg_orders
-      @iceberg_orders ||= Resources::IcebergOrders.new(client: client_for(Resources::IcebergOrders::API_TYPE))
-    end
+    def iceberg_orders = @iceberg_orders ||= Resources::IcebergOrders.new(client: client_for(Resources::IcebergOrders::API_TYPE))
     def super_orders = @super_orders ||= Resources::SuperOrders.new(client: client_for(Resources::SuperOrders::API_TYPE))
     def twap_orders = @twap_orders ||= Resources::TwapOrders.new(client: client_for(Resources::TwapOrders::API_TYPE))
     def statements = @statements ||= Resources::Statements.new(client: client_for(Resources::Statements::API_TYPE))
     def kill_switch = @kill_switch ||= Resources::KillSwitch.new(client: client_for(Resources::KillSwitch::API_TYPE))
     def pnl_exit = @pnl_exit ||= Resources::PnlExit.new(client: client_for(Resources::PnlExit::API_TYPE))
-    def trader_control
-      @trader_control ||= Resources::TraderControl.new(client: client_for(Resources::TraderControl::API_TYPE))
-    end
+    def trader_control = @trader_control ||= Resources::TraderControl.new(client: client_for(Resources::TraderControl::API_TYPE))
     def ip_setup = @ip_setup ||= Resources::IPSetup.new(client: client_for(Resources::IPSetup::API_TYPE))
     def edis = @edis ||= Resources::Edis.new(client: client_for(Resources::Edis::API_TYPE))
 
