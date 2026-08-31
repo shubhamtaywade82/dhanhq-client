@@ -9,12 +9,19 @@ VCR.configure do |config|
   config.configure_rspec_metadata! # Automatically tag RSpec examples with VCR metadata
 
   # Filter sensitive data from cassettes
-  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { DhanHQ.configuration&.access_token }
-  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { ENV.fetch("DHAN_ACCESS_TOKEN", nil) }
-  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { "test_access_token" }
-  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { DhanHQ.configuration&.client_id }
-  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { ENV.fetch("DHAN_CLIENT_ID", nil) }
-  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { "test_client_id" }
+  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") do
+    token = DhanHQ.configuration&.access_token
+    token = ENV.fetch("DHAN_ACCESS_TOKEN", nil) if token.nil? || token.empty?
+    token = ENV.fetch("ACCESS_TOKEN", nil) if token.nil? || token.empty?
+    token.nil? || token.empty? ? "test_access_token" : token
+  end
+
+  config.filter_sensitive_data("<DHAN_CLIENT_ID>") do
+    cid = DhanHQ.configuration&.client_id
+    cid = ENV.fetch("DHAN_CLIENT_ID", nil) if cid.nil? || cid.empty?
+    cid = ENV.fetch("CLIENT_ID", nil) if cid.nil? || cid.empty?
+    cid.nil? || cid.empty? ? "test_client_id" : cid
+  end
 
   # Allow overriding recording mode via ENV
   # Usage: VCR_RECORD=all bundle exec rspec
