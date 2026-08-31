@@ -221,7 +221,12 @@ module DhanHQ
       @dry_run = attrs.key?(:dry_run) ? attrs[:dry_run] : env_flag("DHAN_DRY_RUN", default: false)
       @retry_non_idempotent_writes = attrs.key?(:retry_non_idempotent_writes) ? attrs[:retry_non_idempotent_writes] : env_flag("DHAN_RETRY_WRITES", default: false)
       @auto_correlation_id = attrs.key?(:auto_correlation_id) ? attrs[:auto_correlation_id] : env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
-      @warn_on_ambiguous_write_failure = attrs.key?(:warn_on_ambiguous_write_failure) ? attrs[:warn_on_ambiguous_write_failure] : env_flag("DHAN_WARN_AMBIGUOUS_WRITE_FAILURE", default: true)
+      @warn_on_ambiguous_write_failure = if attrs.key?(:warn_on_ambiguous_write_failure)
+                                           attrs[:warn_on_ambiguous_write_failure]
+                                         else
+                                           env_flag("DHAN_WARN_AMBIGUOUS_WRITE_FAILURE",
+                                                    default: true)
+                                         end
       @base_url = attrs[:base_url] || ENV.fetch("DHAN_BASE_URL", nil)
       @ws_version = (attrs[:ws_version] || ENV.fetch("DHAN_WS_VERSION", 2)).to_i
       @ws_order_url = attrs[:ws_order_url] || ENV.fetch("DHAN_WS_ORDER_URL", nil)

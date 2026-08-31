@@ -18,6 +18,10 @@ AllCops:
     # gem's own style, and references Rails/Sidekiq/ActionCable constants that
     # don't exist in this gem's own context.
     - "lib/generators/**/templates/**/*"
+    - "node_modules/**/*"
+    - "website/node_modules/**/*"
+    - "vendor/**/*"
+    - "pkg/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

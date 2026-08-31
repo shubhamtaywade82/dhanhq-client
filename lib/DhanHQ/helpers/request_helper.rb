@@ -24,7 +24,7 @@ module DhanHQ
     def current_config
       if respond_to?(:config) && config
         config
-      elsif respond_to?(:client) && client&.respond_to?(:config) && client.config
+      elsif respond_to?(:client) && client.respond_to?(:config) && client.config
         client.config
       else
         DhanHQ.configuration
