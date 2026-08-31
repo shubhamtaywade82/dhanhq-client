@@ -9,9 +9,12 @@ VCR.configure do |config|
   config.configure_rspec_metadata! # Automatically tag RSpec examples with VCR metadata
 
   # Filter sensitive data from cassettes
-  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { DhanHQ.configuration.access_token }
-  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { DhanHQ.configuration.client_id }
+  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { DhanHQ.configuration&.access_token }
+  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { ENV.fetch("DHAN_ACCESS_TOKEN", nil) }
+  config.filter_sensitive_data("<DHAN_ACCESS_TOKEN>") { "test_access_token" }
+  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { DhanHQ.configuration&.client_id }
   config.filter_sensitive_data("<DHAN_CLIENT_ID>") { ENV.fetch("DHAN_CLIENT_ID", nil) }
+  config.filter_sensitive_data("<DHAN_CLIENT_ID>") { "test_client_id" }
 
   # Allow overriding recording mode via ENV
   # Usage: VCR_RECORD=all bundle exec rspec
