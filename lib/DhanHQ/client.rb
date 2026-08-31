@@ -69,26 +69,36 @@ module DhanHQ
       @connection = build_connection(current_url)
     end
 
-    # Resource accessors bound to this client instance
-    def orders = @orders ||= Resources::Orders.new(client: self)
-    def market_feed = @market_feed ||= Resources::MarketFeed.new(client: self)
-    def positions = @positions ||= Resources::Positions.new(client: self)
-    def holdings = @holdings ||= Resources::Holdings.new(client: self)
-    def historical_data = @historical_data ||= Resources::HistoricalData.new(client: self)
-    def option_chain = @option_chain ||= Resources::OptionChain.new(client: self)
-    def funds = @funds ||= Resources::Funds.new(client: self)
-    def trades = @trades ||= Resources::Trades.new(client: self)
-    def forever_orders = @forever_orders ||= Resources::ForeverOrders.new(client: self)
-    def alert_orders = @alert_orders ||= Resources::AlertOrders.new(client: self)
-    def iceberg_orders = @iceberg_orders ||= Resources::IcebergOrders.new(client: self)
-    def super_orders = @super_orders ||= Resources::SuperOrders.new(client: self)
-    def twap_orders = @twap_orders ||= Resources::TwapOrders.new(client: self)
-    def statements = @statements ||= Resources::Statements.new(client: self)
-    def kill_switch = @kill_switch ||= Resources::KillSwitch.new(client: self)
-    def pnl_exit = @pnl_exit ||= Resources::PnlExit.new(client: self)
-    def trader_control = @trader_control ||= Resources::TraderControl.new(client: self)
-    def ip_setup = @ip_setup ||= Resources::IPSetup.new(client: self)
-    def edis = @edis ||= Resources::Edis.new(client: self)
+    # Resource accessors bound to this client instance. Each resource gets the client
+    # matching its own API_TYPE, so e.g. option chain calls throttle at 1 per 3 sec
+    # instead of borrowing the order client's 10/sec limiter.
+    def orders = @orders ||= Resources::Orders.new(client: client_for(Resources::Orders::API_TYPE))
+    def market_feed = @market_feed ||= Resources::MarketFeed.new(client: client_for(Resources::MarketFeed::API_TYPE))
+    def positions = @positions ||= Resources::Positions.new(client: client_for(Resources::Positions::API_TYPE))
+    def holdings = @holdings ||= Resources::Holdings.new(client: client_for(Resources::Holdings::API_TYPE))
+    def historical_data
+      @historical_data ||= Resources::HistoricalData.new(client: client_for(Resources::HistoricalData::API_TYPE))
+    end
+    def option_chain = @option_chain ||= Resources::OptionChain.new(client: client_for(Resources::OptionChain::API_TYPE))
+    def funds = @funds ||= Resources::Funds.new(client: client_for(Resources::Funds::API_TYPE))
+    def trades = @trades ||= Resources::Trades.new(client: client_for(Resources::Trades::API_TYPE))
+    def forever_orders
+      @forever_orders ||= Resources::ForeverOrders.new(client: client_for(Resources::ForeverOrders::API_TYPE))
+    end
+    def alert_orders = @alert_orders ||= Resources::AlertOrders.new(client: client_for(Resources::AlertOrders::API_TYPE))
+    def iceberg_orders
+      @iceberg_orders ||= Resources::IcebergOrders.new(client: client_for(Resources::IcebergOrders::API_TYPE))
+    end
+    def super_orders = @super_orders ||= Resources::SuperOrders.new(client: client_for(Resources::SuperOrders::API_TYPE))
+    def twap_orders = @twap_orders ||= Resources::TwapOrders.new(client: client_for(Resources::TwapOrders::API_TYPE))
+    def statements = @statements ||= Resources::Statements.new(client: client_for(Resources::Statements::API_TYPE))
+    def kill_switch = @kill_switch ||= Resources::KillSwitch.new(client: client_for(Resources::KillSwitch::API_TYPE))
+    def pnl_exit = @pnl_exit ||= Resources::PnlExit.new(client: client_for(Resources::PnlExit::API_TYPE))
+    def trader_control
+      @trader_control ||= Resources::TraderControl.new(client: client_for(Resources::TraderControl::API_TYPE))
+    end
+    def ip_setup = @ip_setup ||= Resources::IPSetup.new(client: client_for(Resources::IPSetup::API_TYPE))
+    def edis = @edis ||= Resources::Edis.new(client: client_for(Resources::Edis::API_TYPE))
 
     # WebSocket streams bound to this client instance configuration
     def ws_market_feed(mode: :ticker, url: nil, &block)
@@ -98,8 +108,8 @@ module DhanHQ
       end
     end
 
-    def ws_order_update = WS::Orders.new(config: @config)
-    def ws_market_depth = WS::MarketDepth.new(config: @config)
+    def ws_order_update = WS::Orders::Client.new(config: @config)
+    def ws_market_depth = WS::MarketDepth::Client.new(config: @config)
 
     # Sends an HTTP request to the API with automatic retry for transient errors.
     #
@@ -240,6 +250,16 @@ module DhanHQ
 
     private
 
+    # A client sharing this one's config but rate-limited for a different API tier.
+    # RateLimiter.for(api_type) is a shared instance per type, so sibling clients still
+    # throttle against the same counters as any other client using that tier.
+    def client_for(api_type)
+      return self if api_type == @api_type
+
+      @sibling_clients ||= {}
+      @sibling_clients[api_type] ||= self.class.new(config: @config, api_type: api_type)
+    end
+
     def resolve_config(config_or_attrs, keyword_config)
       if config_or_attrs.is_a?(DhanHQ::Configuration)
         config_or_attrs
@@ -256,7 +276,7 @@ module DhanHQ
     #
     # @return [DhanHQ::DryRun::Simulator]
     def dry_run
-      @dry_run ||= DhanHQ::DryRun::Simulator.new
+      @dry_run ||= DhanHQ::DryRun::Simulator.new(config: @config)
     end
 
     # A write may be auto-retried only when the user has explicitly opted in.
