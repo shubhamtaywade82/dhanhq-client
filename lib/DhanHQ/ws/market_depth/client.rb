@@ -14,7 +14,9 @@ module DhanHQ
       # Provides real-time market depth (bid/ask levels) for specified symbols
       class Client < BaseConnection
         SUBSCRIBE_REQUEST_CODE    = 23
-        UNSUBSCRIBE_REQUEST_CODE  = 12
+        # Unsubscribe is the subscribe code + 1 per the Full Market Depth docs.
+        # RequestCode 12 is the disconnect frame and would close the socket.
+        UNSUBSCRIBE_REQUEST_CODE  = 24
 
         ##
         # Initialize Market Depth WebSocket client
@@ -129,13 +131,18 @@ module DhanHQ
 
         ##
         # Process incoming WebSocket message
-        # @param data [String] Raw message data
+        # @param data [String] Raw binary message (may contain stacked frames)
         def process_message(data)
-          depth_data = @decoder.decode(data)
-          return unless depth_data
-
-          emit(:depth_update, depth_data)
-          emit(:raw_depth, data) # For debugging
+          frames = @decoder.decode(data)
+          frames.each do |frame|
+            if frame[:side] == :disconnect
+              DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth] disconnect code=#{frame[:disconnect_code]}")
+              emit(:disconnect, frame)
+            else
+              emit(:depth_update, frame)
+            end
+          end
+          emit(:raw_depth, data) unless frames.empty? # For debugging
         rescue StandardError => e
           DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth] Error processing message: #{e.class} #{e.message}")
           emit(:error, e)

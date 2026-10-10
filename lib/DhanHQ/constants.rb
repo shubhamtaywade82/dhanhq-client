@@ -500,14 +500,23 @@ module DhanHQ
       ].freeze
     end
 
-    # Public rate limits published in DhanHQ API documentation.
+    # Public rate limits published in DhanHQ API documentation
+    # (https://dhanhq.co/docs/v2/ — Rate Limits).
     module RateLimit
-      ORDER_API = { per_second: 10, per_day: 100_000 }.freeze
-      DATA_API = { per_second: 5, per_day: 7_000 }.freeze
+      # Order APIs: 10/sec, 250/min, 1,000/hr, 7,000/day (25 modifications/order).
+      ORDER_API = { per_second: 10, per_minute: 250, per_hour: 1_000, per_day: 7_000 }.freeze
+      # Data APIs: 5/sec, 100,000/day.
+      DATA_API = { per_second: 5, per_day: 100_000 }.freeze
+      # Market Quote APIs: 1/sec (up to 1,000 instruments per call).
       QUOTE_API = { per_second: 1 }.freeze
+      # Option chain: 1 unique request per 3 seconds.
       OPTION_CHAIN = { per_second: 1.0 / 3 }.freeze
+      # Non-trading APIs: 20/sec.
       NON_TRADING_API = { per_second: 20 }.freeze
       ORDER_MODIFICATIONS_PER_ORDER = 25
+      # Live Market Feed: 5 connections/user, 5,000 instruments per connection,
+      # max 100 instruments per subscribe message.
+      MARKET_FEED = { max_connections: 5, instruments_per_connection: 5_000, instruments_per_message: 100 }.freeze
     end
 
     # Canonical Dhan API, auth, WebSocket and instrument URLs (see https://dhanhq.co/docs/v2/).

@@ -109,10 +109,13 @@ module DhanHQ
 
     # WebSocket streams bound to this client instance configuration
     def ws_market_feed(mode: :ticker, url: nil, &block)
-      WS::Client.new(mode: mode, url: url, config: @config).tap do |ws|
-        ws.start if block_given?
-        ws.on(:tick, &block) if block_given?
-      end
+      ws = WS::Client.new(mode: mode, url: url, config: @config)
+      # Register the tick callback BEFORE the socket starts: the connection runs
+      # in a background thread, so subscribing after #start can drop the first
+      # ticks delivered while the callback registration is still in flight.
+      ws.on(:tick, &block) if block_given?
+      ws.start if block_given?
+      ws
     end
 
     def ws_order_update = WS::Orders::Client.new(config: @config)
@@ -130,6 +133,7 @@ module DhanHQ
       payload = with_correlation_id(method, path, payload)
       return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
 
+      assert_sandbox_capability!(method, path)
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
 
@@ -269,6 +273,21 @@ module DhanHQ
     end
 
     private
+
+    # Fails fast with a clear error when the effective target host is the
+    # sandbox but the endpoint is not part of the sandbox API surface. Without
+    # this the caller would see an opaque 404/405 or DH-905 from the host.
+    def assert_sandbox_capability!(method, path)
+      return unless @config.environment_for(@api_type) == :sandbox
+      return unless SandboxCapabilities.unsupported?(method, path)
+
+      reason = SandboxCapabilities.reason_for(method, path)
+      raise DhanHQ::SandboxUnsupportedError,
+            "#{method.to_s.upcase} #{path} cannot run on the Dhan sandbox host " \
+            "(https://sandbox.dhan.co/v2): #{reason}. Use mode :hybrid (live " \
+            "market data + sandbox execution), route this tier to production via " \
+            "config.environment_overrides, or run in :live mode."
+    end
 
     def resolve_config(config_or_attrs, keyword_config, attrs = {})
       if config_or_attrs.is_a?(DhanHQ::Configuration)

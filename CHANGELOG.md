@@ -1,3 +1,21 @@
+## [Unreleased]
+
+### Fixed
+
+- **Live Market Feed subscribed every mode as ticker** — `WS::Connection::SUB_CODES` mapped `ticker/quote/full` all to RequestCode **15** (LTP-only packets), so `mode: :full` silently delivered 8-byte ticker ticks instead of the 162-byte 26-field + 5-level-depth packets. Each mode now maps to its documented code: **15 / 17 / 21**.
+- **Unsubscribe sent the disconnect frame** — `UNSUB_CODES` used RequestCode **12** (the official Disconnect Feed code), so any per-instrument unsubscribe told the server to close the socket. Unsubscribe codes are now subscribe+1: **16 / 18 / 22**. `WS::MarketDepth::Client::UNSUBSCRIBE_REQUEST_CODE` likewise fixed 12 → **24**.
+- **Market depth decoder parsed JSON; the wire is binary** — `WS::MarketDepth::Decoder` expected `{"Type":"depth_update"}` JSON that the Full Market Depth WebSocket never sends. Rewritten against the documented binary protocol: 12-byte little-endian header (message length, response code 41 bid / 51 ask / 50 disconnect, segment, security id, sequence) + N×16-byte rows (float64 price, uint32 qty, uint32 orders), with stacked-frame splitting by `message_length`. The client now emits `:depth_update` per frame (with `side:`) and `:disconnect`.
+- **Index packets were dropped** — IDX_I instruments stream response-code-1 packets, but `Decoder::FEED_KIND` had no mapping, so NIFTY/SENSEX subscriptions produced nothing. Index packets now decode per the documented 32-byte layout (latest/open/close/high/low + update time) as `kind: :index`.
+- **Market-status packets were unreachable** — the parser referenced a `RESPONSE_CODES[:market_status]` key that was never defined; code 7 (market open/close notification) now parses and decodes.
+- **Disconnect codes read big-endian** — the disconnect payload is a uint16 little-endian (805–809); it was read as big-endian signed, mangling the codes (805 → 9475). Fixed in the parser and `Packets::DisconnectPacket`; `Packets::Header` is now little-endian throughout per the spec.
+- **Rate limits had the Order/Data daily caps swapped** — `RateLimiter` and `Constants::RateLimit` capped Order APIs at 100,000/day (official: **10/s, 250/min, 1,000/hr, 7,000/day**) and Data APIs at 7,000/day (official: **5/s, 100,000/day**). Both corrected; the 250/min and 1,000/hr windows are now actually enforced for order traffic.
+- **`ws_market_feed` tick-callback race** — the tick callback was registered after the socket thread started; it is now registered before `start`, so the first ticks can no longer be dropped.
+
+### Added
+
+- **Sandbox capability guard** — `DhanHQ::SandboxCapabilities` (derived from the official sandbox OpenAPI spec at `sandbox.dhan.co/v2/v3/api-docs`) and `DhanHQ::SandboxUnsupportedError`. Requests that would target the sandbox host for endpoints the sandbox does not implement (super orders, alerts/multi orders, pnlExit, `/ip/*`, `charts/rollingoption`, `/data/*`, `marketfeed/*`, `optionchain*`, `instrument/*`, `margincalculator/multi`, `globalstocks/*`, `DELETE /positions`, `GET /killswitch`) now fail fast with an actionable message instead of an opaque 404/DH-905. `:hybrid` mode is unaffected — its data tiers keep resolving to production.
+- **Review documentation** — `REVIEW.md` (protocol-verified review with findings F1–F9 and recommendations M1–M9) and `GAP_ANALYSIS.md` (endpoint-by-endpoint matrix: 47 live-spec paths ✅, sandbox matrix, WS packet coverage, auth surface, rate limits, error codes).
+
 ## [4.1.0] - 2026-10-10
 
 ### Added

@@ -14,8 +14,8 @@ module DhanHQ
         uint32 :ltt                     # 4 bytes
         float  :atp                     # 4 bytes
         uint32 :volume                  # 4 bytes
-        int32  :total_sell_qty          # 4 bytes
-        int32  :total_buy_qty           # 4 bytes
+        uint32 :total_sell_qty          # 4 bytes
+        uint32 :total_buy_qty           # 4 bytes
         float  :day_open                # 4 bytes
         float  :day_close               # 4 bytes
         float  :day_high                # 4 bytes

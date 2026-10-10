@@ -9,7 +9,7 @@ module DhanHQ
       class PrevClosePacket < BinData::Record
         endian :little
         float :prev_close    # 4 bytes
-        int32 :oi_prev       # 4 bytes
+        uint32 :oi_prev       # 4 bytes
       end
     end
   end

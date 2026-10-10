@@ -9,9 +9,16 @@ module DhanHQ
     # Low-level wrapper responsible for establishing and maintaining the raw
     # WebSocket connection to the streaming API.
     class Connection
-      SUB_CODES   = { ticker: 15, quote: 15, full: 15 }.freeze # All use RequestCode 15 per official API
-      # Request codes used when unsubscribing from feeds.
-      UNSUB_CODES = { ticker: 12, quote: 12, full: 12 }.freeze # Use disconnect code 12 for unsubscribe
+      # Feed request codes per the official Live Market Feed docs (v2):
+      # 15 = Ticker, 17 = Quote, 21 = Full (26-field + 5-level depth).
+      # RequestCode 15 subscribes to LTP-only ticker packets regardless of the
+      # fields the caller wants, so each mode must map to its own code.
+      SUB_CODES   = { ticker: 15, quote: 17, full: 21 }.freeze
+      # Unsubscribe request codes are the subscribe code + 1 per the docs:
+      # 16 = Ticker, 18 = Quote, 22 = Full. RequestCode 12 is the DISCONNECT
+      # frame and kills the whole connection — it must never be used to
+      # unsubscribe from individual instruments.
+      UNSUB_CODES = { ticker: 16, quote: 18, full: 22 }.freeze
 
       COOL_OFF_429 = 60  # seconds to cool off on 429
       MAX_BACKOFF  = 90  # cap exponential backoff
