@@ -144,14 +144,18 @@ These are **not** mode-aware; they always use the URLs above.
 - **Auth:** Token generation and renewal always use production hosts.
 - **WebSockets:** Sandbox does **not** support WebSocket. Order updates, market feed, and market depth always use production URLs; the gem does not publish or use any sandbox WebSocket URLs.
 
-## Call-all-endpoints script
+## Smoke testing
 
-`bin/call_all_endpoints.rb` invokes every REST endpoint exposed by the gem (read-only by default; use `--all` to include write/destructive calls). Useful for connectivity checks or sandbox verification.
+There is no shipped call-all-endpoints script (an earlier revision of this page
+referenced `bin/call_all_endpoints.rb`, which does not exist in the repo). Use
+what is actually here:
 
 ```bash
-bin/call_all_endpoints.rb              # read-only
-bin/call_all_endpoints.rb --list       # print endpoint list
-bin/call_all_endpoints.rb --all        # include POST/PUT/DELETE
+bin/console                  # IRB with the gem preloaded — try client.profile.get,
+                              # client.market_feed.ltp(...), client.fundlimit.get ...
+bundle exec rspec spec/dhan_hq/sandbox_connectivity_spec.rb   # guarded sandbox probes
+bin/ws_feed_test.rb          # live market-feed smoke test (production WS only)
 ```
 
-Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`. Optional: `DHAN_MODE=hybrid` (or `DHAN_SANDBOX=true`), `DHAN_TEST_SECURITY_ID`, `DHAN_TEST_ORDER_ID`, `DHAN_TEST_ISIN`, `DHAN_TEST_EXPIRY`. When not using `--skip-unavailable`, the script creates a temporary alert for GET/PUT/DELETE alert endpoints and deletes it at exit.
+Requires `DHAN_CLIENT_ID` and `DHAN_ACCESS_TOKEN`. Optional: `DHAN_MODE=hybrid`
+(or `DHAN_SANDBOX=true`).

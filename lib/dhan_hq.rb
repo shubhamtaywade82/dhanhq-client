@@ -87,8 +87,6 @@ module DhanHQ
   require_relative "DhanHQ/skills/builtin/market_data_summarizer"
   DhanHQ::Skills::Registry.load_builtins
 
-  class Error < StandardError; end
-
   class << self
     # Default REST API host used when no custom base URL is provided.
     #
@@ -247,6 +245,10 @@ module DhanHQ
     def fetch_token_endpoint(url, bearer_token, label)
       conn = ::Faraday.new(url: url) do |c|
         c.request :url_encoded
+        # Bounded timeouts, same defaults as Client#build_connection; without
+        # them a stalled token endpoint would hang the caller forever.
+        c.options.timeout = ENV.fetch("DHAN_READ_TIMEOUT", 30).to_i
+        c.options.open_timeout = ENV.fetch("DHAN_CONNECT_TIMEOUT", 10).to_i
         c.adapter ::Faraday.default_adapter
       end
 

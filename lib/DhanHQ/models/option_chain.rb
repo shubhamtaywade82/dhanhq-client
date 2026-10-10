@@ -56,6 +56,13 @@ module DhanHQ
 
       class << self
         ##
+        # The option chain API takes TitleCase keys (e.g. "UnderlyingScripValue");
+        # see BaseModel.param_key_style.
+        def param_key_style
+          :title
+        end
+
+        ##
         # Provides a shared instance of the OptionChain resource.
         #
         # @return [DhanHQ::Resources::OptionChain] The OptionChain resource client instance
