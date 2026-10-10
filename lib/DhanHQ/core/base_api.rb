@@ -29,7 +29,7 @@ module DhanHQ
     # @param params [Hash] Query parameters
     # @return [Hash, Array] The parsed API response
     def get(endpoint, params: {})
-      formatted_params = format_params(endpoint, params)
+      formatted_params = format_params(:get, endpoint, params)
       handle_response(client.get(build_path(endpoint), formatted_params))
     end
 
@@ -39,7 +39,7 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def post(endpoint, params: {})
-      formatted_params = format_params(endpoint, params)
+      formatted_params = format_params(:post, endpoint, params)
       handle_response(client.post(build_path(endpoint), formatted_params))
     end
 
@@ -49,7 +49,7 @@ module DhanHQ
     # @param params [Hash] Request body
     # @return [Hash, Array] The parsed API response
     def put(endpoint, params: {})
-      formatted_params = format_params(endpoint, params)
+      formatted_params = format_params(:put, endpoint, params)
       handle_response(client.put(build_path(endpoint), formatted_params))
     end
 
@@ -58,7 +58,7 @@ module DhanHQ
     # @param endpoint [String] API endpoint
     # @return [Hash, Array] The parsed API response
     def delete(endpoint)
-      formatted_params = format_params(endpoint, {})
+      formatted_params = format_params(:delete, endpoint, {})
       handle_response(client.delete(build_path(endpoint), formatted_params))
     end
 
@@ -72,21 +72,44 @@ module DhanHQ
       "#{self.class::HTTP_PATH}#{endpoint}"
     end
 
-    # Format parameters based on API endpoint. Uses path-based strategy (marketfeed: pass-through,
-    # optionchain: titleize, default: camelize).
-    def format_params(endpoint, params)
+    # Format parameters based on API endpoint. The parameter key style is
+    # declared per operation in the vendored contract (DhanHQ::Contract::Operation::PARAM_STYLES)
+    # and resolved through the registry; the path-based strategy below is only
+    # the legacy fallback for paths the contract does not cover.
+    def format_params(verb, endpoint, params)
       full_path = build_path(endpoint)
       return params if params.empty?
 
-      param_formatter_for(full_path).call(params)
+      param_formatter_for(verb, full_path).call(params)
     end
 
-    # Returns a callable that formats params for the given path (Strategy).
-    def param_formatter_for(full_path)
-      return ->(p) { p } if full_path.include?("/marketfeed")
-      return ->(p) { titleize_keys(p) } if full_path.include?("/optionchain")
+    # Returns a callable that formats params for the given verb + path (Strategy).
+    def param_formatter_for(verb, full_path)
+      style = contract_param_style(verb, full_path)
+      return ->(p) { p } if style == :none
+      return ->(p) { titleize_keys(p) } if style == :titleize
 
       ->(p) { camelize_keys(p) }
+    end
+
+    private
+
+    # @return [Symbol] The parameter key style for this verb + path: the
+    #   contract-declared one when an operation matches, else the legacy
+    #   URL-sniffed strategy for paths absent from the contract.
+    def contract_param_style(verb, full_path)
+      DhanHQ::Contract::Registry.resolve(verb, full_path)&.param_style ||
+        legacy_param_style(full_path)
+    end
+
+    # Legacy casing strategy for paths the contract does not cover (kept for
+    # behaviour compatibility; the conformance suite keeps the bound surface
+    # complete, so this only serves unbound legacy paths).
+    def legacy_param_style(full_path)
+      return :none if full_path.include?("/marketfeed")
+      return :titleize if full_path.include?("/optionchain")
+
+      :camelize
     end
   end
 end
