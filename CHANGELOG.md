@@ -1,5 +1,10 @@
 ## [4.1.0] - 2026-10-10
 
+### Fixed (PR review follow-up)
+
+- **`WS::Registry#stop_all` deadlock** — the registry mutex is no longer held while clients are stopped. Both `WS::Client#stop` and `WS::Orders::Client#stop` call `Registry.unregister` (same mutex) from `stop`, so stopping under the mutex raised a recursive-locking `ThreadError` that the per-client rescue silently swallowed — killing the market feed's `emit(:close, true)` notification (orders clients emit before unregistering, so only theirs survived). `stop_all` now snapshots and clears the client list under the mutex, then stops each client outside it; unregister during that later stop is a no-op delete. Regression spec `spec/dhan_hq/ws/registry_stop_all_spec.rb` covers self-unregistering clients, close-listener notification for both orderings, failing-client isolation, and the empty-registry case.
+- **Typed order guards on derivative order models** — `SuperOrder`, `ForeverOrder`, `TwapOrder` and `IcebergOrder` id guards now raise `DhanHQ::OrderError` (was bare `RuntimeError`), so `rescue DhanHQ::Error` catches them consistently with `Models::Order`. Guard assertions strengthened to the error class; new coverage for `TwapOrder`/`IcebergOrder` (`spec/dhan_hq/models/typed_order_guards_spec.rb`).
+
 ### Fixed (full-gem review pass — `ruby-agent-skills` audit)
 
 - **WebSocket feed request codes now match the official Annexure table** (`dhanhq.co/docs/v2/annexure#feed-request-code`). Market feed subscribe per mode: 15/17/21 (was 15 for all three); unsubscribe: 16/18/22 (was 12 for all — 12 is the whole-connection *Disconnect Feed* frame, so per-instrument unsubscribes most plausibly tore down the entire socket). Market depth unsubscribe: 24 (was 12; subscribe stays 23). New spec `spec/dhan_hq/ws/connection_spec.rb` asserts the mapping. **Caveat:** verified against the published table only — `wss://api-feed.dhan.co` is not reachable from the CI environment (geo-block outside India), so a one-constant revert is documented in the review notes if live testing disagrees.

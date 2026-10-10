@@ -29,15 +29,25 @@ module DhanHQ
 
         # Stops and removes all registered clients.
         #
+        # The client list is snapshotted and cleared under the mutex, but each
+        # client is stopped *after* releasing it: `Client#stop` (market feed and
+        # orders) calls {Registry.unregister} on itself, and Mutex is not
+        # reentrant — stopping under the mutex would raise a recursive-locking
+        # ThreadError that the per-client rescue would silently swallow, losing
+        # the market feed's `emit(:close, true)` notification.
+        #
         # @return [void]
         def stop_all
-          @mutex.synchronize do
-            @clients.dup.each do |c|
-              c.stop
-            rescue StandardError => e
-              DhanHQ.logger&.debug("[DhanHQ::WS::Registry] stop failed: #{e.class} #{e.message}")
-            end
+          clients = @mutex.synchronize do
+            snapshot = @clients.dup
             @clients.clear
+            snapshot
+          end
+
+          clients.each do |c|
+            c.stop
+          rescue StandardError => e
+            DhanHQ.logger&.debug("[DhanHQ::WS::Registry] stop failed: #{e.class} #{e.message}")
           end
         end
       end
