@@ -15,6 +15,7 @@ module DhanHQ
       # @param params [Hash] Query parameters for the request.
       # @return [Hash] API response containing option chain data.
       def fetch(params)
+        params = contract_params(params)
         post("", params: params)
       end
 
@@ -24,6 +25,7 @@ module DhanHQ
       # @param params [Hash] Query parameters for the request.
       # @return [Hash] API response containing option chain data.
       def expirylist(params)
+        params = contract_params(params)
         post("/expirylist", params: params)
       end
     end

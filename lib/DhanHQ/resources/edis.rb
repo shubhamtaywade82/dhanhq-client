@@ -11,10 +11,12 @@ module DhanHQ
       HTTP_PATH = "/v2/edis"
 
       def form(params)
+        params = contract_params(params)
         post("/form", params: params)
       end
 
       def bulk_form(params)
+        params = contract_params(params)
         post("/bulkform", params: params)
       end
 

@@ -76,11 +76,22 @@ module DhanHQ
     # declared per operation in the vendored contract (DhanHQ::Contract::Operation::PARAM_STYLES)
     # and resolved through the registry; the path-based strategy below is only
     # the legacy fallback for paths the contract does not cover.
+    #
+    # Generated param structs (DhanHQ::Contract::Params) are coerced to plain
+    # hashes here, so every resource method transparently accepts either a
+    # hash or a struct.
     def format_params(verb, endpoint, params)
+      params = contract_params(params)
       full_path = build_path(endpoint)
       return params if params.empty?
 
       param_formatter_for(verb, full_path).call(params)
+    end
+
+    # Coerces a generated param struct to its wire hash. Idempotent: hashes
+    # (and anything else) pass through untouched.
+    def contract_params(params)
+      DhanHQ::Contract::Params.coerce(params)
     end
 
     # Returns a callable that formats params for the given verb + path (Strategy).

@@ -6,9 +6,9 @@
 > ✅ P2 schema-derived validation (default-on requests, opt-in responses) ·
 > ✅ P3 generated metadata + endpoint catalogue + contract-declared casing ·
 > ✅ P4 WS protocol manifest wired into runtime + fixture round-trip ·
-> ✅ P5 drift CI + property harness + governance. Remaining future work is
-> limited to what the plan deliberately deferred (generated param structs
-> per operation; AsyncAPI lifecycle document).
+> ✅ P5 drift CI + property harness + governance ·
+> ✅ P6 generated param structs + AsyncAPI lifecycle document (the two
+> items the plan originally deferred — both now executed).
 >
 > Companion to [REVIEW.md](REVIEW.md) (findings F1–F9, recommendations M1–M9) and
 > [GAP_ANALYSIS.md](GAP_ANALYSIS.md) (endpoint matrices). This document answers two questions:
@@ -194,6 +194,45 @@ OpenAPI cannot describe the market feed, so "complete" contract-first needs a se
 - Changelog discipline: any vendored-spec diff must ship with a gem-level decision
   (support / wrap / xfail-with-reason) before release.
 
+### P6 — The Deferred Two, Delivered *(~1.5–2 weeks)*
+
+The original plan scoped these out; both are now implemented, following the same
+rule as every earlier phase: **the contract is the input, nothing in the output
+is hand-maintained.**
+
+**P6a — per-operation generated param structs.** `rake contract:generate` now
+emits `lib/DhanHQ/contract/params.rb`: one frozen, self-validating struct per
+request-body schema in the vendored live contract (26 classes: `OrderParams`,
+`SuperModifyParams`, `GttModifyParams`, …). Construction fails fast at the call
+site — unknown keys, missing required fields, enum violations and type
+violations raise `DhanHQ::ValidationError` before any socket opens; wire keys,
+required lists (minus the client-injected `dhanClientId`) and enums are
+generated, so a schema change regenerates the structs. Resource methods accept
+structs and hashes interchangeably: `BaseAPI` coerces at the wire boundary, and
+every bound params-taking method coerces as its first statement — enforced
+structurally by a bindings-driven conformance example, not by convention.
+Fields the Dry contracts additionally require (e.g. `validity` on place-order)
+remain semantic-layer concerns: structs carry the contract's structural truth;
+the Dry/risk layers keep the stricter human rules.
+
+**P6b — AsyncAPI lifecycle document.** `docs/ws_lifecycle.asyncapi.yml` is an
+AsyncAPI 2.6 document **generated from `contracts/dhanhq/ws_protocol.yml`**
+(`rake contract:asyncapi`) — servers (feed + both depth sockets with their ws
+query bindings), the client command frames (subscribe/unsubscribe per family
+with manifest-stamped RequestCodes, the whole-connection disconnect), every
+binary packet with its byte layout in `x-dhan-struct`, disconnect-code examples,
+and `x-dhan-lifecycle` (heartbeat 10s/40s, 5 connections/user, 5,000
+instruments/connection, codes 805–809). Because it is generated, the artifact
+cannot drift from the manifest: `spec/dhan_hq/ws/asyncapi_spec.rb` re-emits it
+and requires byte-identical output, plus cross-checks every message against the
+manifest. The JSON command-frame shape (instruments + requestCode) now also
+lives in the manifest (`request_payload:`), so the doc derives it rather than
+transcribing it.
+
+Deliberately still out of scope: nested (per-leg) param structs for array-of-
+object fields (raw hashes there remain schema-validated at the wire), and any
+AsyncAPI toolchain integration beyond the generated document.
+
 ---
 
 ## 4. Effort Summary
@@ -206,6 +245,7 @@ OpenAPI cannot describe the market feed, so "complete" contract-first needs a se
 | P3 | Generated param structs, models, docs | 2–4 weeks | **L3** — precision without losing ergonomics |
 | P4 | Binary WS manifest + data-driven decoders | ~1 week | Contract coverage beyond OpenAPI; kills the F1–F7 class |
 | P5 | CI drift detection + property tests + generated docs | 2–4 days | **L4** — self-maintaining conformance |
+| P6 | Generated param structs + AsyncAPI lifecycle doc | ~1.5–2 weeks | L3+ ergonomics; portable WS lifecycle contract |
 
 - **Full conversion (L4): roughly 5–8 weeks of focused work.**
 - **The 80/20 (P0 + P1 + P2): roughly 1.5–2.5 weeks** and already delivers most of the value:

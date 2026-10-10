@@ -19,6 +19,7 @@ module DhanHQ
         # @param params [Hash] `:security_id`, `:transaction_type`, `:price`, `:quantity`
         # @return [Hash] Margin breakdown.
         def calculate(params)
+          params = contract_params(params)
           post("/margincalculator", params: wire_params(params))
         end
 
@@ -27,6 +28,7 @@ module DhanHQ
         # @param params [Hash] `:security_id`, `:transaction_type`, `:price`, `:quantity`
         # @return [Hash] Charge breakdown.
         def estimate(params)
+          params = contract_params(params)
           post("/transEstimate", params: wire_params(params))
         end
 

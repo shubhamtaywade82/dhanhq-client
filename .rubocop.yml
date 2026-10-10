@@ -22,6 +22,7 @@ AllCops:
     # documents — edit the generator (lib/DhanHQ/contract/generator.rb),
     # never this file.
     - "lib/DhanHQ/contract/metadata.rb"
+    - "lib/DhanHQ/contract/params.rb"
     - "node_modules/**/*"
     - "website/node_modules/**/*"
     - "vendor/**/*"
@@ -42,6 +43,8 @@ RSpec/DescribeClass:
     - "spec/dhan_hq/models/typed_order_guards_spec.rb"
     - "spec/dhan_hq/gem_packaging_spec.rb"
     - "spec/dhan_hq/zeitwerk_autoload_spec.rb"
+    # AsyncAPI document parity suite describes a generated artifact, not a class.
+    - "spec/dhan_hq/ws/asyncapi_spec.rb"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
@@ -59,6 +62,7 @@ RSpec/MultipleExpectations:
   Exclude:
     - "spec/dhan_hq/contract/**/*"
     - "spec/dhan_hq/ws/protocol_spec.rb"
+    - "spec/dhan_hq/ws/asyncapi_spec.rb"
     - "spec/dhan_hq/ws/decoder_feed_spec.rb"
     - "spec/dhan_hq/sandbox_capabilities_spec.rb"
 
@@ -67,7 +71,12 @@ RSpec/ExampleLength:
   # Byte-level decoder suites build whole frames in one example; splitting
   # them would scatter a single wire-format fact across many fragments.
   Exclude:
+    # Byte/manifest parity suites build whole frames and cross-check whole
+    # surfaces in one example.
     - "spec/dhan_hq/ws/decoder_feed_spec.rb"
+    - "spec/dhan_hq/ws/asyncapi_spec.rb"
+    - "spec/dhan_hq/contract/params_spec.rb"
+    - "spec/dhan_hq/contract/params_integration_spec.rb"
 
 RSpec/MultipleMemoizedHelpers:
   Max: 10

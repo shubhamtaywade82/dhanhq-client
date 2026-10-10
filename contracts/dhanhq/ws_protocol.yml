@@ -217,6 +217,19 @@ full_market_depth:
     twohundred_level_instruments: 1
     segments: [NSE_EQ, NSE_FNO]
 
+# Shape of the JSON command frames clients publish on the v2 sockets.
+# Identical for subscribe and unsubscribe (only requestCode differs) and
+# identical across the live-feed and depth sockets. Verified against
+# research/dhanhq-market-feed.md and the official DhanHQ-py / DhanHQ-js SDKs.
+request_payload:
+  instruments_key: instruments
+  request_code_key: requestCode
+  instrument:
+    required: [exchangeSegment, securityId]
+    properties:
+      exchangeSegment: string
+      securityId: string
+
 # Disconnection message codes (payload of the code-50 packet)
 disconnect_codes:
   805: Connection limit exceeded

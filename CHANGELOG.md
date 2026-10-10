@@ -26,6 +26,31 @@ the vendor-spec patch log, and the generated
 
 #### Added
 
+- **Generated request-param structs (P6a)** — `rake contract:generate` now also
+  emits `lib/DhanHQ/contract/params.rb`: one frozen, self-validating struct per
+  request-body schema in the vendored contract (26 classes, e.g.
+  `DhanHQ::Contract::Params::OrderParams` for `placeorder`/`placesliceorder`).
+  Construction fails fast — unknown keys, missing required fields, enum and
+  type violations raise `DhanHQ::ValidationError` at the call site, before any
+  request leaves the process; IDEs autocomplete the fields. Required lists omit
+  the transport-injected `dhanClientId`. Resource methods accept a struct or a
+  hash interchangeably (`orders.create(OrderParams.new(...))`), and a
+  bindings-driven conformance example enforces that every bound params-taking
+  resource method coerces its params — structurally, not by convention.
+- **AsyncAPI lifecycle document (P6b)** — `docs/ws_lifecycle.asyncapi.yml`,
+  generated from `contracts/dhanhq/ws_protocol.yml` (`rake contract:asyncapi`):
+  AsyncAPI 2.6 description of the live feed with servers (feed + 20/200-level
+  depth sockets), the JSON command frames (per-family subscribe/unsubscribe and
+  the whole-connection disconnect, each stamped with its manifest RequestCode),
+  every binary packet carrying its byte layout in `x-dhan-struct`, disconnect
+  code examples (805–809), and the `x-dhan-lifecycle` extension (heartbeat
+  10s / dead-after-40s silence, 5 connections/user, 5,000 instruments per
+  connection). Spec-checked: regeneration must be byte-identical to the
+  committed artifact, and every message must match the manifest.
+- **`request_payload:` section in `ws_protocol.yml`** — the JSON command-frame
+  shape (`instruments` + `requestCode`), verified against the official docs and
+  SDKs, so the AsyncAPI document derives command payloads from the manifest.
+
 - **Vendored contracts** — `contracts/dhanhq/live.openapi.json` (47 paths /
   63 operations) and `sandbox.openapi.json` (22 paths / 27 operations),
   unmodified downloads from the `v3/api-docs` endpoints; `contracts/dhanhq/ws_protocol.yml`,

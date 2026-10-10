@@ -135,11 +135,11 @@ namespace :contract do
     puts "Vendored contracts match the live api-docs endpoints."
   end
 
-  desc "Regenerate lib/DhanHQ/contract/metadata.rb and docs/ENDPOINTS.md from the contract"
+  desc "Regenerate lib/DhanHQ/contract/metadata.rb, lib/DhanHQ/contract/params.rb, docs/ENDPOINTS.md and docs/ws_lifecycle.asyncapi.yml"
   task :generate do
     require_relative "lib/dhan_hq"
     DhanHQ::Contract::Generator.write_all!
-    puts "Regenerated lib/DhanHQ/contract/metadata.rb and docs/ENDPOINTS.md."
+    puts "Regenerated contract/metadata.rb, contract/params.rb, docs/ENDPOINTS.md and docs/ws_lifecycle.asyncapi.yml."
   end
 
   desc "Offline property harness: schema-validate generated payloads for sandbox read-only operations"
@@ -154,6 +154,13 @@ namespace :contract do
     require_relative "lib/dhan_hq"
     DhanHQ::Contract::Generator.write_endpoints_doc!
     puts "Regenerated docs/ENDPOINTS.md."
+  end
+
+  desc "Regenerate docs/ws_lifecycle.asyncapi.yml from ws_protocol.yml"
+  task :asyncapi do
+    require_relative "lib/dhan_hq"
+    DhanHQ::Contract::Generator.write_asyncapi!
+    puts "Regenerated docs/ws_lifecycle.asyncapi.yml."
   end
 end
 

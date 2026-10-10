@@ -15,6 +15,7 @@ module DhanHQ
       # @param params [Hash] Parameters for the request
       # @return [Hash] API response with expired options data
       def fetch(params)
+        params = contract_params(params)
         post("/rollingoption", params: params)
       end
     end

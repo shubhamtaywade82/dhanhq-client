@@ -37,6 +37,7 @@ module DhanHQ
         # @raise [DhanHQ::LiveTradingDisabledError] Unless LIVE_TRADING is enabled.
         # @raise [DhanHQ::ValidationError] When the payload fails validation.
         def create(params)
+          params = contract_params(params)
           ensure_live_trading!
           log_order_context("DHAN_GLOBAL_ORDER_ATTEMPT", params)
           validate_place_order!(params)
@@ -49,6 +50,7 @@ module DhanHQ
         # @param params [Hash] Fields to change, in snake_case.
         # @return [Hash] `{ orderId:, orderStatus: }`
         def update(order_id, params)
+          params = contract_params(params)
           ensure_live_trading!
           log_order_context("DHAN_GLOBAL_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
           validate_modify_order!(params.merge(order_id: order_id))
