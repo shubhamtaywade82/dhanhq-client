@@ -9,13 +9,14 @@ module DhanHQ
     # disconnected when required.
     class Registry
       @clients = []
+      @mutex = Mutex.new
       class << self
         # Registers a client instance with the registry.
         #
         # @param client [DhanHQ::WS::Client]
         # @return [void]
         def register(client)
-          @clients << client unless @clients.include?(client)
+          @mutex.synchronize { @clients << client unless @clients.include?(client) }
         end
 
         # Removes a client from the registry.
@@ -23,18 +24,21 @@ module DhanHQ
         # @param client [DhanHQ::WS::Client]
         # @return [void]
         def unregister(client)
-          @clients.delete(client)
+          @mutex.synchronize { @clients.delete(client) }
         end
 
         # Stops and removes all registered clients.
         #
         # @return [void]
         def stop_all
-          @clients.dup.each do |c|
-            c.stop
-          rescue StandardError
+          @mutex.synchronize do
+            @clients.dup.each do |c|
+              c.stop
+            rescue StandardError => e
+              DhanHQ.logger&.debug("[DhanHQ::WS::Registry] stop failed: #{e.class} #{e.message}")
+            end
+            @clients.clear
           end
-          @clients.clear
         end
       end
     end

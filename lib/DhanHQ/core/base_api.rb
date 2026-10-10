@@ -64,21 +64,6 @@ module DhanHQ
 
     private
 
-    # Performs an API request.
-    #
-    # @param method [Symbol] HTTP method (:get, :post, :put, :delete)
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Request parameters
-    # @return [Hash, Array] The parsed API response
-    # @raise [DhanHQ::Error] If an API error occurs.
-    def request(method, endpoint, params: {})
-      formatted_params = format_params(endpoint, params)
-
-      response = client.request(method, build_path(endpoint), formatted_params)
-
-      handle_response(response)
-    end
-
     # Construct the complete API URL
     #
     # @param endpoint [String] API endpoint
