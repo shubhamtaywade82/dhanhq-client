@@ -9,15 +9,16 @@ module DhanHQ
     # Low-level wrapper responsible for establishing and maintaining the raw
     # WebSocket connection to the streaming API.
     class Connection
-      # Feed request codes per the official Live Market Feed docs (v2):
-      # 15 = Ticker, 17 = Quote, 21 = Full (26-field + 5-level depth).
-      # RequestCode 15 subscribes to LTP-only ticker packets regardless of the
-      # fields the caller wants, so each mode must map to its own code.
+      # Feed request codes per the official Annexure "Feed Request Code" table
+      # (dhanhq.co/docs/v2/annexure#feed-request-code): 15 = Ticker, 17 = Quote,
+      # 21 = Full. RequestCode 15 subscribes to LTP-only ticker packets
+      # regardless of the fields the caller wants, so each mode must map to its
+      # own code.
       SUB_CODES   = { ticker: 15, quote: 17, full: 21 }.freeze
-      # Unsubscribe request codes are the subscribe code + 1 per the docs:
-      # 16 = Ticker, 18 = Quote, 22 = Full. RequestCode 12 is the DISCONNECT
-      # frame and kills the whole connection — it must never be used to
-      # unsubscribe from individual instruments.
+      # Unsubscribe request codes are the subscribe code + 1 per the same table:
+      # 16 = Ticker, 18 = Quote, 22 = Full. RequestCode 12 is the whole-connection
+      # Disconnect Feed frame — it is reserved for #send_disconnect and must never
+      # be used to unsubscribe from individual instruments.
       UNSUB_CODES = { ticker: 16, quote: 18, full: 22 }.freeze
 
       COOL_OFF_429 = 60  # seconds to cool off on 429
@@ -226,7 +227,7 @@ module DhanHQ
         subs, unsubs = cmds.partition { |c| c.op == :sub }
 
         unless subs.empty?
-          list     = uniq(flatten(subs.map(&:payload)))
+          list     = uniq(subs.map(&:payload).flatten)
           new_only = @state.want_sub(list)
           unless new_only.empty?
             send_sub(new_only)
@@ -236,7 +237,7 @@ module DhanHQ
 
         return if unsubs.empty?
 
-        list       = uniq(flatten(unsubs.map(&:payload)))
+        list       = uniq(unsubs.map(&:payload).flatten)
         exist_only = @state.want_unsub(list)
         return if exist_only.empty?
 
@@ -274,17 +275,10 @@ module DhanHQ
         DhanHQ.logger&.debug("[DhanHQ::WS] send_disconnect error #{e.class}: #{e.message}")
       end
 
-      def flatten(a) = a.flatten
-
       def uniq(list)
-        seen = {}
-        list.each_with_object([]) do |i, out|
-          k = "#{i[:ExchangeSegment]}:#{i[:SecurityId]}"
-          next if seen[k]
-
-          out << i
-          seen[k] = true
-        end
+        # Composite key: the same instrument can arrive via repeated subscribe
+        # calls; Array#uniq with a block keeps the first occurrence.
+        list.uniq { |i| [i[:ExchangeSegment], i[:SecurityId]] }
       end
     end
   end

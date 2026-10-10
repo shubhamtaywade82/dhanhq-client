@@ -35,8 +35,10 @@ module DhanHQ
         token = @config.resolved_access_token
         raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
 
-        cid   = @config.client_id or raise "DhanHQ.client_id not set"
-        ver   = (@config.respond_to?(:ws_version) && @config.ws_version) || 2
+        cid = @config.client_id
+        raise DhanHQ::AuthenticationError, "client_id is not set (configure DhanHQ.client_id)" if cid.nil? || cid.to_s.empty?
+
+        ver = (@config.respond_to?(:ws_version) && @config.ws_version) || 2
         base  = url || @config.ws_market_feed_url
         @url  = base.include?("?") ? base : "#{base}?version=#{ver}&token=#{token}&clientId=#{cid}&authType=2"
       end
@@ -54,7 +56,7 @@ module DhanHQ
           emit(:tick, tick) if tick
         end
         Registry.register(self)
-        install_at_exit_once!
+        self.class.install_at_exit_hook!
         @conn.start
         self
       end
@@ -294,13 +296,6 @@ module DhanHQ
         callbacks_snapshot.each { |cb| cb.call(payload) }
       rescue StandardError => e
         DhanHQ.logger&.error("[DhanHQ::WS::Client] Error in event handler for #{event}: #{e.class} #{e.message}")
-      end
-
-      def install_at_exit_once!
-        return if defined?(@at_exit_installed) && @at_exit_installed
-
-        @at_exit_installed = true
-        at_exit { Registry.stop_all }
       end
     end
   end

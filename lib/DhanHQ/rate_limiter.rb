@@ -5,9 +5,15 @@ require "concurrent"
 module DhanHQ
   # Coarse-grained in-memory throttler matching the platform rate limits.
   class RateLimiter
-    # Per-interval thresholds keyed by API type, matching the published
-    # DhanHQ rate-limit table (Order APIs: 10/sec, 250/min, 1,000/hr, 7,000/day;
-    # Data APIs: 5/sec, 100,000/day; Market Quote: 1/sec; Option Chain: 1 per 3 sec).
+    # Per-interval thresholds keyed by API type.
+    #
+    # Order APIs: 10/sec, 250/min, 1,000/hr, 7,000/day; Data APIs: 5/sec,
+    # 100,000/day; Market Quote: 1/sec; Option Chain: 1 per 3 sec. These are
+    # deliberately conservative client-side budgets — the SDK stays well inside
+    # whatever per-account enforcement the broker applies. See REVIEW.md
+    # (finding F8): the daily caps were previously swapped (orders 100k/day,
+    # data 7k/day) against both the published table and the OpenAPI spec's
+    # x-rate-limit annotations.
     # Global Stocks shares the order-API limits on its own tier so it can be
     # routed independently (it always stays on the production host).
     RATE_LIMITS = {
@@ -19,6 +25,9 @@ module DhanHQ
       non_trading_api: { per_second: 20, per_minute: Float::INFINITY, per_hour: Float::INFINITY,
                          per_day: Float::INFINITY }
     }.freeze
+
+    # Seconds to wait between counter resets, per interval.
+    RESET_INTERVALS = { per_minute: 60, per_hour: 3600, per_day: 86_400 }.freeze
 
     # Thread-safe shared rate limiters per API type
     @shared_limiters = Concurrent::Map.new
@@ -59,9 +68,7 @@ module DhanHQ
 
           sleep_time = 3 - (Time.now - last_request_time)
           if sleep_time.positive?
-            if ENV["DHAN_DEBUG"] == "true"
-              puts "Sleeping for #{sleep_time.round(2)} seconds due to option_chain rate limit"
-            end
+            DhanHQ.logger&.debug("[DhanHQ::RateLimiter] Sleeping #{sleep_time.round(2)}s (option_chain limit)")
             sleep(sleep_time)
           end
 
@@ -104,6 +111,9 @@ module DhanHQ
       end
     end
 
+    # NOTE: @request_times is only touched inside #throttle!, which holds the
+    # per-tier mutex, so the plain Array needs no synchronization of its own.
+
     private
 
     # Gets or creates a mutex for this API type for thread-safe throttling
@@ -143,47 +153,28 @@ module DhanHQ
       end
     end
 
-    # Spawns background threads to reset counters after each interval elapses.
+    # Spawns one reset thread per interval whose limit is finite. Intervals whose
+    # limit is Float::INFINITY never block, so resetting them is a no-op and no
+    # thread is created (quote and non-trading tiers end up with zero threads).
+    # Threads die with the process; #shutdown exists for explicit teardown.
     def start_cleanup_threads
       @cleanup_threads = []
       @shutdown = Concurrent::AtomicBoolean.new(false)
 
-      # Don't create per_second cleanup thread - we handle it with timestamps
-      @cleanup_threads << Thread.new do
-        loop do
-          break if @shutdown.true?
+      RESET_INTERVALS.each do |interval, seconds|
+        limit = RATE_LIMITS[@api_type][interval]
+        next if limit.nil? || limit >= Float::INFINITY
 
-          sleep(60)
-          break if @shutdown.true?
+        @cleanup_threads << Thread.new do
+          loop do
+            break if @shutdown.true?
 
-          mutex.synchronize do
-            @buckets[:per_minute]&.value = 0
-          end
-        end
-      end
+            sleep(seconds)
+            break if @shutdown.true?
 
-      @cleanup_threads << Thread.new do
-        loop do
-          break if @shutdown.true?
-
-          sleep(3600)
-          break if @shutdown.true?
-
-          mutex.synchronize do
-            @buckets[:per_hour]&.value = 0
-          end
-        end
-      end
-
-      @cleanup_threads << Thread.new do
-        loop do
-          break if @shutdown.true?
-
-          sleep(86_400)
-          break if @shutdown.true?
-
-          mutex.synchronize do
-            @buckets[:per_day]&.value = 0
+            mutex.synchronize do
+              @buckets[interval]&.value = 0
+            end
           end
         end
       end

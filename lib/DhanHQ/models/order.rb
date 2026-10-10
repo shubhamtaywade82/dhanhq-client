@@ -491,12 +491,12 @@ module DhanHQ
       #   order = DhanHQ::Models::Order.find("112111182045")
       #   order.modify(validity: "IOC")
       #
-      # @raise [RuntimeError] If order ID is missing
+      # @raise [DhanHQ::OrderError] If order ID is missing
       # @raise [DhanHQ::ValidationError] If validation fails for any parameter
       # @raise [DhanHQ::ModificationLimitError] If this instance has already been modified 25 times (Dhan API cap)
       # @note Count is per Order instance in this process; a fresh find() resets it.
       def modify(new_params)
-        raise "Order ID is required to modify an order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to modify an order" unless id
 
         count = @modification_count || 0
         if count >= Constants::RateLimit::ORDER_MODIFICATIONS_PER_ORDER
@@ -537,9 +537,9 @@ module DhanHQ
       #     puts "Failed to cancel order"
       #   end
       #
-      # @raise [RuntimeError] If order ID is missing
+      # @raise [DhanHQ::OrderError] If order ID is missing
       def cancel
-        raise "Order ID is required to cancel an order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to cancel an order" unless id
 
         DhanHQ.logger&.info("[DhanHQ::Models::Order] Cancelling order #{id}")
         response = self.class.resource.cancel(id)
@@ -566,9 +566,9 @@ module DhanHQ
       #   puts "Updated status: #{order.order_status}"
       #   puts "Filled: #{order.filled_qty}/#{order.quantity}"
       #
-      # @raise [RuntimeError] If order ID is missing
+      # @raise [DhanHQ::OrderError] If order ID is missing
       def refresh
-        raise "Order ID is required to refresh an order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to refresh an order" unless id
 
         self.class.find(id)
       end
@@ -603,7 +603,7 @@ module DhanHQ
       alias delete destroy
 
       def slice_order(params)
-        raise "Order ID is required to slice an order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to slice an order" unless id
 
         normalized = snake_case(params)
         normalized[:dhan_client_id] ||= DhanHQ.configuration&.client_id

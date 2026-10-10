@@ -50,7 +50,7 @@ RSpec.describe DhanHQ::Models::SuperOrder do
     it "raises when order id missing" do
       record = described_class.new({}, skip_validation: true)
 
-      expect { record.modify({}) }.to raise_error("Order ID is required to modify a super order")
+      expect { record.modify({}) }.to raise_error(DhanHQ::OrderError, "Order ID is required to modify a super order")
     end
 
     it "returns true when update echoes orderId" do
@@ -73,7 +73,7 @@ RSpec.describe DhanHQ::Models::SuperOrder do
     it "raises when order id missing" do
       record = described_class.new({}, skip_validation: true)
 
-      expect { record.cancel }.to raise_error("Order ID is required to cancel a super order")
+      expect { record.cancel }.to raise_error(DhanHQ::OrderError, "Order ID is required to cancel a super order")
     end
 
     it "returns true when cancellation state is CANCELLED" do

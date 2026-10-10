@@ -40,13 +40,30 @@ module DhanHQ
     class << self
       attr_reader :defined_attributes
 
-      # Registers the set of attributes for this model
+      # Registers the set of attributes for this model. Also defines the
+      # snake_case and camelCase readers once per class, so instances stop
+      # allocating per-record singleton methods.
       #
       # @param args [Array<Symbol, String>] A list of attribute names
       def attributes(*args)
         @defined_attributes ||= []
-        @defined_attributes.concat(args.map(&:to_s))
+        new_attrs = args.map(&:to_s)
+        @defined_attributes.concat(new_attrs)
+        define_accessors(new_attrs)
+        @defined_attributes
       end
+
+      # Defines one snake_case and one camelCase reader per attribute, reading
+      # through @attributes so every instance stays in sync. Called from
+      # {attributes}; private because it is a declaration helper.
+      def define_accessors(attrs)
+        attrs.each do |attr|
+          camel = attr.to_s.camelize(:lower)
+          define_method(attr) { @attributes[attr] }
+          define_method(camel) { @attributes[attr] }
+        end
+      end
+      private :define_accessors
 
       # Provide a default API type, can be overridden by child classes
       #
@@ -62,6 +79,13 @@ module DhanHQ
       # For child classes, override `api_type` or `api` if needed
       def api
         @api ||= BaseAPI.new(api_type: api_type)
+      end
+
+      # Parameter key style used by {#to_request_params}: :camel (camelCase)
+      # by default. Models whose API takes TitleCase keys (the option chain)
+      # override this to :title.
+      def param_key_style
+        :camel
       end
 
       ##
@@ -91,6 +115,8 @@ module DhanHQ
       # Validate attributes before creating a new instance
       def validate_attributes(attributes)
         contract = validation_contract
+        return true if contract.nil?
+
         result = contract.call(attributes)
 
         raise ArgumentError, "Validation failed: #{result.errors.to_h}" if result.failure?
@@ -132,8 +158,6 @@ module DhanHQ
       # @param attributes [Hash] The attributes of the resource
       # @return [DhanHQ::BaseModel, DhanHQ::ErrorObject] The resource or error object
       def create(attributes)
-        # validate_params!(attributes, validation_contract)
-
         response = resource.post("", params: attributes)
         build_from_response(response)
       end
@@ -242,7 +266,7 @@ module DhanHQ
       if self.class.defined_attributes&.include?("dhan_client_id") && !attrs[:dhan_client_id] && DhanHQ.configuration.client_id
         attrs[:dhan_client_id] = DhanHQ.configuration.client_id
       end
-      optionchain_api? ? titleize_keys(attrs) : camelize_keys(attrs)
+      self.class.param_key_style == :title ? titleize_keys(attrs) : camelize_keys(attrs)
     end
 
     # Identifier inferred from the loaded attributes.
@@ -254,17 +278,13 @@ module DhanHQ
       id_value&.to_s
     end
 
-    # Dynamically assign attributes as methods
+    # Assigns each declared attribute to an instance variable. The accessor
+    # methods themselves are defined once per class (see .attributes); the
+    # ivars exist for {AttributeHelper#inspect} and debugging.
     def assign_attributes
       self.class.defined_attributes&.each do |attr|
         instance_variable_set(:"@#{attr}", @attributes[attr])
-        define_singleton_method(attr) { instance_variable_get(:"@#{attr}") }
-        define_singleton_method(attr.to_s.camelize(:lower)) { instance_variable_get(:"@#{attr}") }
       end
-    end
-
-    def optionchain_api?
-      self.class.name.include?("OptionChain")
     end
 
     # Validate attributes using contract

@@ -13,9 +13,11 @@ module DhanHQ
       # WebSocket client for Full Market Depth data
       # Provides real-time market depth (bid/ask levels) for specified symbols
       class Client < BaseConnection
+        # Feed request codes per the official Annexure "Feed Request Code" table
+        # (dhanhq.co/docs/v2/annexure#feed-request-code): 23 = Subscribe - Full
+        # Market Depth, 24 = Unsubscribe - Full Market Depth. Never 12 - that is
+        # the whole-connection disconnect, not a per-instrument unsubscribe.
         SUBSCRIBE_REQUEST_CODE    = 23
-        # Unsubscribe is the subscribe code + 1 per the Full Market Depth docs.
-        # RequestCode 12 is the disconnect frame and would close the socket.
         UNSUBSCRIBE_REQUEST_CODE  = 24
 
         ##

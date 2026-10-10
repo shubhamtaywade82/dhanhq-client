@@ -114,7 +114,7 @@ module DhanHQ
       # @param new_params [Hash{Symbol => String, Integer, Float}]
       # @return [TwapOrder, nil]
       def modify(new_params)
-        raise "Order ID is required to modify a TWAP order" unless order_id
+        raise DhanHQ::OrderError, "Order ID is required to modify a TWAP order" unless order_id
 
         DhanHQ.logger&.info("[DhanHQ::Models::TwapOrder] Modifying order #{order_id}")
         full_params = snake_case(new_params)
@@ -135,7 +135,7 @@ module DhanHQ
       #
       # @return [Boolean] true when cancelled successfully
       def cancel
-        raise "Order ID is required to cancel a TWAP order" unless order_id
+        raise DhanHQ::OrderError, "Order ID is required to cancel a TWAP order" unless order_id
 
         response = self.class.resource.cancel(order_id)
         response.is_a?(Hash) && response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED
