@@ -106,6 +106,31 @@ end
 - **`access_token_provider`**: Callable (Proc/lambda) returning the token string. Called on every request (no memoization). When set, the gem uses it instead of `access_token`.
 - **`on_token_expired`**: Optional callable invoked when a 401/token-expired triggers a **single retry** (only when `access_token_provider` is set).
 
+## Multi-Instance Client Configuration
+
+For multi-account or multi-tenant architectures, construct explicit `DhanHQ::Client` instances without depending on global singleton state:
+
+```ruby
+# Direct configuration via keyword arguments
+client = DhanHQ::Client.new(
+  client_id: "YOUR_CLIENT_ID",
+  access_token: "YOUR_ACCESS_TOKEN",
+  sandbox: false,
+  dry_run: false
+)
+
+# Or via an explicit Configuration object
+custom_config = DhanHQ::Configuration.new do |c|
+  c.client_id = "TENANT_CLIENT_ID"
+  c.access_token = "TENANT_ACCESS_TOKEN"
+  c.dry_run = true
+end
+
+client = DhanHQ::Client.new(config: custom_config)
+```
+
+Each client instance manages its own Faraday connection, isolated configuration, dry-run state, and instance-bound resource accessors (`client.orders`, `client.positions`, `client.market_feed`, etc.).
+
 For detailed authentication flows, see [AUTHENTICATION.md](AUTHENTICATION.md).
 
 ## Available Resources

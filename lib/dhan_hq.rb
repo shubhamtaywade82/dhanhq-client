@@ -3,7 +3,11 @@
 require "json"
 require "logger"
 require "zeitwerk"
-require "dotenv/load"
+begin
+  require "dotenv/load"
+rescue LoadError
+  # Dotenv is optional in host applications
+end
 require "faraday"
 # Minimal eager requires for backward-compatible constants.
 # These are widely referenced (e.g. `DhanHQ::BaseAPI`) and should not depend on
@@ -88,9 +92,13 @@ module DhanHQ
     # @return [String]
     BASE_URL = Constants::Urls::REST_API_BASE
     # The current configuration instance.
-    #
-    # @return [DhanHQ::Configuration, nil] The current configuration or `nil` if not set.
-    attr_accessor :configuration
+    attr_reader :configuration
+
+    def configuration=(config)
+      @configuration = config
+      @default_client = nil
+      reset_model_resources!
+    end
 
     attr_writer :logger
 
@@ -106,8 +114,10 @@ module DhanHQ
     # @return [void]
     def configure
       self.configuration ||= Configuration.new
-      yield(configuration)
+      yield(configuration) if block_given?
       self.logger ||= Logger.new($stdout, level: Logger::INFO)
+      @default_client = Client.new(config: configuration)
+      reset_model_resources!
     end
 
     # default logger so calls like DhanHQ.logger&.info never explode
@@ -116,6 +126,18 @@ module DhanHQ
     # @return [Logger] The configured logger, defaulting to STDOUT at INFO level.
     def logger
       @logger ||= Logger.new($stdout, level: Logger::INFO)
+    end
+
+    # Global default client (used for backward compatibility with class-level APIs)
+    #
+    # @return [DhanHQ::Client]
+    def default_client
+      @default_client ||= Client.new(config: ensure_configuration!)
+    end
+
+    # Resets the global default client
+    def reset_default_client!
+      @default_client = nil
     end
 
     # Configures the DhanHQ client using environment variables.
@@ -129,6 +151,8 @@ module DhanHQ
     # @return [void]
     def configure_with_env
       self.configuration = Configuration.new
+      @default_client = Client.new(config: configuration)
+      reset_model_resources!
     end
 
     # Ensures configuration exists, bootstrapping from ENV when nil.
@@ -140,9 +164,32 @@ module DhanHQ
       self.configuration ||= Configuration.new
     end
 
-    # Resets the configuration to nil.
+    # Resets the configuration and default client to nil.
     def reset_configuration!
       self.configuration = nil
+      @default_client = nil
+      reset_model_resources!
+    end
+
+    # Clears memoized class-level resource and API instances across all models.
+    def reset_model_resources!
+      models = [
+        BaseModel,
+        Models::Order, Models::Holding, Models::Position, Models::HistoricalData,
+        Models::Trade, Models::OptionChain, Models::Funds, Models::AlertOrder,
+        Models::ForeverOrder, Models::IcebergOrder, Models::SuperOrder, Models::TwapOrder,
+        Models::LedgerEntry, Models::Instrument, Models::Edis, Models::Profile,
+        Models::Margin, Models::MultiOrder, Models::KillSwitch, Models::PnlExit,
+        Models::MarketFeed, Models::ExpiredOptionsData
+      ]
+
+      models.each do |klass|
+        next unless klass.is_a?(Class)
+
+        klass.instance_variables.each do |var|
+          klass.instance_variable_set(var, nil) if var.to_s.end_with?("resource", "api")
+        end
+      end
     end
 
     # Configures the DhanHQ client by fetching credentials from a token endpoint.
@@ -164,39 +211,14 @@ module DhanHQ
     def configure_from_token_endpoint(base_url: nil, bearer_token: nil)
       base_url ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BASE_URL", nil)
       bearer_token ||= ENV.fetch("DHAN_TOKEN_ENDPOINT_BEARER", nil)
-
       raise DhanHQ::TokenEndpointError, "base_url and bearer_token (or ENV DHAN_TOKEN_ENDPOINT_*) are required" if base_url.to_s.empty? || bearer_token.to_s.empty?
 
-      url = "#{base_url.to_s.chomp("/")}/auth/dhan/token"
-      conn = ::Faraday.new(url: url) do |c|
-        c.request :url_encoded
-        c.adapter ::Faraday.default_adapter
-      end
-
-      response = conn.get("") do |req|
-        req.headers["Authorization"] = "Bearer #{bearer_token}"
-        req.headers["Accept"] = "application/json"
-      end
-
-      unless response.success?
-        body = parse_json_body(response.body)
-        msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
-        raise DhanHQ::TokenEndpointError, "Token endpoint returned #{response.status}: #{msg}"
-      end
-
-      data = parse_json_body(response.body)
-      data = data.transform_keys(&:to_s) if data.is_a?(Hash)
-
-      access_token = data["access_token"] || data[:access_token]
-      client_id = data["client_id"] || data[:client_id]
+      data = fetch_token_endpoint("#{base_url.to_s.chomp("/")}/auth/dhan/token", bearer_token, "Token endpoint")
+      access_token = data["access_token"]
+      client_id = data["client_id"]
       raise DhanHQ::TokenEndpointError, "Token endpoint response missing access_token or client_id" if access_token.to_s.empty? || client_id.to_s.empty?
 
-      self.configuration ||= Configuration.new
-      configuration.access_token = access_token.to_s
-      configuration.client_id = client_id.to_s
-      dhan_base = data["base_url"] || data[:base_url]
-      configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
-      configuration
+      apply_token_config(access_token, client_id, data["base_url"])
     end
 
     # Configures the DhanHQ client by fetching credentials from a dashboard API.
@@ -208,6 +230,18 @@ module DhanHQ
     def configure_from_dashboard(bearer_token:, url: "http://localhost:3011/api/dhan_access_token")
       raise DhanHQ::TokenEndpointError, "bearer_token is required" if bearer_token.to_s.empty?
 
+      data = fetch_token_endpoint(url, bearer_token, "Dashboard")
+      access_token = data["access_token"] || data["accessToken"] || data["dhan_access_token"] || data["dhanaccesstoken"]
+      client_id = data["client_id"] || data["clientId"] || data["dhan_client_id"] || data["dhanClientId"]
+      client_id ||= configuration&.client_id || ENV.fetch("DHAN_CLIENT_ID", nil)
+
+      raise DhanHQ::TokenEndpointError, "Dashboard response missing access_token (tried access_token, dhan_access_token, dhanaccesstoken)" if access_token.to_s.empty?
+      raise DhanHQ::TokenEndpointError, "Dashboard response missing client_id, and no fallback client_id was found in config or ENV['DHAN_CLIENT_ID']" if client_id.to_s.empty?
+
+      apply_token_config(access_token, client_id, data["base_url"] || data["baseUrl"])
+    end
+
+    def fetch_token_endpoint(url, bearer_token, label)
       conn = ::Faraday.new(url: url) do |c|
         c.request :url_encoded
         c.adapter ::Faraday.default_adapter
@@ -221,24 +255,18 @@ module DhanHQ
       unless response.success?
         body = parse_json_body(response.body)
         msg = body["error"] || body["message"] || body["errorMessage"] || response.body.to_s
-        raise DhanHQ::TokenEndpointError, "Dashboard returned #{response.status}: #{msg}"
+        raise DhanHQ::TokenEndpointError, "#{label} returned #{response.status}: #{msg}"
       end
 
       data = parse_json_body(response.body)
-      data = data.transform_keys(&:to_s) if data.is_a?(Hash)
+      data.is_a?(Hash) ? data.transform_keys(&:to_s) : {}
+    end
 
-      access_token = data["access_token"] || data["accessToken"] || data["dhan_access_token"] || data["dhanaccesstoken"]
-      client_id = data["client_id"] || data["clientId"] || data["dhan_client_id"] || data["dhanClientId"]
-      client_id ||= self.configuration&.client_id || ENV.fetch("DHAN_CLIENT_ID", nil)
-
-      raise DhanHQ::TokenEndpointError, "Dashboard response missing access_token (tried access_token, dhan_access_token, dhanaccesstoken)" if access_token.to_s.empty?
-      raise DhanHQ::TokenEndpointError, "Dashboard response missing client_id, and no fallback client_id was found in config or ENV['DHAN_CLIENT_ID']" if client_id.to_s.empty?
-
+    def apply_token_config(access_token, client_id, base_url)
       self.configuration ||= Configuration.new
       configuration.access_token = access_token.to_s
       configuration.client_id = client_id.to_s
-      dhan_base = data["base_url"] || data["baseUrl"]
-      configuration.base_url = dhan_base.to_s if dhan_base.to_s != ""
+      configuration.base_url = base_url.to_s if base_url.to_s != ""
       configuration
     end
 

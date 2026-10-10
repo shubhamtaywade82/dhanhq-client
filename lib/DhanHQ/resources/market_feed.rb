@@ -49,7 +49,7 @@ module DhanHQ
       #
       # @return [MarketFeed]
       def quote_resource
-        @quote_resource ||= self.class.new(api_type: :quote_api)
+        @quote_resource ||= self.class.new(client: DhanHQ::Client.new(config: client.config, api_type: :quote_api))
       end
     end
   end

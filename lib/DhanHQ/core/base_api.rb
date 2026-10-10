@@ -17,9 +17,10 @@ module DhanHQ
 
     # Initializes the BaseAPI with the appropriate Client instance
     #
+    # @param client [DhanHQ::Client, nil] Optional injected client instance
     # @param api_type [Symbol] API type (`:order_api`, `:data_api`, `:non_trading_api`)
-    def initialize(api_type: self.class::API_TYPE)
-      @client = DhanHQ::Client.new(api_type: api_type)
+    def initialize(client: nil, api_type: self.class::API_TYPE)
+      @client = client || DhanHQ::Client.new(api_type: api_type)
     end
 
     # Perform a GET request via `Client`

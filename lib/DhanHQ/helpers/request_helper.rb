@@ -21,6 +21,16 @@ module DhanHQ
 
     private
 
+    def current_config
+      if respond_to?(:config) && config
+        config
+      elsif respond_to?(:client) && client.respond_to?(:config) && client.config
+        client.config
+      else
+        DhanHQ.configuration
+      end
+    end
+
     # Dynamically builds headers for each request.
     #
     # @param path [String] The API endpoint path.
@@ -41,7 +51,7 @@ module DhanHQ
 
       # Add client-id for DATA APIs (now including sandbox profile/funds)
       if data_api?(path)
-        client_id = DhanHQ.configuration&.client_id
+        client_id = current_config&.client_id
         unless client_id
           raise DhanHQ::InvalidAuthenticationError,
                 "client_id is required for DATA APIs but not set. Please configure DhanHQ with DHAN_CLIENT_ID."
@@ -53,7 +63,7 @@ module DhanHQ
     end
 
     def resolved_access_token
-      DhanHQ.configuration&.resolved_access_token
+      current_config&.resolved_access_token
     end
 
     # Determines if the API path requires a `client-id` header.
@@ -80,7 +90,7 @@ module DhanHQ
 
       out = payload
       if path && %i[post put patch].include?(method)
-        client_id = DhanHQ.configuration&.client_id
+        client_id = current_config&.client_id
         needs_client_id = data_api?(path) || payload_requires_dhan_client_id?(path)
         if client_id && needs_client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
           out = payload.dup

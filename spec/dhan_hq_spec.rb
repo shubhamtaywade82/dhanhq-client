@@ -51,4 +51,33 @@ RSpec.describe DhanHQ do
       expect(result.client_id).to eq("existing")
     end
   end
+
+  describe "resource client refresh on configuration replacement" do
+    it "updates memoized model resources when configuration is replaced" do
+      described_class.configure do |config|
+        config.access_token = "initial_token"
+        config.client_id = "initial_client"
+      end
+
+      expect(DhanHQ::Models::Order.resource.client.config.access_token).to eq("initial_token")
+
+      described_class.configure do |config|
+        config.access_token = "updated_token"
+        config.client_id = "updated_client"
+      end
+
+      expect(DhanHQ::Models::Order.resource.client.config.access_token).to eq("updated_token")
+      expect(DhanHQ::Models::Order.resource.client.config.client_id).to eq("updated_client")
+    end
+
+    it "refreshes client when configuration is directly assigned" do
+      expect(DhanHQ::Models::Order.resource).not_to be_nil
+      new_config = DhanHQ::Configuration.new(access_token: "direct_token", client_id: "direct_client")
+
+      described_class.configuration = new_config
+
+      expect(DhanHQ::Models::Order.resource.client.config.access_token).to eq("direct_token")
+      expect(DhanHQ::Models::Order.resource.client.config.client_id).to eq("direct_client")
+    end
+  end
 end

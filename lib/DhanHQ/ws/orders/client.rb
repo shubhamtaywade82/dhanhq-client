@@ -16,15 +16,15 @@ module DhanHQ
         # Maximum age of orders in tracker in seconds (default: 7 days)
         MAX_ORDER_AGE = ENV.fetch("DHAN_WS_MAX_ORDER_AGE", 604_800).to_i
 
-        def initialize(url: nil, **options)
+        def initialize(url: nil, config: nil, **options)
           @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
           @started = Concurrent::AtomicBoolean.new(false)
           @order_tracker = Concurrent::Map.new
           @order_timestamps = Concurrent::Map.new
           @cleanup_mutex = Mutex.new
           @cleanup_thread = nil
-          cfg = DhanHQ.configuration
-          @url = url || cfg.ws_order_url
+          @config = config || DhanHQ.configuration || DhanHQ.ensure_configuration!
+          @url = url || @config.ws_order_url
           @connection_options = options
         end
 
@@ -35,7 +35,7 @@ module DhanHQ
           return self if @started.true?
 
           @started.make_true
-          @conn = Connection.new(url: @url, **@connection_options)
+          @conn = Connection.new(url: @url, config: @config, **@connection_options)
           @conn.on(:open) { emit(:open, true) }
           @conn.on(:close) { |payload| emit(:close, payload) }
           @conn.on(:error) { |error| emit(:error, error) }

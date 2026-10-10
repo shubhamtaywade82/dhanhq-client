@@ -212,30 +212,32 @@ module DhanHQ
       @ws_debug == true
     end
 
-    # Initializes a new configuration instance with default values.
-    #
-    # @example
-    #   config = DhanHQ::Configuration.new
-    #   config.client_id = "your_client_id"
-    #   config.access_token = "your_access_token"
-    def initialize
-      @client_id = ENV.fetch("DHAN_CLIENT_ID", nil)
-      @access_token = ENV.fetch("DHAN_ACCESS_TOKEN", nil)
-      @sandbox        = env_flag("DHAN_SANDBOX", default: false)
-      @dry_run        = env_flag("DHAN_DRY_RUN", default: false)
-      @retry_non_idempotent_writes = env_flag("DHAN_RETRY_WRITES", default: false)
-      @auto_correlation_id = env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
-      @warn_on_ambiguous_write_failure = env_flag("DHAN_WARN_AMBIGUOUS_WRITE_FAILURE", default: true)
-      @base_url       = ENV.fetch("DHAN_BASE_URL", nil)
-      @ws_version     = ENV.fetch("DHAN_WS_VERSION", 2).to_i
-      @ws_order_url = ENV.fetch("DHAN_WS_ORDER_URL", nil)
-      @ws_market_feed_url = ENV.fetch("DHAN_WS_MARKET_FEED_URL", nil)
-      @ws_market_depth_url = ENV.fetch("DHAN_WS_MARKET_DEPTH_URL", nil)
-      @market_depth_level = ENV.fetch("DHAN_MARKET_DEPTH_LEVEL", "20").to_i
-      @ws_debug       = env_flag("DHAN_WS_DEBUG", default: false)
-      @ws_user_type   = ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
-      @partner_id     = ENV.fetch("DHAN_PARTNER_ID", nil)
-      @partner_secret = ENV.fetch("DHAN_PARTNER_SECRET", nil)
+    def initialize(attrs = {})
+      @client_id = attrs[:client_id] || ENV.fetch("DHAN_CLIENT_ID", nil)
+      @access_token = attrs[:access_token] || ENV.fetch("DHAN_ACCESS_TOKEN", nil)
+      @access_token_provider = attrs[:access_token_provider]
+      @on_token_expired = attrs[:on_token_expired]
+      @sandbox = attrs.key?(:sandbox) ? attrs[:sandbox] : env_flag("DHAN_SANDBOX", default: false)
+      @dry_run = attrs.key?(:dry_run) ? attrs[:dry_run] : env_flag("DHAN_DRY_RUN", default: false)
+      @retry_non_idempotent_writes = attrs.key?(:retry_non_idempotent_writes) ? attrs[:retry_non_idempotent_writes] : env_flag("DHAN_RETRY_WRITES", default: false)
+      @auto_correlation_id = attrs.key?(:auto_correlation_id) ? attrs[:auto_correlation_id] : env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
+      @warn_on_ambiguous_write_failure = if attrs.key?(:warn_on_ambiguous_write_failure)
+                                           attrs[:warn_on_ambiguous_write_failure]
+                                         else
+                                           env_flag("DHAN_WARN_AMBIGUOUS_WRITE_FAILURE",
+                                                    default: true)
+                                         end
+      @base_url = attrs[:base_url] || ENV.fetch("DHAN_BASE_URL", nil)
+      @ws_version = (attrs[:ws_version] || ENV.fetch("DHAN_WS_VERSION", 2)).to_i
+      @ws_order_url = attrs[:ws_order_url] || ENV.fetch("DHAN_WS_ORDER_URL", nil)
+      @ws_market_feed_url = attrs[:ws_market_feed_url] || ENV.fetch("DHAN_WS_MARKET_FEED_URL", nil)
+      @ws_market_depth_url = attrs[:ws_market_depth_url] || ENV.fetch("DHAN_WS_MARKET_DEPTH_URL", nil)
+      @market_depth_level = (attrs[:market_depth_level] || ENV.fetch("DHAN_MARKET_DEPTH_LEVEL", "20")).to_i
+      @ws_debug = attrs.key?(:ws_debug) ? attrs[:ws_debug] : env_flag("DHAN_WS_DEBUG", default: false)
+      @ws_user_type = attrs[:ws_user_type] || ENV.fetch("DHAN_WS_USER_TYPE", "SELF")
+      @partner_id = attrs[:partner_id] || ENV.fetch("DHAN_PARTNER_ID", nil)
+      @partner_secret = attrs[:partner_secret] || ENV.fetch("DHAN_PARTNER_SECRET", nil)
+      yield(self) if block_given?
     end
 
     private

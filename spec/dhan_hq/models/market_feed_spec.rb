@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe DhanHQ::Models::MarketFeed, vcr: {
-  cassette_name: "models/market_feed",
-  record: :new_episodes # :once  # or :new_episodes, etc. based on your preference
+  cassette_name: "models/market_feed"
 } do
   before do
     # Ensure the DhanHQ gem is configured with valid credentials.

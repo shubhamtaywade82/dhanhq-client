@@ -23,8 +23,9 @@ module DhanHQ
       # @param options [Hash] Connection options
       # @option options [Integer] :max_backoff Maximum backoff time (default: 90)
       # @option options [Integer] :cool_off_429 Cool off time for 429 errors (default: 60)
-      def initialize(url:, **options)
+      def initialize(url:, config: nil, **options)
         @url = url
+        @config = config || DhanHQ.configuration || DhanHQ.ensure_configuration!
         @callbacks = Concurrent::Map.new { |h, k| h[k] = [] }
         @started = Concurrent::AtomicBoolean.new(false)
         @stop = false

@@ -25,8 +25,9 @@ module DhanHQ
       # Extracts a fabricated id out of a request path.
       ID_PATTERN = /#{Regexp.escape(ID_PREFIX)}[A-Za-z0-9]+/
 
-      def initialize(ledger: Ledger.instance)
+      def initialize(ledger: Ledger.instance, config: nil)
         @ledger = ledger
+        @config = config
       end
 
       # Whether this request should be answered locally.
@@ -35,7 +36,7 @@ module DhanHQ
       # @param path [String, nil] Request path
       # @return [Boolean]
       def simulates?(method, path)
-        return false unless DhanHQ.configuration&.dry_run?
+        return false unless (@config || DhanHQ.configuration)&.dry_run?
 
         WritePaths.mutating?(method, path) || replayable_read?(method, path)
       end

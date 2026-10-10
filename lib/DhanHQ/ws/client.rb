@@ -20,7 +20,8 @@ module DhanHQ
     class Client
       # @param mode [Symbol] Feed mode (:ticker, :quote, :full).
       # @param url [String, nil] Optional custom WebSocket endpoint.
-      def initialize(mode: :ticker, url: nil)
+      # @param config [DhanHQ::Configuration, nil] Optional configuration instance.
+      def initialize(mode: :ticker, url: nil, config: nil)
         @mode  = mode # :ticker, :quote, :full (adjust to your API)
         @bus   = CmdBus.new
         @state = SubState.new
@@ -29,13 +30,14 @@ module DhanHQ
         @last_message_at = Concurrent::AtomicReference.new(nil)
         @connected_at = Concurrent::AtomicReference.new(nil)
         @reconnects = Concurrent::AtomicFixnum.new(0)
+        @config = config || DhanHQ.configuration || DhanHQ.ensure_configuration!
 
-        token = DhanHQ.configuration.resolved_access_token
+        token = @config.resolved_access_token
         raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
 
-        cid   = DhanHQ.configuration.client_id or raise "DhanHQ.client_id not set"
-        ver   = (DhanHQ.configuration.respond_to?(:ws_version) && DhanHQ.configuration.ws_version) || 2
-        base  = url || DhanHQ.configuration.ws_market_feed_url
+        cid   = @config.client_id or raise "DhanHQ.client_id not set"
+        ver   = (@config.respond_to?(:ws_version) && @config.ws_version) || 2
+        base  = url || @config.ws_market_feed_url
         @url  = base.include?("?") ? base : "#{base}?version=#{ver}&token=#{token}&clientId=#{cid}&authType=2"
       end
 

@@ -77,6 +77,22 @@ For token rotation without restarting the app, set `access_token_provider` (Proc
 
 See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) and README “Dynamic access token”.
 
+**Multi-instance clients (multi-account support)**
+
+When you need to trade across multiple accounts, run multi-tenant setups, or isolate sandbox/testing environments in a single process, use `DhanHQ::Client.new`:
+
+```ruby
+# Account 1
+client1 = DhanHQ::Client.new(client_id: "ACC_1", access_token: "TOKEN_1")
+
+# Account 2 (Sandbox)
+client2 = DhanHQ::Client.new(client_id: "ACC_2", access_token: "TOKEN_2", sandbox: true)
+
+# Resource accessors directly bound to client instance:
+orders1 = client1.orders.all
+orders2 = client2.orders.all
+```
+
 ---
 
 ## Working With Models
