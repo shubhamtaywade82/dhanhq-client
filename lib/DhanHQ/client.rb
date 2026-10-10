@@ -134,6 +134,8 @@ module DhanHQ
       return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
 
       assert_sandbox_capability!(method, path)
+      payload = with_injected_client_id(method, path, payload)
+      operation = assert_contract!(method, path, payload)
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
 
@@ -145,9 +147,42 @@ module DhanHQ
             req.headers.merge!(build_headers(path))
             prepare_payload(req, payload, method, path)
           end
-          handle_response(response)
+          parsed = handle_response(response)
+          log_response_contract_drift!(operation, parsed)
+          parsed
         end
       end
+    end
+
+    # Contract-first structural validation of the wire payload (see
+    # DhanHQ::Contract::SchemaValidator). Semantic rules stay in the
+    # dry-validation contracts; this catches drift between the gem and the
+    # vendored OpenAPI document before a request leaves the process.
+    #
+    # @return [DhanHQ::Contract::Operation, nil] the resolved operation, for
+    #   downstream response-drift checks
+    def assert_contract!(method, path, payload)
+      operation = Contract::Registry.resolve(method, path)
+      return unless operation
+      return operation unless @config&.validate_requests?
+
+      Contract::SchemaValidator.validate_request!(operation, payload)
+      operation
+    end
+
+    # Logs (never raises) when a parsed 2xx response no longer matches the
+    # contract — the early-warning tripwire for upstream drift.
+    def log_response_contract_drift!(operation, parsed)
+      return unless operation
+      return unless @config&.validate_responses?
+
+      errors = Contract::SchemaValidator.response_errors(operation, parsed)
+      return if errors.empty?
+
+      DhanHQ.logger&.warn(
+        "[DhanHQ::Client] Response no longer matches the contract for " \
+        "#{operation.label}: #{errors.join('; ')}"
+      )
     end
 
     def with_auth_retry

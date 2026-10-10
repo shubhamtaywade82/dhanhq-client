@@ -75,6 +75,37 @@ module DhanHQ
       prefixes.any? { |p| path.start_with?(p) }
     end
 
+    # Injects +dhanClientId+ into payloads destined for endpoints whose wire
+    # contract requires it. Called by Client#request BEFORE contract validation
+    # so the validator sees the payload exactly as it will hit the wire;
+    # {#prepare_payload} calls this too and is idempotent.
+    #
+    # @param method [Symbol]
+    # @param path [String, nil]
+    # @param payload [Hash]
+    # @return [Hash] the payload (a dup when injection happened)
+    def with_injected_client_id(method, path, payload)
+      return payload unless payload.is_a?(Hash)
+      return payload unless path && %i[post put patch].include?(method)
+      # Mirror prepare_payload's early return: empty bodies on non-data paths
+      # were never injected before contract validation existed, and changing
+      # their wire shape now would break recorded-fixture consumers.
+      return payload if payload.empty? && !data_api?(path)
+
+      client_id = current_config&.client_id
+      needs_client_id = data_api?(path) || payload_requires_dhan_client_id?(path)
+      return payload if client_id.nil? || !needs_client_id
+      return payload if payload.key?(:dhanClientId) || payload.key?("dhanClientId")
+
+      out = payload.dup
+      if out.keys.any?(String)
+        out["dhanClientId"] = client_id
+      else
+        out[:dhanClientId] = client_id
+      end
+      out
+    end
+
     # Prepares the request payload based on the HTTP method.
     #
     # @param req [Faraday::Request] The request object.
@@ -88,19 +119,7 @@ module DhanHQ
               "Invalid payload: Expected a Hash, got #{payload.class}"
       end
 
-      out = payload
-      if path && %i[post put patch].include?(method)
-        client_id = current_config&.client_id
-        needs_client_id = data_api?(path) || payload_requires_dhan_client_id?(path)
-        if client_id && needs_client_id && !payload.key?(:dhanClientId) && !payload.key?("dhanClientId")
-          out = payload.dup
-          if out.keys.any?(String)
-            out["dhanClientId"] = client_id
-          else
-            out[:dhanClientId] = client_id
-          end
-        end
-      end
+      out = with_injected_client_id(method, path, payload)
 
       case method
       when :delete then req.params = {}

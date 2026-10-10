@@ -51,6 +51,15 @@ RSpec.describe DhanHQ::Client do
   describe "retry exhaustion" do
     subject(:client) { described_class.new(api_type: :order_api) }
 
+    # Minimal payload that satisfies the vendored placeorder contract — these
+    # specs exercise retry semantics, but with contract-first validation on by
+    # default the wire payload must also be schema-valid.
+    let(:contract_valid_order) do
+      { transactionType: "BUY", exchangeSegment: "NSE_EQ", securityId: "1333",
+        quantity: 1, productType: "CNC", orderType: "LIMIT", validity: "DAY",
+        price: 100.0 }
+    end
+
     it "translates a Faraday transport error so rescue DhanHQ::Error catches it" do
       stub_request(:get, "https://api.dhan.co/v2/orders").to_timeout
 
@@ -61,7 +70,7 @@ RSpec.describe DhanHQ::Client do
     it "omits the retry count when retries were disabled" do
       stub_request(:post, "https://api.dhan.co/v2/orders").to_timeout
 
-      expect { client.request(:post, "/v2/orders", { securityId: "1" }) }
+      expect { client.request(:post, "/v2/orders", contract_valid_order) }
         .to raise_error(DhanHQ::NetworkError, /\ARequest failed: /)
     end
 
@@ -70,7 +79,7 @@ RSpec.describe DhanHQ::Client do
         .to_return(status: 429, body: { errorCode: "DH-904", errorMessage: "Rate limit" }.to_json,
                    headers: { "Content-Type" => "application/json" })
 
-      expect { client.request(:post, "/v2/orders", { securityId: "1" }) }
+      expect { client.request(:post, "/v2/orders", contract_valid_order) }
         .to raise_error(DhanHQ::RateLimitError)
     end
 

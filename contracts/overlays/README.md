@@ -69,6 +69,15 @@ evidence** while not blocking a proven-working endpoint. If the vendor later
 adds `/profile` to the sandbox spec, this overlay becomes a harmless no-op add
 (same pointer, same operationId — review the refresh diff and drop it then).
 
+## 0005-enum-reconciliation.jsonpatch *(applies to: live)*
+
+Replaces `OrderRequest.exchangeSegment`'s enum. The vendor spec lists 6
+segments and omits `IDX_I`, `NSE_CURRENCY`, `BSE_CURRENCY` — contradicting the
+published annexure table (dhanhq.co/docs/v2/annexure) and the gem's audited
+`Constants::ExchangeSegment`. After this overlay, schema-derived validation
+(`config.validate_requests`, default on) accepts exactly the documented
+segments. Enforced bidirectionally by `spec/dhan_hq/contract/enum_parity_spec.rb`.
+
 ## Refreshing the vendored documents
 
 ```bash

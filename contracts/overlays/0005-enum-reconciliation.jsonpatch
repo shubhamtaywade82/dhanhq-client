@@ -1,0 +1,17 @@
+[
+  {
+    "op": "replace",
+    "path": "/components/schemas/OrderRequest/properties/exchangeSegment/enum",
+    "value": [
+      "IDX_I",
+      "NSE_EQ",
+      "NSE_FNO",
+      "NSE_CURRENCY",
+      "NSE_COMM",
+      "BSE_EQ",
+      "MCX_COMM",
+      "BSE_CURRENCY",
+      "BSE_FNO"
+    ]
+  }
+]

@@ -118,24 +118,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "exchangeSegment",
-                  "securityId"
-                ],
-                "properties": {
-                  "exchangeSegment": {
-                    "type": "string",
-                    "description": "Exchange segment, e.g. NSE_EQ"
-                  },
-                  "securityId": {
-                    "type": "string",
-                    "description": "Dhan security id (numeric string)"
-                  },
-                  "instrumentType": {
-                    "type": "string",
-                    "description": "EQUITY / FUTIDX / FUTSTK / OPTFUT etc."
+                "description": "Segment-keyed instrument id lists, e.g. {\"NSE_EQ\": [11536]}",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
                   }
-                }
+                },
+                "minProperties": 1
               }
             }
           }
@@ -174,24 +167,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "exchangeSegment",
-                  "securityId"
-                ],
-                "properties": {
-                  "exchangeSegment": {
-                    "type": "string",
-                    "description": "Exchange segment, e.g. NSE_EQ"
-                  },
-                  "securityId": {
-                    "type": "string",
-                    "description": "Dhan security id (numeric string)"
-                  },
-                  "instrumentType": {
-                    "type": "string",
-                    "description": "EQUITY / FUTIDX / FUTSTK / OPTFUT etc."
+                "description": "Segment-keyed instrument id lists, e.g. {\"NSE_EQ\": [11536]}",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
                   }
-                }
+                },
+                "minProperties": 1
               }
             }
           }
@@ -230,24 +216,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "exchangeSegment",
-                  "securityId"
-                ],
-                "properties": {
-                  "exchangeSegment": {
-                    "type": "string",
-                    "description": "Exchange segment, e.g. NSE_EQ"
-                  },
-                  "securityId": {
-                    "type": "string",
-                    "description": "Dhan security id (numeric string)"
-                  },
-                  "instrumentType": {
-                    "type": "string",
-                    "description": "EQUITY / FUTIDX / FUTSTK / OPTFUT etc."
+                "description": "Segment-keyed instrument id lists, e.g. {\"NSE_EQ\": [11536]}",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
                   }
-                }
+                },
+                "minProperties": 1
               }
             }
           }

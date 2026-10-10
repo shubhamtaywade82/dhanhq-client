@@ -33,7 +33,9 @@ RSpec.describe DhanHQ::Client do
         headers: { "Content-Type" => "application/json" }
       )
 
-      expect(client.post("/v2/orders", { "dhanClientId" => "1000000001" })).to include(:orderId)
+      expect(client.post("/v2/orders",
+                         { "dhanClientId" => "1000000001", "transactionType" => "BUY",
+                           "exchangeSegment" => "NSE_EQ" })).to include(:orderId)
     end
 
     it "does not interfere when the same paths resolve to production" do
