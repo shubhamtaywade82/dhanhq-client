@@ -248,6 +248,76 @@ ws_orders = client1.ws_order_update
 
 > **Full details**: TOTP flows, partner mode, token endpoint bootstrap, auto-management — see [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
 
+### Environments: Live / Sandbox / Hybrid
+
+`config.mode` decides which Dhan host each request hits:
+
+| Mode       | Market data (quotes, option chain, charts, instruments, ScanX) | Trading & account (orders, positions, funds, statements) |
+| ---------- | -------------------------------------------------------------- | -------------------------------------------------------- |
+| `:live`    | `api.dhan.co` (default)                                         | `api.dhan.co`                                            |
+| `:sandbox` | `sandbox.dhan.co`                                               | `sandbox.dhan.co`                                        |
+| `:hybrid`  | `api.dhan.co` — **live prices**                                 | `sandbox.dhan.co` — **paper execution**                   |
+
+`hybrid` is the strategy-rehearsal mode: your code reads real market data and places
+orders that are accepted and validated by the Dhan sandbox (which mirrors the live REST
+surface) without risking money.
+
+```ruby
+DhanHQ.configure do |config|
+  config.client_id    = ENV["DHAN_CLIENT_ID"]
+  config.access_token = ENV["DHAN_ACCESS_TOKEN"]
+  config.mode         = :hybrid   # or :live (default) / :sandbox
+end
+
+# Same code, split routing:
+client.market_feed.ltp("NSE_EQ" => [11536])   # -> https://api.dhan.co/v2/marketfeed/ltp
+client.option_chain.fetch(...)                # -> https://api.dhan.co/v2/optionchain
+client.orders.create(...)                     # -> https://sandbox.dhan.co/v2/orders  (no LIVE_TRADING needed)
+client.positions.all                          # -> https://sandbox.dhan.co/v2/positions
+```
+
+Per-tier escape hatch when the defaults don't fit:
+
+```ruby
+config.mode = :hybrid
+config.environment_overrides = { non_trading_api: :live }  # e.g. read the real fund limits
+```
+
+- Env vars: `DHAN_MODE=live|sandbox|hybrid` (or the legacy `DHAN_SANDBOX=true`).
+- The `LIVE_TRADING` guard is **relaxed automatically** for requests routed to the
+  sandbox host — no real money can move there. Orders still hit the guard on `:live`.
+- Per-client override: `DhanHQ::Client.new(config: shared_config, mode: :hybrid)` forks
+  the config instead of mutating the shared one.
+- Global Stocks (US equities) always stay on production in `:hybrid` — the sandbox host
+  does not mirror them.
+- WebSocket streams are production-only (Dhan sandbox has no WS); in `:hybrid` the order
+  update stream reports your **real** account, not sandbox orders.
+- `sandbox = true` remains a supported alias for `mode = :sandbox`.
+
+> **Full details**: what each tier routes where, verified-vs-unverified sandbox endpoints —
+> see [docs/ENDPOINTS_AND_SANDBOX.md](docs/ENDPOINTS_AND_SANDBOX.md).
+
+---
+
+## ScanX Data API (company info, market movers, news, technicals)
+
+The `/v2/data/*` endpoints are wrapped by `client.scanx` — fundamentals, ranked movers,
+live news headlines and server-side indicators, all validated by dry-validation contracts:
+
+```ruby
+client.scanx.company_info(security_id: "1333", exchange_segment: "NSE_EQ",
+                          instrument: "EQUITY", metrics: %w[CO RATIOS SHP])
+
+client.scanx.technical_data(security_id: "1333", exchange_segment: "NSE_EQ",
+                            instrument: "EQUITY", timeframe: "D",
+                            indicators: %w[SMA_20 RSI_14 MACD_HIST PIVOT_CLASSIC])
+
+client.scanx.market_movers(exchange_segment: "NSE_FNO", instrument: %w[OPTIDX OPTSTK],
+                           category: "HIGHEST_OI", expiry: "2026-10-29", limit: 10)
+
+client.scanx.news_headlines(categories: %w[ALL], limit: 25)
+```
+
 ---
 
 ## Order Safety
@@ -265,6 +335,11 @@ LIVE_TRADING=false   # or simply omit
 ```
 
 Attempting to place an order without `LIVE_TRADING=true` raises `DhanHQ::LiveTradingDisabledError`.
+
+**Sandbox exception:** orders routed to the sandbox host (`mode = :sandbox`, or the trading
+tiers under `mode = :hybrid`) skip this guard automatically — the sandbox cannot move real
+money, so the gate only protects production writes. Every audit log line records the
+`target` host (`live`/`sandbox`) it fired at.
 
 ### Dry-Run Mode
 

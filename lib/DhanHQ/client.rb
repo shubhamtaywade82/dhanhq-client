@@ -49,8 +49,12 @@ module DhanHQ
     # @param config_or_attrs [DhanHQ::Configuration, Hash, nil] Optional configuration or attribute hash
     # @param config [DhanHQ::Configuration, nil] Optional keyword configuration
     # @param api_type [Symbol] Type of API (`:order_api`, `:data_api`, `:non_trading_api`)
+    # @param mode [Symbol, nil] Optional environment override (`:live`, `:sandbox`, `:hybrid`)
+    #   for this client. When combined with +config:+ the configuration is forked,
+    #   so a shared/global configuration is never mutated.
     # @param attrs [Hash] Additional keyword configuration attributes
-    def initialize(config_or_attrs = nil, config: nil, api_type: :order_api, **attrs)
+    def initialize(config_or_attrs = nil, config: nil, api_type: :order_api, mode: nil, **attrs)
+      attrs = attrs.merge(mode: mode) if mode
       @config = resolve_config(config_or_attrs, config, attrs)
       @api_type = api_type
       @rate_limiter = RateLimiter.for(api_type)
@@ -59,11 +63,12 @@ module DhanHQ
     end
 
     # The Faraday connection used for HTTP requests.
-    # Built on first use and rebuilt whenever the configured base URL changes.
+    # Built on first use and rebuilt whenever the base URL for this client's API
+    # tier changes — including a mid-flight mode switch.
     #
     # @return [Faraday::Connection]
     def connection
-      current_url = @config.base_url
+      current_url = @config.base_url_for(@api_type)
       return @connection if @connection && @last_base_url == current_url
 
       @last_base_url = current_url
@@ -92,6 +97,15 @@ module DhanHQ
     def trader_control = @trader_control ||= Resources::TraderControl.new(client: client_for(Resources::TraderControl::API_TYPE))
     def ip_setup = @ip_setup ||= Resources::IPSetup.new(client: client_for(Resources::IPSetup::API_TYPE))
     def edis = @edis ||= Resources::Edis.new(client: client_for(Resources::Edis::API_TYPE))
+    def scanx = @scanx ||= Resources::ScanX.new(client: client_for(Resources::ScanX::API_TYPE))
+
+    # The effective environment (+:live+ or +:sandbox+) for requests issued by
+    # this client, resolved from its API tier and the configured mode.
+    #
+    # @return [Symbol]
+    def environment
+      @config.environment_for(@api_type)
+    end
 
     # WebSocket streams bound to this client instance configuration
     def ws_market_feed(mode: :ticker, url: nil, &block)
@@ -258,15 +272,26 @@ module DhanHQ
 
     def resolve_config(config_or_attrs, keyword_config, attrs = {})
       if config_or_attrs.is_a?(DhanHQ::Configuration)
-        config_or_attrs
+        fork_config_with_attrs(config_or_attrs, attrs)
       elsif config_or_attrs.is_a?(Hash)
         DhanHQ::Configuration.new(config_or_attrs.merge(attrs))
       elsif keyword_config
-        keyword_config
+        fork_config_with_attrs(keyword_config, attrs)
       elsif attrs.any?
         DhanHQ::Configuration.new(attrs)
       else
         DhanHQ.ensure_configuration!
+      end
+    end
+
+    # Copies a Configuration when per-instance attributes (e.g. +mode:+) are
+    # given alongside it, so an injected or global configuration is never
+    # mutated. Without extra attributes the original object is shared unchanged.
+    def fork_config_with_attrs(config, attrs)
+      return config if attrs.empty?
+
+      config.dup.tap do |forked|
+        attrs.each { |key, value| forked.public_send("#{key}=", value) }
       end
     end
 

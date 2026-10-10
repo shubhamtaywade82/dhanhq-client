@@ -79,6 +79,10 @@ RSpec.configure do |config|
     # Force sandbox to false for general test suite (to match VCR cassettes)
     # The sandbox_connectivity_spec.rb will explicitly override this.
     ENV["DHAN_SANDBOX"] = "false"
+    # Same for the mode selector — a DHAN_MODE set in the developer's shell
+    # must not reroute the suite's stubbed/VCR requests to the sandbox host.
+    ENV.delete("DHAN_MODE")
+    ENV.delete("DHAN_ENV_OVERRIDES")
 
     # Always initialize with env defaults to avoid nil configuration errors
     DhanHQ.configure_with_env

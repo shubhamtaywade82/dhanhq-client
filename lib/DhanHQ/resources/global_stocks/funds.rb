@@ -10,7 +10,7 @@ module DhanHQ
       # Global Stocks funds are held in USD and are reported separately from the
       # domestic INR fund limit exposed by {DhanHQ::Resources::Funds}.
       class Funds < BaseAPI
-        API_TYPE = :order_api
+        API_TYPE = :global_stocks_api
         HTTP_PATH = "/v2/globalstocks/fundlimit"
 
         # Retrieves the authenticated user's US stock fund limit details.

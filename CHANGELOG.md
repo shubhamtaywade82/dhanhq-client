@@ -1,3 +1,31 @@
+## [4.1.0] - 2026-10-10
+
+### Added
+
+- **Environment modes — `config.mode = :live | :sandbox | :hybrid` (`DHAN_MODE`)** — one switch that decides which Dhan host every request hits. `:live` (default) keeps today's behaviour; `:sandbox` replaces the old all-or-nothing `sandbox = true` flag; and the new **`:hybrid`** mode is the strategy-rehearsal combination the docs site describes — **live market data + sandbox execution**: market feed, option chain, historical charts, instruments and ScanX keep hitting `https://api.dhan.co/v2` for real prices while orders, positions, funds, statements and the rest of the trading surface hit `https://sandbox.dhan.co/v2`, where orders are validated but never fill.
+
+  ```ruby
+  DhanHQ.configure do |config|
+    config.mode = :hybrid      # or DHAN_MODE=hybrid
+  end
+
+  client.market_feed.ltp("NSE_EQ" => [11536])  # -> api.dhan.co     (live prices)
+  client.orders.create(...)                    # -> sandbox.dhan.co (paper execution)
+  ```
+
+  - Resolution is per API tier (`order_api`, `data_api`, `quote_api`, `option_chain`, `non_trading_api`, `global_stocks_api`) via `Configuration#base_url_for(api_type)` / `#environment_for(api_type)`; the client rebuilds its Faraday connection when the resolved URL changes, so a mid-flight mode switch takes effect.
+  - `config.environment_overrides = { non_trading_api: :live }` (or `DHAN_ENV_OVERRIDES="non_trading_api=live"`) overrides any tier on top of the mode — e.g. keep real fund limits while everything else runs on the sandbox.
+  - `sandbox = true` / `DHAN_SANDBOX=true` remain supported aliases for `mode = :sandbox`; `mode` takes precedence when both are given. Unknown modes raise `ArgumentError` at configuration time, not on the first request.
+  - Per-client override: `DhanHQ::Client.new(config: shared, mode: :hybrid)` **forks** the configuration rather than mutating the shared/global one, so two clients can run different modes side by side.
+  - **Global Stocks (US equities) stays on production in `:hybrid`** on its own `global_stocks_api` rate-limit tier (same limits as order APIs) — `sandbox.dhan.co` does not mirror the `/v2/globalstocks/*` surface.
+- **Sandbox-aware LIVE_TRADING gate** — the `ENV["LIVE_TRADING"]` guard now applies only to writes whose effective target is production. Any write routed to the sandbox host (full `:sandbox`, or the trading tiers under `:hybrid`) skips the gate automatically, because no real money can move there. Every order-audit log line now also records `"target":"live"|"sandbox"`, so the audit trail shows which host each attempt fired at.
+- **ScanX data API — `client.scanx`** — wraps the four `/v2/data/*` endpoints from the official API surface, each validated by a dry-validation contract, riding the `data_api` tier (live in `:hybrid`):
+  - `#company_info` — `POST /v2/data/companyinfo`: company overview, valuation/profitability ratios and shareholding pattern (`metrics: %w[CO RATIOS SHP]`).
+  - `#market_movers` — `POST /v2/data/marketmovers`: top options/futures/stocks by OI, volume or price movement; the contract enforces the API's own rule that `expiry` is required for derivative instruments and `universe` for EQUITY.
+  - `#news_headlines` — `POST /v2/data/newsheadline`: live news by category/stock (limit 1–50); `dhanClientId` is injected automatically.
+  - `#technical_data` — `POST /v2/data/technical`: 24 server-side indicators (SMA/EMA families, RSI_14, MACD_HIST, STOCH, ATR_14, ADX_14, pivots…) computed on the latest closed candle.
+  - `/v2/data` joins the `client-id`-header prefixes so ScanX requests authenticate like the other data APIs.
+
 ## [4.0.0] - 2026-08-31
 
 ### Added
