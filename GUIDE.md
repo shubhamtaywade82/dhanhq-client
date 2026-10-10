@@ -57,6 +57,8 @@ Set any of the following environment variables _before_ calling
 
 | Variable                                  | Purpose                                              |
 | ----------------------------------------- | ---------------------------------------------------- |
+| `DHAN_MODE`                               | `live` (default), `sandbox`, or `hybrid` — see [Environments](#environments-live-sandbox-hybrid) below. |
+| `DHAN_ENV_OVERRIDES`                      | String-form per-tier overrides, e.g. `non_trading_api=live`. |
 | `DHAN_LOG_LEVEL`                          | Change logger verbosity (`INFO` default).            |
 | `DHAN_BASE_URL`                           | Override the REST API host.                          |
 | `DHAN_WS_VERSION`                         | Target a specific WebSocket API version.             |
@@ -92,6 +94,28 @@ client2 = DhanHQ::Client.new(client_id: "ACC_2", access_token: "TOKEN_2", sandbo
 orders1 = client1.orders.all
 orders2 = client2.orders.all
 ```
+
+**Environments: live / sandbox / hybrid**
+
+`config.mode` picks which host each tier hits. `:hybrid` is the strategy-rehearsal mode —
+live market data from `api.dhan.co`, paper execution on `sandbox.dhan.co`:
+
+```ruby
+DhanHQ.configure do |config|
+  config.mode = :hybrid   # or DHAN_MODE=hybrid
+  # Optional: per-tier escape hatch on top of the mode
+  # config.environment_overrides = { non_trading_api: :live }
+end
+
+client.market_feed.ltp("NSE_EQ" => [11536])   # live prices from api.dhan.co
+client.orders.create(...)                     # paper execution on sandbox.dhan.co
+```
+
+The `LIVE_TRADING` gate is relaxed automatically for sandbox-targeted writes; production
+writes still require `ENV["LIVE_TRADING"]="true"`. Global Stocks always stays on production
+in `:hybrid`, and WebSocket streams are production-only (the Dhan sandbox has no WS).
+See [docs/ENDPOINTS_AND_SANDBOX.md](docs/ENDPOINTS_AND_SANDBOX.md) for the full routing
+and verification table.
 
 ---
 

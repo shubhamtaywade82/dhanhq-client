@@ -130,6 +130,63 @@ module DhanHQ
     # Backward-compatible alias kept for existing SDK usage.
     Instrument = InstrumentType
 
+    # ScanX data API enums (POST /v2/data/* — company info, market movers,
+    # news headlines, technical indicators).
+    module ScanX
+      # Exchange segments accepted by POST /v2/data/companyinfo.
+      COMPANY_INFO_SEGMENTS = %w[NSE_EQ BSE_EQ].freeze
+      # Metric sections returned by POST /v2/data/companyinfo (CO = company
+      # overview, RATIOS = valuation/profitability + industry benchmarks,
+      # SHP = shareholding pattern).
+      COMPANY_INFO_METRICS = %w[CO RATIOS SHP].freeze
+      # Instrument kinds accepted by POST /v2/data/companyinfo.
+      COMPANY_INFO_INSTRUMENTS = %w[EQUITY].freeze
+
+      # Exchange segments accepted by POST /v2/data/marketmovers.
+      MARKET_MOVERS_SEGMENTS = %w[NSE_FNO BSE_FNO NSE_COMM MCX_COMM NSE_EQ BSE_EQ].freeze
+      # Instrument kinds ranked by POST /v2/data/marketmovers.
+      MARKET_MOVERS_INSTRUMENTS = %w[OPTIDX OPTSTK OPTFUT FUTIDX FUTSTK FUTCOM EQUITY].freeze
+      # Ranking categories for POST /v2/data/marketmovers.
+      MARKET_MOVERS_CATEGORIES =
+        %w[HIGHEST_OI OI_GAINERS OI_LOSERS TOP_VOLUME PRICE_GAINERS PRICE_LOSERS].freeze
+      # Equity universes accepted by POST /v2/data/marketmovers (required when
+      # instrument is EQUITY).
+      MARKET_MOVERS_UNIVERSES = %w[
+        ALL FNO_STOCKS NIFTY_50 NIFTY_BANK FINNIFTY INDIA_VIX NIFTY_MIDCAP NIFTY_NEXT_50
+        NIFTY_SMALLCAP_50 NIFTY_MID_CAP_50 NIFTY_100 NIFTY_200 NIFTY_500 NIFTY_MIDCAP_100
+        NIFTY_MIDCAP_150 NIFTY_SMALLCAP_100 NIFTY_SMALLCAP_250 NIFTY_MICROCAP_250 NIFTY_AUTO
+        NIFTY_PRIVATE_BANK NIFTY_FMCG NIFTY_ENERGY NIFTY_INFRA NIFTY_IT NIFTY_MEDIA NIFTY_METAL
+        NIFTY_MNC NIFTY_PHARMA NIFTY_PSU_BANK NIFTY_REALTY NIFTY_SERVICE_SECTOR NIFTY_CUNSUMPTION
+        GIFT_NIFTY SENSEX BSE_100 BSE_200 BSE_500 BSE_150_MIDCAP BSE_250_SMALLCAP
+        BSE_250_LARGE_MID BSE_400_MID_SMALL BSE_BANKEX BSE_AUTO BSE_CAPITAL_GOODS
+        BSE_CONSUMER_DURABLES BSE_ENERGY BSE_FINANCE BSE_FMCG BSE_HEALTHCARE BSE_INDIA_MFG
+        BSE_INDUSTRIALS BSE_IPO BSE_IT BSE_METALS BSE_OIL_AND_GAS BSE_POWER BSE_PSU BSE_TELECOM
+      ].freeze
+
+      # News categories accepted by POST /v2/data/newsheadline.
+      NEWS_CATEGORIES = %w[
+        ALL COMPANIES EQUITY_MARKETS DEBT_MARKETS IPO GLOBAL INDIAN_ECONOMY GLOBAL_ECONOMY
+        CURRENCY COMMODITIES CRYPTOCURRENCIES GOVERNMENT_POLICY_AND_REGULATION INFRASTRUCTURE
+        INTERNATIONAL_TRADE INVESTMENT_IDEAS REAL_ESTATE STARTUPS TECHNOLOGY MUTUAL_FUNDS
+      ].freeze
+      # News scoping options (portfolio/watchlist) for POST /v2/data/newsheadline.
+      NEWS_UNIVERSES = %w[PORTFOLIO WATCHLIST].freeze
+
+      # Exchange segments accepted by POST /v2/data/technical.
+      TECHNICAL_SEGMENTS = %w[NSE_EQ IDX_I].freeze
+      # Instrument kinds accepted by POST /v2/data/technical.
+      TECHNICAL_INSTRUMENTS = %w[INDEX EQUITY].freeze
+      # Candle timeframes for POST /v2/data/technical (1/5/15 minute, D = daily).
+      TECHNICAL_TIMEFRAMES = %w[1 5 15 D].freeze
+      # Indicator identifiers computed by POST /v2/data/technical.
+      TECHNICAL_INDICATORS = %w[
+        SMA_5 SMA_10 SMA_20 SMA_50 SMA_100 SMA_200
+        EMA_5 EMA_10 EMA_20 EMA_50 EMA_100 EMA_200
+        RSI_14 MACD_HIST STOCH STOCHRSI_14 ATR_14 ADX_14 UO ROC WILLR
+        PIVOT_CLASSIC PIVOT_FIBONACCI PIVOT_CAMARILLA
+      ].freeze
+    end
+
     # Minute intervals allowed by POST /v2/charts/intraday (charts annexure).
     module ChartInterval
       ONE = "1"
@@ -536,7 +593,8 @@ module DhanHQ
       "/v2/marketfeed/",
       "/v2/optionchain",
       "/v2/instrument/",
-      "/v2/charts"
+      "/v2/charts",
+      "/v2/data"
     ].freeze
 
     # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.
@@ -555,6 +613,7 @@ module DhanHQ
       /v2/killswitch
       /v2/ip
       /v2/globalstocks
+      /v2/data/newsheadline
     ].freeze
 
     # Path prefixes whose non-GET requests change real account state — they place,

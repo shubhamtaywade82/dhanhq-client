@@ -37,13 +37,28 @@ module DhanHQ
     module OrderAudit
       private
 
-      # Raises an error if LIVE_TRADING is not explicitly enabled.
-      # Set ENV["LIVE_TRADING"]="true" in production to allow order submission.
+      # Raises an error unless live trading is explicitly enabled OR the request
+      # targets the sandbox host, where no real money is at risk.
+      #
+      # Set ENV["LIVE_TRADING"]="true" to allow order submission against the
+      # production host. Orders routed to the sandbox host (config.mode =
+      # :sandbox, or the trading tiers under :hybrid) skip the gate because they
+      # cannot place real orders.
       def ensure_live_trading!
         return if ENV["LIVE_TRADING"] == "true"
+        return if sandbox_target?
 
         raise DhanHQ::LiveTradingDisabledError,
-              "Live trading is disabled. Set ENV[\"LIVE_TRADING\"]=\"true\" to enable order placement."
+              "Live trading is disabled. Set ENV[\"LIVE_TRADING\"]=\"true\" to enable order placement, " \
+              "or switch to the sandbox with DhanHQ.configure { |c| c.mode = :sandbox } / :hybrid."
+      end
+
+      # True when this resource's requests resolve to the sandbox host.
+      # Tolerates hosts that never got a client wired in (bare test doubles).
+      def sandbox_target?
+        return false unless respond_to?(:client) && client.respond_to?(:environment)
+
+        client.environment == :sandbox
       end
 
       # Runs the risk pipeline for the given order params.
@@ -120,6 +135,7 @@ module DhanHQ
           event: event,
           hostname: inspector.hostname,
           env: inspector.environment,
+          target: request_target,
           ipv4: inspector.public_ipv4,
           ipv6: inspector.public_ipv6,
           security_id: extract_param(params, :securityId, :security_id),
@@ -129,6 +145,13 @@ module DhanHQ
         }.compact
 
         DhanHQ.logger&.warn(JSON.generate(entry))
+      end
+
+      # The host the order will be sent to, for the audit trail.
+      def request_target
+        return "sandbox" if sandbox_target?
+
+        "live"
       end
 
       # Extracts a value from params trying both camelCase and snake_case keys,

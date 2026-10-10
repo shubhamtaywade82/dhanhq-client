@@ -8,7 +8,7 @@ module DhanHQ
       #   GET /v2/globalstocks/trades
       #   GET /v2/globalstocks/trades/{security-id}
       class Trades < BaseAPI
-        API_TYPE = :order_api
+        API_TYPE = :global_stocks_api
         HTTP_PATH = "/v2/globalstocks/trades"
 
         # Retrieves the current trading day's executed Global Stocks trades.

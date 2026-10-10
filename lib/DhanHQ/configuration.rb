@@ -15,6 +15,24 @@ module DhanHQ
     # Default Sandbox API host.
     # @return [String]
     SANDBOX_URL = Constants::Urls::SANDBOX_API_BASE
+
+    # All environments a client can run in.
+    #
+    # - +:live+ — every request hits the production host.
+    # - +:sandbox+ — every request hits the sandbox host (previous `sandbox = true` behaviour).
+    # - +:hybrid+ — market data (quotes, option chain, charts, instruments, ScanX)
+    #   hits production while trading/account requests hit the sandbox host, so a
+    #   strategy rehearses execution against real prices without risking money.
+    # @return [Array<Symbol>]
+    MODES = %i[live sandbox hybrid].freeze
+
+    # API tiers routed to the production host when {#mode} is +:hybrid+.
+    # Everything else (orders, positions, funds, statements, ...) routes to the
+    # sandbox host. Global Stocks keeps its own tier so it stays on production in
+    # hybrid mode — the sandbox host does not mirror the US-equities API.
+    # @return [Array<Symbol>]
+    HYBRID_LIVE_API_TYPES = %i[data_api quote_api option_chain global_stocks_api].freeze
+
     # The client ID for API authentication.
     # @return [String, nil] The client ID or `nil` if not set.
     attr_accessor :client_id
@@ -39,7 +57,55 @@ module DhanHQ
     attr_writer :base_url
 
     # Whether to use the sandbox environment.
-    attr_accessor :sandbox
+    #
+    # Backward-compatible facade over {#mode}: setting it to +true+ switches to
+    # full sandbox mode, +false+ back to live. Prefer {#mode} for new code — it
+    # also supports +:hybrid+ (live market data + sandbox execution).
+    #
+    # rubocop:disable Naming/PredicateMethod -- legacy attr_accessor-style API,
+    # kept as a boolean mirror of +mode+ for every caller written before :hybrid.
+    # @return [Boolean] True when every request targets the sandbox host.
+    def sandbox
+      mode == :sandbox
+    end
+    # rubocop:enable Naming/PredicateMethod
+
+    def sandbox=(value)
+      self.mode = value ? :sandbox : :live
+    end
+
+    # The environment the client runs in: +:live+, +:sandbox+, or +:hybrid+.
+    #
+    # Set via +DHAN_MODE+ or in {DhanHQ.configure}. {#sandbox=} remains as an
+    # alias for switching between +:live+ and +:sandbox+.
+    #
+    # @return [Symbol]
+    attr_reader :mode
+
+    # @param value [Symbol, String] One of {MODES} (case-insensitive).
+    # @raise [ArgumentError] When the value is not a known mode.
+    def mode=(value)
+      @mode = coerce_mode!(value)
+    end
+
+    # Per-tier environment overrides applied on top of {#mode}.
+    #
+    # Keys are API tier symbols (+:order_api+, +:data_api+, +:quote_api+,
+    # +:option_chain+, +:non_trading_api+, +:global_stocks_api+); values are
+    # +:live+ or +:sandbox+. Useful to, say, keep fund limits on production while
+    # everything else runs on the sandbox in hybrid mode:
+    #
+    #   DhanHQ.configure do |c|
+    #     c.mode = :hybrid
+    #     c.environment_overrides = { non_trading_api: :live }
+    #   end
+    #
+    # @return [Hash{Symbol => Symbol}]
+    attr_reader :environment_overrides
+
+    def environment_overrides=(value)
+      @environment_overrides = coerce_environment_overrides(value)
+    end
 
     # When true, state-changing requests (order placement, modification,
     # cancellation, position exits, trading controls) are validated and logged but
@@ -176,15 +242,54 @@ module DhanHQ
     # is nil or the default production URL, returns {SANDBOX_URL}.
     # @return [String]
     def base_url
-      if sandbox? && (@base_url.nil? || @base_url == BASE_URL)
+      base_url_for(nil)
+    end
+
+    # Returns the base URL for requests on the given API tier, honouring
+    # {#mode}, {#environment_overrides}, and an explicit {#base_url} override.
+    #
+    # In +:hybrid+ mode data tiers (see {HYBRID_LIVE_API_TYPES}) resolve to the
+    # production host while trading and account tiers resolve to the sandbox
+    # host, which is what lets a strategy read live prices while placing paper
+    # orders.
+    #
+    # @param api_type [Symbol, nil] API tier the request belongs to. +nil+ uses
+    #   the mode-level default (+:sandbox+ mode resolves to the sandbox host,
+    #   +:live+ and +:hybrid+ to production).
+    # @return [String]
+    def base_url_for(api_type)
+      if environment_for(api_type) == :sandbox && (@base_url.nil? || @base_url == BASE_URL)
         SANDBOX_URL
       else
         @base_url || BASE_URL
       end
     end
 
+    # The effective environment (+:live+ or +:sandbox+) for requests on the
+    # given API tier. Explicit {#environment_overrides} win over the {#mode}
+    # defaults.
+    #
+    # @param api_type [Symbol, nil]
+    # @return [Symbol]
+    def environment_for(api_type)
+      key = api_type&.to_sym
+      return @environment_overrides[key] if key && @environment_overrides.key?(key)
+
+      case mode
+      when :sandbox then :sandbox
+      when :hybrid then HYBRID_LIVE_API_TYPES.include?(key) ? :live : :sandbox
+      else :live
+      end
+    end
+
     def sandbox?
-      @sandbox == true
+      mode == :sandbox
+    end
+
+    # True when {#mode} is +:hybrid+ — live market data, sandbox execution.
+    # @return [Boolean]
+    def hybrid?
+      mode == :hybrid
     end
 
     # @return [Boolean] True when state-changing requests should be simulated.
@@ -228,6 +333,10 @@ module DhanHQ
                                                     default: true)
                                          end
       @base_url = attrs[:base_url] || ENV.fetch("DHAN_BASE_URL", nil)
+      @environment_overrides = coerce_environment_overrides(
+        attrs[:environment_overrides] || ENV.fetch("DHAN_ENV_OVERRIDES", nil)
+      )
+      @mode = resolve_mode(attrs)
       @ws_version = (attrs[:ws_version] || ENV.fetch("DHAN_WS_VERSION", 2)).to_i
       @ws_order_url = attrs[:ws_order_url] || ENV.fetch("DHAN_WS_ORDER_URL", nil)
       @ws_market_feed_url = attrs[:ws_market_feed_url] || ENV.fetch("DHAN_WS_MARKET_FEED_URL", nil)
@@ -241,6 +350,46 @@ module DhanHQ
     end
 
     private
+
+    # Resolves the initial mode from attributes and ENV.
+    #
+    # Precedence: an explicit +:mode+ attribute wins, then +DHAN_MODE+, then the
+    # legacy +sandbox+ attribute / +DHAN_SANDBOX+ flag, then +:live+.
+    def resolve_mode(attrs)
+      raw_mode = attrs.key?(:mode) ? attrs[:mode] : ENV.fetch("DHAN_MODE", nil)
+      return coerce_mode!(raw_mode) if raw_mode
+
+      sandbox_flag = attrs.key?(:sandbox) ? attrs[:sandbox] : env_flag("DHAN_SANDBOX", default: false)
+      sandbox_flag ? :sandbox : :live
+    end
+
+    # Normalises a mode value, raising on anything outside {MODES}.
+    def coerce_mode!(value)
+      mode = value.to_s.strip.downcase.to_sym
+      raise ArgumentError, "unknown mode #{value.inspect}: expected one of #{MODES.join(", ")}" unless MODES.include?(mode)
+
+      mode
+    end
+
+    # Valid targets for an environment override.
+    OVERRIDE_TARGETS = %i[live sandbox].freeze
+    private_constant :OVERRIDE_TARGETS
+
+    # Normalises an environment-overrides hash: symbol keys, :live/:sandbox values.
+    def coerce_environment_overrides(value)
+      return {} if value.nil? || value == ""
+
+      value = value.split(",").to_h { |pair| pair.split("=") } if value.is_a?(String)
+      raise ArgumentError, "environment_overrides must be a Hash (tier => :live/:sandbox)" unless value.is_a?(Hash)
+
+      value.each_with_object({}) do |(tier, env), out|
+        key = tier.to_s.strip.to_sym
+        target = env.to_s.strip.downcase.to_sym
+        raise ArgumentError, "environment override for #{key} must be :live or :sandbox (got #{env.inspect})" unless OVERRIDE_TARGETS.include?(target)
+
+        out[key] = target
+      end
+    end
 
     # Reads a boolean-ish environment variable, falling back to +default+ when unset.
     def env_flag(name, default:)

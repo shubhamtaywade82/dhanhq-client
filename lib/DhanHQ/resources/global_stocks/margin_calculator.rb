@@ -11,7 +11,7 @@ module DhanHQ
       # Both endpoints take the same request body. The API documents +price+ and
       # +quantity+ as strings, so numeric input is stringified before sending.
       class MarginCalculator < BaseAPI
-        API_TYPE = :non_trading_api
+        API_TYPE = :global_stocks_api
         HTTP_PATH = "/v2/globalstocks"
 
         # Calculates the margin required for a Global Stocks order.

@@ -44,6 +44,9 @@ module DhanHQ
     # "dhan_hq"` — it only worked via exe/dhanhq-mcp and lib/dhan_hq/mcp.rb, which
     # require_relative the file directly instead of going through the autoloader.
     "mcp" => "MCP",
+    # resources/scanx.rb defines DhanHQ::Resources::ScanX; without this Zeitwerk
+    # looks for DhanHQ::Resources::Scanx and fails on the first reference.
+    "scanx" => "ScanX",
     "ws" => "WS"
   )
   LOADER.push_dir(File.join(__dir__, "DhanHQ"), namespace: self)

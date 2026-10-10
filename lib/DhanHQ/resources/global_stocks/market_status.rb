@@ -7,7 +7,7 @@ module DhanHQ
       #
       #   GET /v2/globalstocks/marketstatus
       class MarketStatus < BaseAPI
-        API_TYPE = :non_trading_api
+        API_TYPE = :global_stocks_api
         HTTP_PATH = "/v2/globalstocks/marketstatus"
 
         # Retrieves the current US market status and session timings.

@@ -2,5 +2,5 @@
 
 module DhanHQ
   # Semantic version of the DhanHQ client gem.
-  VERSION = "4.0.0"
+  VERSION = "4.1.0"
 end
