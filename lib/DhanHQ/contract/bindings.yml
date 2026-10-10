@@ -1,0 +1,157 @@
+# DhanHQ contract bindings — the explicit link between the gem's resource
+# methods and the operations in the vendored DhanHQ OpenAPI contract.
+#
+# Generated code and the conformance spec (spec/dhan_hq/contract/) consume this
+# file: every resource HTTP verb must map to a real operationId, and every
+# contract operation must be bound here or listed under unbound_operations with
+# a reason. Nothing in this file is decorative — the conformance suite fails on
+# drift in either direction.
+#
+# NOTE: keep the keys identical to the resource class names.
+
+bindings:
+  Resources::Orders:
+    create: placeorder
+    update: modifyorder
+    slicing: placesliceorder
+    cancel: cancelorder
+    all: getorders
+    find: getorderbyorderid
+    by_correlation: getorderbycorrelationid
+  Resources::Trades:
+    all: getalltrades
+    find: gettradebyorderid
+  Resources::Statements:
+    ledger: ledger
+    trade_history: gettradehistory
+  Resources::SuperOrders:
+    all: getsuperorders
+    create: placesuperorder
+    update: modifysuperorder
+    cancel: cancelsuperorder
+  Resources::ForeverOrders:
+    all: getforeverorders
+    create: placeforeverorder
+    update: modifyforeverorder
+    cancel: cancelforeverorder
+  Resources::AlertOrders:
+    create: alertOrder
+    update: modifyAlertOrder
+    delete: delAlertOrder
+  Resources::MultiOrders:
+    create: placeMultiOrder
+  Resources::Positions:
+    all: getpositions
+    convert: convertposition
+    exit_all: orderExitAll
+  Resources::Holdings:
+    all: getholdings
+  Resources::Edis:
+    form: edisform
+    bulk_form: bulkedisform
+    tpin: edistpin
+    inquire: edisqtystatus
+  Resources::PnlExit:
+    status: getPnlExit
+    configure: pnlExit
+    stop: stopPnlExit
+  Resources::KillSwitch:
+    status: KillSwitchStatus
+    update: killswitch
+  Resources::MarginCalculator:
+    calculate: margincalculator
+    calculate_multi: margincalculatormulti
+  Resources::Funds:
+    fetch: fundlimit
+  Resources::ScanX:
+    company_info: companyInfo
+    market_movers: marketMovers
+    news_headlines: newsHeadline
+    technical_data: technicalMetrics
+  Resources::ExpiredOptionsData:
+    fetch: optionchart
+  Resources::HistoricalData:
+    daily: historicalcharts
+    intraday: intradaycharts
+  Resources::MarketFeed:
+    ltp: marketfeedLTP
+    ohlc: marketfeedOHLC
+    quote: marketfeedQuote
+  Resources::OptionChain:
+    fetch: optionchain
+    expirylist: optionchainexpirylist
+  Resources::Instruments:
+    by_segment: getinstrumentlist
+  Resources::Profile:
+    fetch: getProfile
+  Resources::IPSetup:
+    current: getIP
+    set: setIP
+    update: modifyIP
+  Resources::GlobalStocks::Orders:
+    create: placeOrder
+    update: modifyOrder
+    cancel: cancelOrder
+    all: getOrders
+    find: getOrderByOrderId
+  Resources::GlobalStocks::Trades:
+    all: getPastTrades
+    by_security_id: getPastTradesByScript
+  Resources::GlobalStocks::MarketStatus:
+    fetch: getMarketStatus
+  Resources::GlobalStocks::Holdings:
+    all: getHoldings
+  Resources::GlobalStocks::Funds:
+    fetch: getFundLimit
+  Resources::GlobalStocks::MarginCalculator:
+    calculate: getKnowYourMargin
+    estimate: getOrderEstimator
+
+# Live-contract operations intentionally NOT bound to a resource method.
+# Every entry needs a reason; the conformance spec enforces the completeness
+# of this list against the vendored spec.
+unbound_operations:
+  getAllAlertOrders:
+    reason: >
+      Resources::AlertOrders does not expose a list method yet; the API serves
+      GET /alerts/orders. Candidate follow-up (see REVIEW.md M-series).
+  getAlertOrder:
+    reason: >
+      Resources::AlertOrders does not expose a single-alert reader yet; the API
+      serves GET /alerts/orders/{alertId}. Candidate follow-up.
+  renewToken:
+    reason: >
+      POST /RenewToken is a docs-only endpoint (overlay 0001) used by
+      DhanHQ::Auth::TokenRenewal, outside the Resources layer — the token
+      lifecycle is not a resource method.
+
+# Endpoints the gem exposes that resolve to NO contract operation. Each entry
+# is a documented decision, not an oversight — the conformance spec asserts
+# that Registry.resolve really does return nil for them.
+unmapped_gem_endpoints:
+  - verb: post
+    path: "/v2/orders/iceberg"
+    reason: >
+      Iceberg orders are not part of the DhanHQ v2 OpenAPI contract (REVIEW.md
+      M1: verify against live host or deprecate the resource).
+  - verb: get
+    path: "/v2/orders/iceberg"
+    reason: >
+      Iceberg order list is not part of the v2 contract (REVIEW.md M1).
+  - verb: put
+    path: "/v2/orders/iceberg/OID"
+    reason: >
+      Iceberg order modification is not part of the v2 contract (REVIEW.md M1).
+  - verb: post
+    path: "/v2/orders/twap"
+    reason: >
+      TWAP orders are not part of the DhanHQ v2 OpenAPI contract (REVIEW.md M1).
+  - verb: get
+    path: "/v2/orders/twap"
+    reason: >
+      TWAP order list is not part of the v2 contract (REVIEW.md M1).
+  - verb: get
+    path: "/v2/forever/orders/OID"
+    reason: >
+      The v2 contract serves the forever-order list (GET /forever/orders) but no
+      per-order reader; Resources::ForeverOrders#find hits an undocumented path.

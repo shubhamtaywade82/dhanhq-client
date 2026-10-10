@@ -1,0 +1,357 @@
+[
+  {
+    "op": "add",
+    "path": "/paths/~1orders/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1slicing/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1external~1{correlation-id}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1{order-id}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1{order-id}/put/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1{order-id}/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1trades/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1trades~1{order-id}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1trades~1{from-date}~1{to-date}~1{page-number}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1super~1orders/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1super~1orders/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1super~1orders~1{order-id}/put/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1super~1orders~1{order-id}~1{order-leg}/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1orders/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1orders/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1orders~1{alertId}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1orders~1{alertId}/put/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1orders~1{alertId}/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1alerts~1multi~1orders/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1forever~1orders/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1forever~1orders/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1forever~1orders~1{order-id}/put/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1forever~1orders~1{order-id}/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1positions/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1positions/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1positions~1convert/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1holdings/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1edis~1form/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1edis~1bulkform/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1edis~1tpin/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1edis~1inquire~1{isin}/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1pnlExit/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1pnlExit/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1pnlExit/delete/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1killswitch/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1killswitch/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1margincalculator/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1margincalculator~1multi/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1fundlimit/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1ip~1modifyIP/put/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1ip~1setIP/post/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1ip~1getIP/get/x-dhan-rate-limit-class",
+    "value": "order_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1charts~1rollingoption/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1charts~1intraday/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1charts~1historical/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1data~1technical/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1data~1newsheadline/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1data~1marketmovers/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1data~1companyinfo/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1ledger/get/x-dhan-rate-limit-class",
+    "value": "non_trading_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1orders/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1orders/post/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1orders~1{order-id}/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1orders~1{order-id}/put/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1orders~1{order-id}/delete/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1transEstimate/post/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1margincalculator/post/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1trades/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1trades~1{security-id}/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1marketstatus/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1holdings/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1globalstocks~1fundlimit/get/x-dhan-rate-limit-class",
+    "value": "global_stocks_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1profile/get/x-dhan-rate-limit-class",
+    "value": "non_trading_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1RenewToken/post/x-dhan-rate-limit-class",
+    "value": "non_trading_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1instrument~1{exchangeSegment}/get/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1marketfeed~1ltp/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1marketfeed~1ohlc/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1marketfeed~1quote/post/x-dhan-rate-limit-class",
+    "value": "data_api"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1optionchain/post/x-dhan-rate-limit-class",
+    "value": "option_chain"
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1optionchain~1expirylist/post/x-dhan-rate-limit-class",
+    "value": "option_chain"
+  }
+]

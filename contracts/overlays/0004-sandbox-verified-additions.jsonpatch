@@ -1,0 +1,29 @@
+[
+  {
+    "op": "add",
+    "path": "/paths/~1profile",
+    "value": {
+      "get": {
+        "tags": [
+          "Docs-only"
+        ],
+        "summary": "Get profile (verified on sandbox, absent from sandbox spec)",
+        "description": "Verified against the sandbox host via the gem's recorded VCR cassette (spec/vcr_cassettes/DhanHQ_sandbox_connectivity/successfully_retrieves_the_user_profile.yml, 2026-03-07) even though sandbox.dhan.co/v2/v3/api-docs omits it. Added by overlay 0004 so the derived sandbox matrix matches reality.",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "Profile payload as recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "x-dhan-verified-vcr": true
+      }
+    }
+  }
+]

@@ -61,10 +61,15 @@ RSpec.describe DhanHQ::SandboxCapabilities do
   end
 
   describe ".reason_for" do
-    it "explains the rule that matched" do
+    it "explains the contract operation that is missing from the sandbox" do
       expect(described_class.reason_for(:post, "/v2/marketfeed/ltp"))
-        .to include("POST /v2/marketfeed*")
+        .to include("marketfeedLTP", "not part of the sandbox API surface")
       expect(described_class.reason_for(:post, "/v2/orders")).to be_nil
+    end
+
+    it "explains endpoints absent from both contracts" do
+      expect(described_class.reason_for(:post, "/v2/orders/iceberg"))
+        .to include("no contract operation matches", "REVIEW.md M1")
     end
   end
 end

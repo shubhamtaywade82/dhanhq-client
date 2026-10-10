@@ -1,0 +1,39 @@
+[
+  {
+    "op": "add",
+    "path": "/paths/~1orders/post/x-dhan-quirks",
+    "value": [
+      "Market orders are rejected on the sandbox host (official FAQ).",
+      "Orders receive exchangeOrderId \"0\"; fills never happen.",
+      "Live-valid payloads may be rejected with DH-905 (omsErrorDescription) because the sandbox runs a real OMS/RMS."
+    ]
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1fundlimit/get/x-dhan-quirks",
+    "value": [
+      "Sandbox accounts carry a fixed fund limit of 500 (official FAQ)."
+    ]
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1charts~1intraday/post/x-dhan-quirks",
+    "value": [
+      "Charts return REAL historical OHLCV data, not simulated data."
+    ]
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1charts~1historical/post/x-dhan-quirks",
+    "value": [
+      "Charts return REAL historical OHLCV data, not simulated data."
+    ]
+  },
+  {
+    "op": "add",
+    "path": "/paths/~1orders~1{order-id}/get/x-dhan-quirks",
+    "value": [
+      "Sandbox is NOT paper trading: no virtual-money fill simulation exists."
+    ]
+  }
+]
