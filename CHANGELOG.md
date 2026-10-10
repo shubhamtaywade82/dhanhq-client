@@ -16,6 +16,69 @@
 - **Sandbox capability guard** — `DhanHQ::SandboxCapabilities` (derived from the official sandbox OpenAPI spec at `sandbox.dhan.co/v2/v3/api-docs`) and `DhanHQ::SandboxUnsupportedError`. Requests that would target the sandbox host for endpoints the sandbox does not implement (super orders, alerts/multi orders, pnlExit, `/ip/*`, `charts/rollingoption`, `/data/*`, `marketfeed/*`, `optionchain*`, `instrument/*`, `margincalculator/multi`, `globalstocks/*`, `DELETE /positions`, `GET /killswitch`) now fail fast with an actionable message instead of an opaque 404/DH-905. `:hybrid` mode is unaffected — its data tiers keep resolving to production.
 - **Review documentation** — `REVIEW.md` (protocol-verified review with findings F1–F9 and recommendations M1–M9) and `GAP_ANALYSIS.md` (endpoint-by-endpoint matrix: 47 live-spec paths ✅, sandbox matrix, WS packet coverage, auth surface, rate limits, error codes).
 
+### Contract-first architecture (branch `contract-first`)
+
+The gem's wire knowledge now flows from **machine-readable contracts** instead of
+hand transcription. See [CONTRACT_FIRST.md](CONTRACT_FIRST.md) for the
+architecture, [contracts/overlays/README.md](contracts/overlays/README.md) for
+the vendor-spec patch log, and the generated
+[docs/ENDPOINTS.md](docs/ENDPOINTS.md) catalogue.
+
+#### Added
+
+- **Vendored contracts** — `contracts/dhanhq/live.openapi.json` (47 paths /
+  63 operations) and `sandbox.openapi.json` (22 paths / 27 operations),
+  unmodified downloads from the `v3/api-docs` endpoints; `contracts/dhanhq/ws_protocol.yml`,
+  the byte-level WebSocket wire manifest (packets, request codes, segment enum,
+  FMD frame geometry, disconnect codes, limits). Both ship in the gem.
+- **Contract overlays** (`contracts/overlays/*.jsonpatch`, RFC 6902) — reviewed
+  patches for the vendor spec's defects, applied by `DhanHQ::Contract::SpecLoader`:
+  docs-only endpoints (`/profile`, `/RenewToken`, `/instrument/{exchangeSegment}`,
+  `/marketfeed/{ltp,ohlc,quote}`, `/optionchain`, `/optionchain/expirylist`),
+  rate-limit class annotations on all 71 operations, sandbox behaviour quirks,
+  the VCR-verified `GET /profile` on the sandbox host, and the exchangeSegment
+  enum reconciled with the official annexure (the vendor spec omits `IDX_I`,
+  `NSE_CURRENCY`, `BSE_CURRENCY`).
+- **`DhanHQ::Contract::Registry`** — the executable operation index: resolves
+  resource calls (verb + path) back to operations, knows each operation's tier,
+  param-key style, schemas and sandbox support. `DhanHQ::Contract::Bindings`
+  (`bindings.yml`) declares the resource-method → operationId map (57 bindings),
+  the intentionally unbound operations and the spec-absent gem endpoints
+  (iceberg / TWAP, REVIEW.md M1); the conformance suite enforces completeness
+  in all three directions.
+- **Schema-derived validation** — `DhanHQ::Contract::SchemaValidator`
+  (json_schemer) validates wire payloads against the contract before they are
+  sent. `config.validate_requests` defaults to **on** (set
+  `DHAN_VALIDATE_REQUESTS=false` to opt out); `config.validate_responses`
+  (default off) logs upstream drift instead of raising. Semantic rules
+  (lot/tick multiples etc.) remain in the dry-validation contracts.
+- **`DhanHQ::WS::Protocol`** — runtime wire knowledge (segment enum,
+  subscribe/unsubscribe codes, FMD codes) is now derived from the manifest;
+  `spec/dhan_hq/ws/protocol_spec.rb` packs binary fixtures FROM the manifest
+  and round-trips them through the real decoders, structurally preventing the
+  F1–F7 bug class.
+- **Generated artifacts** (`rake contract:generate`, `rake contract:docs`) —
+  `lib/DhanHQ/contract/metadata.rb` (frozen schema metadata for all 75
+  component schemas) and `docs/ENDPOINTS.md` (endpoint catalogue with tiers,
+  param-key styles and sandbox availability).
+- **Governance** — `rake contract:refresh` / `contract:check` (vendor spec
+  drift as a git diff; CI exit on drift), `rake contract:fuzz` (deterministic
+  offline property harness over the sandbox's read-only operations), and the
+  scheduled `contract-drift` GitHub workflow.
+
+#### Fixed (contract-driven)
+
+- **Model parity gaps** the contract caught immediately: `Models::Order` now
+  exposes `exchange_order_id`; `Models::Holding` exposes `mtf_qty`,
+  `mtf_t1_qty` and `last_traded_price` (served by GET /holdings, previously
+  dropped on the floor).
+- Parameter-key casing in `BaseAPI` is declared per operation in the contract
+  (replacing the `path.include?("/marketfeed")` URL sniffing; the sniffed
+  strategy remains only as the fallback for unbound legacy paths).
+- `dhanClientId` injection moved ahead of contract validation via
+  `RequestHelper#with_injected_client_id` (idempotent; `prepare_payload`
+  reuses it and wire behaviour is unchanged, including empty-body requests).
+
 ## [4.1.0] - 2026-10-10
 
 ### Fixed (PR review follow-up)

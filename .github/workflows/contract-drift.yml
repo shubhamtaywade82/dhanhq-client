@@ -1,0 +1,56 @@
+name: Contract Drift
+
+# Contract-first governance: the vendored OpenAPI documents
+# (contracts/dhanhq/*.openapi.json) are the gem's source of truth for the
+# DhanHQ wire protocol. DhanHQ regenerates those documents on every deploy,
+# so upstream changes can land at any time. This workflow catches them:
+#
+#  1. contract:check re-downloads both api-docs and fails when the vendor
+#     document no longer matches the vendored copy — the PR diff then shows
+#     exactly what changed upstream.
+#  2. The contract specs (conformance, enum parity, model parity, WS
+#     protocol round-trip) run on every push, so a spec update fails loudly
+#     until bindings/overlays are reviewed (contracts/overlays/README.md).
+
+on:
+  push:
+    paths:
+      - "contracts/**"
+      - "lib/DhanHQ/contract/**"
+      - "lib/DhanHQ/ws/**"
+      - ".github/workflows/contract-drift.yml"
+  schedule:
+    - cron: "23 3 * * 1" # weekly, Mondays 03:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Vendor spec drift check
+    runs-on: ubuntu-latest
+    # Scheduled runs on a fork/repo without secrets still work: the api-docs
+    # endpoints are public. A failure opens visibility; wire a Slack/Discord
+    # notification here if desired.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Re-download vendor specs and diff
+        run: bundle exec rake contract:check
+      - name: Contract conformance + validation + protocol specs
+        run: bundle exec rspec spec/dhan_hq/contract spec/dhan_hq/ws/protocol_spec.rb spec/dhan_hq/sandbox_capabilities_spec.rb
+
+  rspec:
+    name: Full suite (contract branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - run: bundle exec rspec spec/dhan_hq spec/dhan_hq_spec.rb spec/generators

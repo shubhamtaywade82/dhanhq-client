@@ -117,6 +117,18 @@ Models own the Ruby API. Resources own HTTP calls. Contracts validate inputs. Th
 
 For the full dependency flow and extension pattern, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Contract-First Design
+
+The gem's wire knowledge is **machine-readable and executable**, not transcribed from prose:
+
+- `contracts/dhanhq/*.openapi.json` — the vendored DhanHQ OpenAPI documents (live + sandbox), plus `ws_protocol.yml`, the byte-level WebSocket wire manifest. Both ship with the gem.
+- `contracts/overlays/` — reviewed RFC 6902 patches for the vendor spec's defects (docs-only endpoints, enum reconciliation, sandbox quirks and verified behaviours).
+- `DhanHQ::Contract::Registry` + `bindings.yml` — every resource call resolves to a contract operation; the conformance spec fails on drift in any direction.
+- Schema-derived request validation is **on by default** (`config.validate_requests`, `DHAN_VALIDATE_REQUESTS=false` to opt out); response validation is opt-in (`config.validate_responses`).
+- Governance: `rake contract:refresh` / `contract:check` (vendor drift), `contract:generate` / `contract:docs` (regenerate metadata + endpoint catalogue), `contract:fuzz` (offline property harness).
+
+See [CONTRACT_FIRST.md](CONTRACT_FIRST.md) for the architecture and [docs/ENDPOINTS.md](docs/ENDPOINTS.md) for the generated catalogue.
+
 ---
 
 ## ✨ Key Features

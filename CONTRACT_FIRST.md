@@ -1,5 +1,15 @@
 # Contract-First Architecture — Assessment & Conversion Roadmap
 
+> **Status: IMPLEMENTED (P0–P5)** — this roadmap has been executed on the
+> `contract-first` branch. Phase status: ✅ P0 vendored contracts + overlays ·
+> ✅ P1 registry + bindings + conformance suite + derived sandbox matrix ·
+> ✅ P2 schema-derived validation (default-on requests, opt-in responses) ·
+> ✅ P3 generated metadata + endpoint catalogue + contract-declared casing ·
+> ✅ P4 WS protocol manifest wired into runtime + fixture round-trip ·
+> ✅ P5 drift CI + property harness + governance. Remaining future work is
+> limited to what the plan deliberately deferred (generated param structs
+> per operation; AsyncAPI lifecycle document).
+>
 > Companion to [REVIEW.md](REVIEW.md) (findings F1–F9, recommendations M1–M9) and
 > [GAP_ANALYSIS.md](GAP_ANALYSIS.md) (endpoint matrices). This document answers two questions:
 >
