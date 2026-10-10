@@ -1293,7 +1293,7 @@
           },
           "orderStatus": {
             "type": "string",
-            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| TRANSIT         | Did not reach the exchange server           |\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker\u2019s end           |\n| CANCELLED       | Cancelled by user                           |\n| PART_TRADED     | Partially Executed                          |\n| TRADED          | Executed                                    |\n| EXPIRED         | Validity of order is expired                |",
+            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| TRANSIT         | Did not reach the exchange server           |\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker’s end           |\n| CANCELLED       | Cancelled by user                           |\n| PART_TRADED     | Partially Executed                          |\n| TRADED          | Executed                                    |\n| EXPIRED         | Validity of order is expired                |",
             "enum": [
               "TRANSIT",
               "PENDING",
@@ -1378,7 +1378,7 @@
           },
           "orderStatus": {
             "type": "string",
-            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker\u2019s end           |\n| CANCELLED       | Cancelled by user                           |\n| EXPIRED         | Validity of order is expired                |",
+            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker’s end           |\n| CANCELLED       | Cancelled by user                           |\n| EXPIRED         | Validity of order is expired                |",
             "enum": [
               "PENDING",
               "REJECTED",
@@ -2511,7 +2511,7 @@
           },
           "orderStatus": {
             "type": "string",
-            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| TRANSIT         | Did not reach the exchange server           |\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker\u2019s end           |\n| CANCELLED       | Cancelled by user                           |\n| PART_TRADED     | Partially Executed                          |\n| TRADED          | Executed                                    |\n| EXPIRED         | Validity of order is expired                |",
+            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| TRANSIT         | Did not reach the exchange server           |\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker’s end           |\n| CANCELLED       | Cancelled by user                           |\n| PART_TRADED     | Partially Executed                          |\n| TRADED          | Executed                                    |\n| EXPIRED         | Validity of order is expired                |",
             "enum": [
               "TRANSIT",
               "PENDING",
@@ -2843,7 +2843,7 @@
           },
           "orderStatus": {
             "type": "string",
-            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker\u2019s end           |\n| CANCELLED       | Cancelled by user                           |\n| EXPIRED         | Validity of order is expired                |",
+            "description": "| **Enum Values** | **Description**                             |\n|-----------------|---------------------------------------------|\n| PENDING         | Reached at exchange end, awaiting execution |\n| REJECTED        | Rejected at exchange/broker’s end           |\n| CANCELLED       | Cancelled by user                           |\n| EXPIRED         | Validity of order is expired                |",
             "enum": [
               "PENDING",
               "REJECTED",

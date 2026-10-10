@@ -33,19 +33,23 @@ class ContractFetchError < StandardError; end
 def fetch_contract_spec(name, url)
   require "net/http"
   uri = URI(url)
-  response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                             open_timeout: 10, read_timeout: 30) do |http|
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = uri.scheme == "https"
+  http.open_timeout = 10
+  http.read_timeout = 30
+  response = http.start do |session|
     request = Net::HTTP::Get.new(uri)
     request["User-Agent"] = "dhanhq-client-contract-refresh (+https://github.com/shubhamtaywade82/dhanhq-client)"
     request["Accept"] = "application/json"
-    http.request(request)
+    session.request(request)
   end
   raise ContractFetchError, "#{name} spec download returned HTTP #{response.code}" unless response.code.to_i == 200
-  unless response.body.to_s.strip.start_with?("{")
-    raise ContractFetchError, "#{name} spec download did not return JSON (#{response.body.to_s[0, 80].inspect})"
-  end
 
-  response.body
+  body = response.body.to_s
+  json = body.strip.start_with?("{")
+  raise ContractFetchError, "#{name} spec download did not return JSON (#{body[0, 80].inspect})" unless json
+
+  body
 end
 
 namespace :contract do
@@ -65,12 +69,12 @@ namespace :contract do
         next
       end
 
-      current = File.exist?(target) ? File.read(target) : nil
-      pretty = "#{JSON.pretty_generate(JSON.parse(body))}\n"
-      if current == pretty
+      current = File.exist?(target) ? JSON.parse(File.read(target)) : nil
+      fresh = JSON.parse(body)
+      if current == fresh
         puts "#{name}: unchanged"
       else
-        File.write(target, pretty)
+        File.write(target, "#{JSON.pretty_generate(fresh)}\n")
         changed << name
         puts "#{name}: UPDATED #{target}"
       end
@@ -109,8 +113,11 @@ namespace :contract do
         next
       end
 
-      fresh = "#{JSON.pretty_generate(JSON.parse(body))}\n"
-      drift << name if fresh != File.read(vendored)
+      fresh = JSON.parse(body)
+      # Deep-compare PARSED documents: byte/serializer differences (key order,
+      # unicode escaping, float formatting) are not contract drift — only
+      # semantic content is.
+      drift << name if fresh != JSON.parse(File.read(vendored))
     end
 
     unless unavailable.empty?
