@@ -111,7 +111,7 @@ module DhanHQ
 
         # Market-status packet (response code 7): header-only frame signalling
         # that the market opened or closed. No OHLC payload is attached.
-        def decode_market_status(pkt, segstr, sid)
+        def decode_market_status(_pkt, segstr, sid)
           { kind: :market_status, segment: segstr, security_id: sid }
         end
 

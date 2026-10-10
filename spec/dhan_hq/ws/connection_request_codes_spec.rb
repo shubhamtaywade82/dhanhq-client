@@ -51,7 +51,7 @@ RSpec.describe DhanHQ::WS::Connection do
     end
 
     it "batches subscriptions at 100 instruments per message" do
-      list = 250.times.map { |i| { ExchangeSegment: "NSE_EQ", SecurityId: i.to_s } }
+      list = Array.new(250) { |i| { ExchangeSegment: "NSE_EQ", SecurityId: i.to_s } }
 
       connection.send(:send_sub, list)
 

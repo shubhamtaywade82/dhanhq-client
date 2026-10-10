@@ -7,7 +7,9 @@ name: Contract Drift
 #
 #  1. contract:check re-downloads both api-docs and fails when the vendor
 #     document no longer matches the vendored copy — the PR diff then shows
-#     exactly what changed upstream.
+#     exactly what changed upstream. sandbox.dhan.co answers HTTP 403 to
+#     datacenter/CI egress, so an unreachable host is reported and skipped;
+#     any reachable host's content drift still fails the run.
 #  2. The contract specs (conformance, enum parity, model parity, WS
 #     protocol round-trip) run on every push, so a spec update fails loudly
 #     until bindings/overlays are reviewed (contracts/overlays/README.md).

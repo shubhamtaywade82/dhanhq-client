@@ -14,9 +14,8 @@ RSpec.describe DhanHQ::Contract::Bindings do
   let(:live_ops) { registry.operations }
   let(:sandbox_raw_ids) do
     doc = DhanHQ::Contract::SpecLoader.load(:sandbox)
-    doc.fetch("paths", {}).flat_map { |_p, item| item.values }
-       .select { |o| o.is_a?(Hash) && o["operationId"] }
-       .map { |o| o.fetch("operationId") }.to_set
+    ids = doc.fetch("paths", {}).values.flat_map(&:values)
+    ids.select { |o| o.is_a?(Hash) && o["operationId"] }.to_set { |o| o.fetch("operationId") }
   end
 
   describe "bindings table" do
@@ -28,14 +27,14 @@ RSpec.describe DhanHQ::Contract::Bindings do
         end
       end
 
-      expect(broken).to be_empty, "bindings point to unknown operations: #{broken.join(', ')}"
+      expect(broken).to be_empty, "bindings point to unknown operations: #{broken.join(", ")}"
     end
 
     it "does not bind the same operation from two resources" do
-      dupes = described_class.all_operation_ids
-                            .tally.select { |_id, count| count > 1 }.keys
+      tally = described_class.all_operation_ids.tally
+      dupes = tally.select { |_id, count| count > 1 }.keys
 
-      expect(dupes).to be_empty, "operations bound more than once: #{dupes.join(', ')}"
+      expect(dupes).to be_empty, "operations bound more than once: #{dupes.join(", ")}"
     end
 
     it "references resource classes and methods that actually exist" do
@@ -54,7 +53,7 @@ RSpec.describe DhanHQ::Contract::Bindings do
         end
       end
 
-      expect(missing).to be_empty, "bindings reference missing code: #{missing.join(', ')}"
+      expect(missing).to be_empty, "bindings reference missing code: #{missing.join(", ")}"
     end
   end
 
@@ -63,9 +62,9 @@ RSpec.describe DhanHQ::Contract::Bindings do
       bound = described_class.all_operation_ids.to_set
       declared_unbound = described_class.unbound_operations.keys.to_set
       unaccounted = live_ops.keys.to_set - bound - declared_unbound
+      message = "operations with no binding and no declared reason: #{unaccounted.sort.join(", ")}"
 
-      expect(unaccounted).to be_empty,
-                         "operations with no binding and no declared reason: #{unaccounted.sort.join(', ')}"
+      expect(unaccounted).to be_empty, message
     end
 
     it "does not declare unbound reasons for operations that ARE bound" do
@@ -79,20 +78,21 @@ RSpec.describe DhanHQ::Contract::Bindings do
       mismatches = described_class.unmapped_gem_endpoints.reject do |entry|
         registry.resolve(entry[:verb] || entry["verb"], entry[:path] || entry["path"]).nil?
       end
+      detail = mismatches.map { |m| "#{m[:verb] || m["verb"]} #{m[:path] || m["path"]}" }.join(", ")
+      message = "these gem endpoints now match a contract operation — move them into the " \
+                "bindings table: #{detail}"
 
-      expect(mismatches).to be_empty,
-        "these gem endpoints now match a contract operation — move them into the bindings table: " \
-        "#{mismatches.map { |m| "#{m[:verb] || m['verb']} #{m[:path] || m['path']}" }.join(', ')}"
+      expect(mismatches).to be_empty, message
     end
   end
 
   describe "operation metadata" do
     it "assigns a known rate-limit class to every operation" do
       valid = DhanHQ::RateLimiter::RATE_LIMITS.keys
-      unclassed = live_ops.values.select { |op| !valid.include?(op.rate_limit_class) }
+      unclassed = live_ops.values.reject { |op| valid.include?(op.rate_limit_class) }
+      message = "operations without a rate-limit class (overlay 0002): #{unclassed.map(&:label).join(", ")}"
 
-      expect(unclassed).to be_empty,
-        "operations without a rate-limit class (overlay 0002): #{unclassed.map(&:label).join(', ')}"
+      expect(unclassed).to be_empty, message
     end
 
     it "marks every overlay operation as docs-only" do
@@ -114,8 +114,8 @@ RSpec.describe DhanHQ::Contract::Bindings do
     end
 
     it "derives sandbox support from the raw sandbox document" do
-      mismatches = live_ops.values.select do |op|
-        op.sandbox_supported? != sandbox_raw_ids.include?(op.id)
+      mismatches = live_ops.values.reject do |op|
+        op.sandbox_supported? == sandbox_raw_ids.include?(op.id)
       end
 
       expect(mismatches).to be_empty
@@ -123,9 +123,9 @@ RSpec.describe DhanHQ::Contract::Bindings do
 
     it "keeps the sandbox surface a subset of the live surface" do
       extra = sandbox_raw_ids - live_ops.keys.to_set
+      message = "sandbox document serves operations the live contract lacks: #{extra.sort.join(", ")}"
 
-      expect(extra).to be_empty,
-        "sandbox document serves operations the live contract lacks: #{extra.sort.join(', ')}"
+      expect(extra).to be_empty, message
     end
 
     it "keeps request-key styles within the supported set" do

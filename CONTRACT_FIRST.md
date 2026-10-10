@@ -123,7 +123,7 @@ Designed so each phase ships value independently and never breaks the public API
 - Add an explicit **binding** from each resource verb to an operationId — either a small
   `operation :create_orders, id: "placeOrder"` DSL per resource, or a YAML map. ~60 bindings for
   live + ~12 for Global Stocks.
-- New spec `spec/contract/conformance_spec.rb` (this *is* GAP_ANALYSIS.md made executable):
+- New spec `spec/dhan_hq/contract/bindings_conformance_spec.rb` (this *is* GAP_ANALYSIS.md made executable):
   - every resource HTTP call targets a registry operation (no naked strings);
   - every live-spec operation is bound (or explicitly `xfail`-listed with reason — that is where
     the M1 iceberg/twap decision lands);

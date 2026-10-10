@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "concurrent"
-require "set"
 
 require_relative "spec_loader"
 require_relative "operation"
@@ -20,6 +19,9 @@ module DhanHQ
     # Everything here is derived from contracts/dhanhq/*.openapi.json plus the
     # overlays in contracts/overlays/ — nothing is hand-transcribed from docs.
     class Registry
+      # Verbs the OpenAPI documents use for operations.
+      HTTP_VERBS = %w[get post put delete patch].freeze
+
       class << self
         # All live operations keyed by operationId (overlays included).
         #
@@ -97,9 +99,7 @@ module DhanHQ
         #
         # @return [Set<String>]
         def sandbox_operation_ids
-          @sandbox_operation_ids ||= begin
-            each_sandbox_op.map { |op| op.fetch("operationId") }.to_set
-          end
+          @sandbox_operation_ids ||= each_sandbox_op.to_set { |op| op.fetch("operationId") }
         end
 
         # @return [Array<String>] Sorted operationIds of the live contract
@@ -161,7 +161,7 @@ module DhanHQ
         def each_live_op
           live_doc.fetch("paths", {}).each do |path, item|
             item.each do |verb, o|
-              next unless %w[get post put delete patch].include?(verb)
+              next unless HTTP_VERBS.include?(verb)
               next unless o.is_a?(Hash) && o["operationId"]
 
               yield path, verb.to_sym, o

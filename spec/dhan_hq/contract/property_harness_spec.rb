@@ -7,8 +7,8 @@ RSpec.describe DhanHQ::Contract::PropertyHarness do
     described_class::SAFE_OPERATIONS.each do |operation_id|
       operation = DhanHQ::Contract::Registry.operation(operation_id)
       expect(operation).not_to be_nil
-      expect(operation).to be_sandbox_supported,
-        "#{operation_id} must be served by the sandbox to be a safe property target"
+      message = "#{operation_id} must be served by the sandbox to be a safe property target"
+      expect(operation).to be_sandbox_supported, message
 
       # Belt and braces: nothing that mutates account state may enter the list.
       expect(operation.path).not_to match(%r{/(orders|positions|holdings|edis|pnlExit|killswitch|alerts)})

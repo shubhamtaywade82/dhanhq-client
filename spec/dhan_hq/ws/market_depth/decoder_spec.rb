@@ -46,7 +46,7 @@ RSpec.describe DhanHQ::WS::MarketDepth::Decoder do
 
   describe "20-level frame" do
     it "decodes a 332-byte twentydepth frame" do
-      rows = 20.times.map { |i| [100.0 - i, 100 + i, i].pack("EVV") }.join
+      rows = Array.new(20) { |i| [100.0 - i, 100 + i, i].pack("EVV") }.join
       binary = [rows.bytesize + 12, 41, 1].pack("s<CC") + [1333].pack("l<") + [42].pack("V") + rows
 
       frames = decoder.decode(binary)

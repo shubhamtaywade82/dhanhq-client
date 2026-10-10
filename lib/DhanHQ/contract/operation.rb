@@ -20,9 +20,11 @@ module DhanHQ
       }.freeze
       DEFAULT_PARAM_STYLE = :camelize
 
+      # Number of templated segments (wildcard_count) — used to prefer literal
+      # matches when resolving a concrete path back to its operation.
       attr_reader :id, :verb, :path, :summary, :docs_only, :rate_limit_class,
                   :request_schema_name, :response_schema_names, :sandbox_supported,
-                  :quirks, :docs_url
+                  :quirks, :docs_url, :path_regexp, :wildcard_count
 
       # @param id [String] operationId
       # @param verb [Symbol] HTTP verb
@@ -36,6 +38,9 @@ module DhanHQ
       # @param sandbox_supported [Boolean] whether the sandbox spec serves this operation
       # @param quirks [Array<String>, nil] sandbox behaviour notes (overlay 0003)
       # @param docs_url [String, nil] prose docs URL for docs-only operations
+      # rubocop:disable Metrics/ParameterLists -- frozen metadata value object;
+      # every field is a facet of one vendored operation, keyword args keep the
+      # Registry.build_operations call site self-documenting.
       def initialize(id:, verb:, path:, summary: nil, docs_only: false,
                      rate_limit_class: nil, request_schema_name: nil,
                      response_schema_names: [], sandbox_supported: false,
@@ -55,6 +60,7 @@ module DhanHQ
         @path_regexp = build_path_regexp
         freeze
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def docs_only? = @docs_only
       def sandbox_supported? = @sandbox_supported
@@ -86,16 +92,6 @@ module DhanHQ
       # @return [String] Human label, e.g. "POST /orders (placeorder)"
       def label
         "#{verb.to_s.upcase} #{path} (#{id})"
-      end
-
-      # @return [Regexp] Matcher for concrete request paths
-      def path_regexp
-        @path_regexp
-      end
-
-      # Number of templated segments — used to prefer literal matches.
-      def wildcard_count
-        @wildcard_count
       end
 
       private

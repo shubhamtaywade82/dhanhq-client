@@ -2,6 +2,14 @@
 
 require "spec_helper"
 
+# Declared, non-silent differences: helper/derived attributes that exist only
+# on the model side, keyed by model.
+MODEL_ONLY_ATTRIBUTES = {
+  "DhanHQ::Models::Order" => [],
+  "DhanHQ::Models::Position" => [],
+  "DhanHQ::Models::Holding" => []
+}.freeze
+
 # Model-layer parity: the attributes each model declares must correspond to
 # properties in the contract's response schemas, and vice versa. This catches
 # both "gem reads a field the API no longer sends" and "API grows a field the
@@ -17,14 +25,6 @@ RSpec.describe "model attribute parity with the contract" do
     camel.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
   end
 
-  # Declared, non-silent differences: helper/derived attributes that exist only
-  # on the model side, keyed by model.
-  MODEL_ONLY_ATTRIBUTES = {
-    "DhanHQ::Models::Order" => [],
-    "DhanHQ::Models::Position" => [],
-    "DhanHQ::Models::Holding" => []
-  }.freeze
-
   {
     "DhanHQ::Models::Order" => "OrderResponse",
     "DhanHQ::Models::Position" => "PositionResponse",
@@ -37,16 +37,16 @@ RSpec.describe "model attribute parity with the contract" do
 
       it "declares every schema property (camelCase → snake_case)" do
         missing = schema_attrs - model_attrs - MODEL_ONLY_ATTRIBUTES.fetch(model_name)
+        message = "#{schema_name} serves fields the model does not declare: #{missing.join(", ")}"
 
-        expect(missing).to be_empty,
-          "#{schema_name} serves fields the model does not declare: #{missing.join(', ')}"
+        expect(missing).to be_empty, message
       end
 
       it "does not declare unknown fields beyond the schema (± declared helpers)" do
         extra = model_attrs - schema_attrs
+        message = "#{model_name} declares fields absent from #{schema_name}: #{extra.join(", ")}"
 
-        expect(extra).to be_empty,
-          "#{model_name} declares fields absent from #{schema_name}: #{extra.join(', ')}"
+        expect(extra).to be_empty, message
       end
     end
   end

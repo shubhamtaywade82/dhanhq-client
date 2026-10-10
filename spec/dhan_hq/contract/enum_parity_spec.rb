@@ -15,13 +15,13 @@ RSpec.describe "enum parity between constants and the vendored contract" do
 
     # Overlay 0005 reconciled the vendor enum (6 values, missing the index and
     # currency segments) with the published annexure table.
-    expect(spec_enum).to contain_exactly(*DhanHQ::Constants::EXCHANGE_SEGMENTS.map(&:to_s))
+    expect(spec_enum).to match_array(DhanHQ::Constants::EXCHANGE_SEGMENTS.map(&:to_s))
   end
 
   it "matches OrderRequest#transactionType" do
     spec_enum = schemas.dig("OrderRequest", "properties", "transactionType", "enum")
 
-    expect(DhanHQ::Constants::TRANSACTION_TYPES.map(&:to_s)).to contain_exactly(*spec_enum)
+    expect(DhanHQ::Constants::TRANSACTION_TYPES.map(&:to_s)).to match_array(spec_enum)
   end
 
   it "matches OrderRequest#orderType" do
@@ -40,14 +40,14 @@ RSpec.describe "enum parity between constants and the vendored contract" do
   it "matches OrderRequest#validity" do
     spec_enum = schemas.dig("OrderRequest", "properties", "validity", "enum")
 
-    expect(DhanHQ::Constants::VALIDITY_TYPES.map(&:to_s)).to contain_exactly(*spec_enum)
+    expect(DhanHQ::Constants::VALIDITY_TYPES.map(&:to_s)).to match_array(spec_enum)
   end
 
   it "keeps the sandbox document's enums consistent with the live document" do
     live_enum = schemas.dig("OrderRequest", "properties", "transactionType", "enum")
-    sandbox_enum = DhanHQ::Contract::Registry.sandbox_doc
-                                              .dig("components", "schemas", "OrderRequest",
-                                                   "properties", "transactionType", "enum")
+    sandbox_doc = DhanHQ::Contract::Registry.sandbox_doc
+    sandbox_enum = sandbox_doc.dig("components", "schemas", "OrderRequest",
+                                   "properties", "transactionType", "enum")
 
     expect(sandbox_enum).to eq(live_enum)
   end

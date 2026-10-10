@@ -14,7 +14,7 @@ RSpec.describe DhanHQ::Client do
     it "raises SandboxUnsupportedError when the tier resolves to sandbox for an absent endpoint" do
       client = described_class.new(config: config, api_type: :data_api)
 
-      expect { client.post("/v2/marketfeed/ltp", { "NSE_EQ" => [11536] }) }
+      expect { client.post("/v2/marketfeed/ltp", { "NSE_EQ" => [11_536] }) }
         .to raise_error(DhanHQ::SandboxUnsupportedError, /sandbox/)
     end
 
@@ -47,7 +47,7 @@ RSpec.describe DhanHQ::Client do
         headers: { "Content-Type" => "application/json" }
       )
 
-      expect { client.post("/v2/marketfeed/ltp", { "NSE_EQ" => [11536] }) }
+      expect { client.post("/v2/marketfeed/ltp", { "NSE_EQ" => [11_536] }) }
         .not_to raise_error
     end
   end

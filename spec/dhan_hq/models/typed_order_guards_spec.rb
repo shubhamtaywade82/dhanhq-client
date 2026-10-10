@@ -7,19 +7,18 @@ require "spec_helper"
 # to the gem-audit pass, which had only converted Models::Order).
 RSpec.describe "typed order guards on derivative order models" do
   %w[TwapOrder IcebergOrder].each do |model_name|
-    model = DhanHQ::Models.const_get(model_name)
-    noun = model_name.gsub(/Order$/, "").downcase
+    describe DhanHQ::Models.const_get(model_name) do
+      let(:noun) { described_class.name.split("::").last.gsub(/Order$/, "").downcase }
 
-    describe model do
       it "raises DhanHQ::OrderError from #modify when order id is missing" do
-        record = model.new({}, skip_validation: true)
+        record = described_class.new({}, skip_validation: true)
 
         expect { record.modify({}) }
           .to raise_error(DhanHQ::OrderError, /Order ID is required to modify an? #{noun} order/i)
       end
 
       it "raises DhanHQ::OrderError from #cancel when order id is missing" do
-        record = model.new({}, skip_validation: true)
+        record = described_class.new({}, skip_validation: true)
 
         expect { record.cancel }
           .to raise_error(DhanHQ::OrderError, /Order ID is required to cancel an? #{noun} order/i)

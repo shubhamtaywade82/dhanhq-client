@@ -71,7 +71,8 @@ RSpec.describe DhanHQ::WS::Decoder do
 
   describe "full packet (response code 8)" do
     it "decodes the 162-byte frame including OI and 5-level depth" do
-      levels = 5.times.map { [1000, 900, 3, 4, 211.5, 212.0].pack("VVvvee") }.join
+      depth_row = [1000, 900, 3, 4, 211.5, 212.0].pack("VVvvee").freeze
+      levels = Array.new(5) { depth_row }.join
       binary = header(8, 162, 2, 49_082) +
                [212.25].pack("e") + [150].pack("v") + [1_700_000_050].pack("V") +
                [212.0].pack("e") + [1_250_000, 300_000, 450_000].pack("V3") +

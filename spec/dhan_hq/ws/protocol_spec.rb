@@ -91,14 +91,14 @@ RSpec.describe DhanHQ::WS::Protocol do
     let(:payload) { {} }
     let(:arrays) { {} }
 
-    context "ticker" do
+    context "with a ticker frame" do
       let(:payload) { { ltp: 2450.5, ltt: 1_736_000_000 } }
       let(:expected) { { ltp: 2450.5, ts: 1_736_000_000 } }
 
-      include_examples "a decoded packet", :ticker, :ticker
+      it_behaves_like "a decoded packet", :ticker, :ticker
     end
 
-    context "index" do
+    context "with an index frame" do
       let(:payload) do
         { latest: 24_500.5, open: 24_400.0, close: 24_600.0, high: 24_650.25, low: 24_350.75,
           update_time: 1_736_000_100 }
@@ -108,10 +108,10 @@ RSpec.describe DhanHQ::WS::Protocol do
           day_high: 24_650.25, day_low: 24_350.75, ts: 1_736_000_100 }
       end
 
-      include_examples "a decoded packet", :index, :index
+      it_behaves_like "a decoded packet", :index, :index
     end
 
-    context "quote" do
+    context "with a quote frame" do
       let(:payload) do
         { ltp: 2450.5, last_trade_qty: 75, ltt: 1_736_000_000, atp: 2445.25, volume: 1_234_567,
           total_sell_qty: 555_000, total_buy_qty: 444_000, day_open: 2440.0, day_close: 2447.0,
@@ -123,24 +123,24 @@ RSpec.describe DhanHQ::WS::Protocol do
           day_high: 2460.0, day_low: 2435.0 }
       end
 
-      include_examples "a decoded packet", :quote, :quote
+      it_behaves_like "a decoded packet", :quote, :quote
     end
 
-    context "oi" do
+    context "with an oi frame" do
       let(:payload) { { open_interest: 98_765 } }
       let(:expected) { { oi: 98_765 } }
 
-      include_examples "a decoded packet", :oi, :oi
+      it_behaves_like "a decoded packet", :oi, :oi
     end
 
-    context "prev_close" do
+    context "with a prev_close frame" do
       let(:payload) { { prev_close: 2433.75, oi_prev: 12_345 } }
       let(:expected) { { prev_close: 2433.75, oi_prev: 12_345 } }
 
-      include_examples "a decoded packet", :prev_close, :prev_close
+      it_behaves_like "a decoded packet", :prev_close, :prev_close
     end
 
-    context "market_status" do
+    context "with a market_status frame" do
       it "decodes the header-only frame" do
         frame = build_frame(:market_status, payload: {})
 
@@ -148,7 +148,7 @@ RSpec.describe DhanHQ::WS::Protocol do
       end
     end
 
-    context "disconnect" do
+    context "with a disconnect frame" do
       let(:payload) { { disconnection_code: 805 } }
 
       it "decodes the LE uint16 code and reports the manifest reason" do
@@ -161,20 +161,20 @@ RSpec.describe DhanHQ::WS::Protocol do
       end
     end
 
-    context "depth (5-level)" do
+    context "with a depth (5-level) frame" do
       let(:payload) { { ltp: 2450.5 } }
       let(:arrays) do
-        { "market_depth" => 5.times.map do |i|
+        { "market_depth" => Array.new(5) do |i|
           { bid_quantity: 100 + i, ask_quantity: 200 + i, no_of_bid_orders: 3 + i,
             no_of_ask_orders: 4 + i, bid_price: 2449.5 + i, ask_price: 2451.5 + i }
         end }
       end
       let(:expected) { { ltp: 2450.5, bid: 2449.5, ask: 2451.5, bid_qty: 100, ask_qty: 200 } }
 
-      include_examples "a decoded packet", :depth, :depth
+      it_behaves_like "a decoded packet", :depth, :depth
     end
 
-    context "full" do
+    context "with a full frame" do
       let(:payload) do
         { ltp: 2450.5, last_trade_qty: 75, ltt: 1_736_000_000, atp: 2445.25, volume: 1_234_567,
           total_sell_qty: 555_000, total_buy_qty: 444_000, open_interest: 9_999_999,
@@ -182,7 +182,7 @@ RSpec.describe DhanHQ::WS::Protocol do
           day_high: 2460.0, day_low: 2435.0 }
       end
       let(:arrays) do
-        { "market_depth" => 5.times.map do |i|
+        { "market_depth" => Array.new(5) do |i|
           { bid_quantity: 100 + i, ask_quantity: 200 + i, no_of_bid_orders: 3 + i,
             no_of_ask_orders: 4 + i, bid_price: 2449.5 + i, ask_price: 2451.5 + i }
         end }
@@ -194,7 +194,7 @@ RSpec.describe DhanHQ::WS::Protocol do
           day_high: 2460.0, day_low: 2435.0, bid: 2449.5, ask: 2451.5, bid_qty: 100, ask_qty: 200 }
       end
 
-      include_examples "a decoded packet", :full, :full
+      it_behaves_like "a decoded packet", :full, :full
     end
   end
 
@@ -255,7 +255,7 @@ RSpec.describe DhanHQ::WS::Protocol do
         "fmd_bid" => 41, "fmd_ask" => 51, "disconnect" => 50
       }
       manifest_codes.each do |name, code|
-        expected = name.start_with?("fmd_") ? "depth_#{name.delete_prefix("fmd_")}".to_sym : name.to_sym
+        expected = name.start_with?("fmd_") ? :"depth_#{name.delete_prefix("fmd_")}" : name.to_sym
         expect(feed_kind).to include(code => expected)
       end
     end
@@ -294,7 +294,7 @@ RSpec.describe DhanHQ::WS::Protocol do
     end
 
     it "round-trips a stacked 20-level bid/ask pair through MarketDepth::Decoder" do
-      levels = 20.times.map { |i| { price: 100.5 + i, quantity: 1_000 + i, orders: 2 + i } }
+      levels = Array.new(20) { |i| { price: 100.5 + i, quantity: 1_000 + i, orders: 2 + i } }
       bid_frame = build_fmd_frame(41, 1333, levels)
       ask_frame = build_fmd_frame(51, 1333, levels)
 

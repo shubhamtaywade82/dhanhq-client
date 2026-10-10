@@ -19,7 +19,7 @@ module DhanHQ
       class << self
         # @return [Hash] The frozen manifest
         def manifest
-          @manifest ||= YAML.safe_load(File.read(MANIFEST_PATH), aliases: true).freeze
+          @manifest ||= YAML.safe_load_file(MANIFEST_PATH, aliases: true).freeze
         rescue Psych::SyntaxError => e
           raise "ws_protocol.yml is not valid YAML: #{e.message}"
         end

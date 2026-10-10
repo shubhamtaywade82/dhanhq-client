@@ -23,7 +23,10 @@ module DhanHQ
         historicalcharts
       ].freeze
 
-      Result = Struct.new(:operation_id, :check, :ok, :detail, keyword_init: true)
+      # keyword_init is NOT yet the default on Ruby 3.2/3.3 (the CI matrix
+      # floor); keep it explicit even though newer rubocop flags it.
+      Result = Struct.new(:operation_id, :check, :ok, :detail,
+                          keyword_init: true) # rubocop:disable Style/RedundantStructKeywordInit
 
       class << self
         # @return [Integer] number of failed checks (0 = all green)
@@ -78,8 +81,8 @@ module DhanHQ
         def valid_payload(operation)
           schema = operation.request_schema
           properties = schema.fetch("properties")
-          schema.fetch("required", []).each_with_object({}) do |key, out|
-            out[key] = example_value(key, properties[key])
+          schema.fetch("required", []).to_h do |key|
+            [key, example_value(key, properties[key])]
           end
         end
 
@@ -99,16 +102,12 @@ module DhanHQ
           # 2. wrong type on a required property (string where int, etc.)
           unless required.empty?
             key = required.find { |k| properties_type(schema, k) != "string" }
-            if key
-              mutations << base.merge(key => "not-a-number")
-            end
+            mutations << base.merge(key => "not-a-number") if key
           end
 
           # 3. invalid enum member on a required enum property
           enum_key = required.find { |k| schema.dig("properties", k, "enum") }
-          if enum_key
-            mutations << base.merge(enum_key => "DH_CONTRACT_FUZZ_INVALID")
-          end
+          mutations << base.merge(enum_key => "DH_CONTRACT_FUZZ_INVALID") if enum_key
 
           mutations
         end
@@ -121,31 +120,31 @@ module DhanHQ
           return property["enum"].first if property["enum"]
 
           case Array(property["type"]).first
-          when "string"  then example_string(key)
+          when "string" then example_string(key)
           when "integer", "number" then 1
           when "boolean" then false
-          when "array"   then []
-          when "object"  then {}
-          else nil
+          when "array" then []
+          when "object" then {}
           end
         end
 
         def example_string(key)
           # Schema-documented example first (e.g. exchangeSegment -> NSE_EQ),
           # else the property name itself, truncated to any documented bound.
-          sample = key.casecmp?("exchangeSegment") ? "NSE_EQ" : key.to_s
+          sample = key.casecmp?("exchangeSegment") ? DhanHQ::Constants::ExchangeSegment::NSE_EQ : key.to_s
           sample[0, 64]
         end
 
         def report(out, failures)
           out.puts "Contract property harness (deterministic, offline)"
-          out.puts "  safe operations: #{SAFE_OPERATIONS.join(', ')}"
+          out.puts "  safe operations: #{SAFE_OPERATIONS.join(", ")}"
           if failures.empty?
             out.puts "  all accept/reject properties hold"
           else
             out.puts "  FAILURES (#{failures.size}):"
             failures.each do |f|
-              out.puts "    - #{f.operation_id}: #{f.check}#{f.ok ? '' : " — #{f.detail}"}"
+              suffix = f.ok ? "" : " — #{f.detail}"
+              out.puts "    - #{f.operation_id}: #{f.check}#{suffix}"
             end
           end
         end

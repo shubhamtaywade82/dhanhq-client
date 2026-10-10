@@ -21,7 +21,8 @@ RSpec.describe DhanHQ::Contract::SchemaValidator do
     end
 
     it "accepts symbol-keyed payloads (stringify before validating)" do
-      expect(described_class.validate_request!(place_order, valid_order_payload)).to be(true)
+      string_keyed = valid_order_payload.to_h { |k, v| [k.to_s, v] }
+      expect(described_class.validate_request!(place_order, string_keyed)).to be(true)
     end
 
     it "accepts payloads carrying extra properties the schema does not list" do

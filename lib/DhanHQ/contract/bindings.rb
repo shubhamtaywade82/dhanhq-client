@@ -53,7 +53,7 @@ module DhanHQ
         private
 
         def parsed
-          @parsed ||= YAML.safe_load(File.read(PATH), aliases: true)
+          @parsed ||= YAML.safe_load_file(PATH, aliases: true)
         rescue Psych::SyntaxError => e
           raise "bindings.yml is not valid YAML: #{e.message}"
         end

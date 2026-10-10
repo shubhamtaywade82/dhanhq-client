@@ -34,10 +34,13 @@ RSpec.describe "contract-first request validation in the client" do
       status: 200, body: { orderId: "OID-1", orderStatus: "PENDING" }.to_json
     )
     client = DhanHQ::Client.new
+    payload = {
+      transactionType: "BUY", exchangeSegment: "NSE_EQ",
+      securityId: "1333", quantity: 1, productType: "CNC",
+      orderType: "LIMIT", validity: "DAY"
+    }
 
-    expect(client.post("/v2/orders", transactionType: "BUY", exchangeSegment: "NSE_EQ",
-                                   securityId: "1333", quantity: 1, productType: "CNC",
-                                   orderType: "LIMIT", validity: "DAY")).to include(:orderId)
+    expect(client.post("/v2/orders", payload)).to include(:orderId)
   end
 
   it "can be disabled per configuration" do
@@ -52,7 +55,7 @@ RSpec.describe "contract-first request validation in the client" do
   end
 
   it "does not validate endpoints absent from the contract (iceberg, twap)" do
-    client = DhanHQ::Client.new
+    DhanHQ::Client.new # instantiation alone never trips the guard
 
     expect(DhanHQ::Contract::Registry.resolve(:post, "/v2/orders/iceberg")).to be_nil
     expect(DhanHQ::Contract::Registry.resolve(:post, "/v2/orders/twap")).to be_nil

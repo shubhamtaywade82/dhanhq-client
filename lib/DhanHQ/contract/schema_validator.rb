@@ -33,7 +33,7 @@ module DhanHQ
           errors = request_errors(operation, payload)
           raise DhanHQ::ValidationError,
                 "#{operation.label} request failed contract validation: " \
-                "#{errors.join('; ')}"
+                "#{errors.join("; ")}"
         end
 
         # Collects request violations without raising.
@@ -86,8 +86,8 @@ module DhanHQ
         def errors_for(schemer, data)
           schemer.validate(stringify_keys(data)).map do |err|
             pointer = err["schema_pointer"]
-            details = err["details"]&.map { |k, v| "#{k}: #{v.is_a?(Array) ? v.join(', ') : v}" if v }
-                       &.compact&.join(", ")
+            detail_items = err["details"]&.filter_map { |k, v| "#{k}: #{v.is_a?(Array) ? v.join(", ") : v}" if v }
+            details = detail_items&.join(", ")
             [pointer, err["type"], details].compact.join(" ").strip
           end
         end

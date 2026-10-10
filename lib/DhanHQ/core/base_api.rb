@@ -92,8 +92,6 @@ module DhanHQ
       ->(p) { camelize_keys(p) }
     end
 
-    private
-
     # @return [Symbol] The parameter key style for this verb + path: the
     #   contract-declared one when an operation matches, else the legacy
     #   URL-sniffed strategy for paths absent from the contract.
