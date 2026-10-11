@@ -41,6 +41,25 @@ module DhanHQ
     # @return [String, nil] The access token or `nil` if not set.
     attr_accessor :access_token
 
+    # Client ID issued for the Dhan sandbox (generated on Dhan Cloud, cloud.dhanhq.co).
+    #
+    # Dhan runs sandbox and production as separate environments with separate
+    # credentials: a production token is rejected by sandbox.dhan.co and vice
+    # versa. Every request routed to the sandbox host (see {#environment_for})
+    # authenticates with these credentials. In +:sandbox+ mode they fall back to
+    # {#client_id}/{#access_token} when unset, so existing full-sandbox setups
+    # keep working; in +:hybrid+ mode they are required.
+    #
+    # Set via +DHAN_SANDBOX_CLIENT_ID+ or in {DhanHQ.configure}.
+    # @return [String, nil]
+    attr_accessor :sandbox_client_id
+
+    # Access token issued for the Dhan sandbox. See {#sandbox_client_id}.
+    #
+    # Set via +DHAN_SANDBOX_ACCESS_TOKEN+ or in {DhanHQ.configure}.
+    # @return [String, nil]
+    attr_accessor :sandbox_access_token
+
     # Optional callable (Proc/lambda) that returns the access token at request time.
     # When set, {#resolved_access_token} calls this instead of using {#access_token}.
     # @return [Proc, nil]
@@ -286,6 +305,35 @@ module DhanHQ
       mode == :sandbox
     end
 
+    # Client ID to authenticate requests on the given API tier with.
+    #
+    # Sandbox-bound tiers use {#sandbox_client_id}; production-bound tiers use
+    # {#client_id}.
+    #
+    # @param api_type [Symbol, nil]
+    # @return [String, nil]
+    # @raise [DhanHQ::AuthenticationError] When a sandbox-bound tier has no
+    #   sandbox credentials outside +:sandbox+ mode.
+    def client_id_for(api_type)
+      return client_id unless environment_for(api_type) == :sandbox
+
+      sandbox_credential(sandbox_client_id, "sandbox_client_id", "DHAN_SANDBOX_CLIENT_ID", api_type) { client_id }
+    end
+
+    # Access token to authenticate requests on the given API tier with.
+    # See {#client_id_for}.
+    #
+    # @param api_type [Symbol, nil]
+    # @return [String, nil]
+    # @raise [DhanHQ::AuthenticationError]
+    def access_token_for(api_type)
+      return resolved_access_token unless environment_for(api_type) == :sandbox
+
+      sandbox_credential(sandbox_access_token, "sandbox_access_token", "DHAN_SANDBOX_ACCESS_TOKEN", api_type) do
+        resolved_access_token
+      end
+    end
+
     # True when {#mode} is +:hybrid+ — live market data, sandbox execution.
     # @return [Boolean]
     def hybrid?
@@ -320,6 +368,8 @@ module DhanHQ
     def initialize(attrs = {})
       @client_id = attrs[:client_id] || ENV.fetch("DHAN_CLIENT_ID", nil)
       @access_token = attrs[:access_token] || ENV.fetch("DHAN_ACCESS_TOKEN", nil)
+      @sandbox_client_id = attrs[:sandbox_client_id] || ENV.fetch("DHAN_SANDBOX_CLIENT_ID", nil)
+      @sandbox_access_token = attrs[:sandbox_access_token] || ENV.fetch("DHAN_SANDBOX_ACCESS_TOKEN", nil)
       @access_token_provider = attrs[:access_token_provider]
       @on_token_expired = attrs[:on_token_expired]
       @sandbox = attrs.key?(:sandbox) ? attrs[:sandbox] : env_flag("DHAN_SANDBOX", default: false)
@@ -350,6 +400,21 @@ module DhanHQ
     end
 
     private
+
+    # Returns a sandbox credential, falling back to the production one only in
+    # full +:sandbox+ mode (where the "production" fields have always held the
+    # sandbox credentials). Anywhere else — +:hybrid+, or a tier overridden to
+    # the sandbox — sending a production credential to the sandbox host is a
+    # guaranteed DH-901, so it fails fast with an actionable message instead.
+    def sandbox_credential(value, attr_name, env_name, api_type)
+      return value.to_s unless value.to_s.strip.empty?
+      return yield if mode == :sandbox
+
+      raise DhanHQ::AuthenticationError,
+            "#{attr_name} is required: #{api_type || "this"} requests route to the Dhan sandbox in " \
+            "#{mode} mode, and the sandbox rejects production credentials. " \
+            "Set #{env_name} (generate it on https://cloud.dhanhq.co)."
+    end
 
     # Resolves the initial mode from attributes and ENV.
     #

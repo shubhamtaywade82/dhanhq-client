@@ -13,12 +13,17 @@ module DhanHQ
       # WebSocket client for Full Market Depth data
       # Provides real-time market depth (bid/ask levels) for specified symbols
       class Client < BaseConnection
-        # Feed request codes per the official Annexure "Feed Request Code" table
-        # (dhanhq.co/docs/v2/annexure#feed-request-code): 23 = Subscribe - Full
-        # Market Depth, 24 = Unsubscribe - Full Market Depth. Never 12 - that is
-        # the whole-connection disconnect, not a per-instrument unsubscribe.
+        # Feed request codes per the Annexure "Feed Request Code" table and the
+        # Full Market Depth "Feed Disconnect" section (docs.dhanhq.co):
+        # 23 = Subscribe - Full Market Depth, 25 = Unsubscribe - Full Market Depth.
+        # Never 12 - that is the whole-connection disconnect, not a
+        # per-instrument unsubscribe.
         SUBSCRIBE_REQUEST_CODE    = 23
-        UNSUBSCRIBE_REQUEST_CODE  = 24
+        UNSUBSCRIBE_REQUEST_CODE  = 25
+
+        # Instruments one connection may carry: 50 for 20-level depth, exactly
+        # one for 200-level depth.
+        MAX_INSTRUMENTS = { 20 => 50, 200 => 1 }.freeze
 
         ##
         # Initialize Market Depth WebSocket client
@@ -30,10 +35,12 @@ module DhanHQ
           url = options[:url] || build_market_depth_url(cfg)
           super(url: url, config: cfg, **options)
 
-          @symbols = Array(symbols)
+          @symbols = symbol_list(symbols)
           @subscriptions = Concurrent::Map.new
           @instrument_cache = Concurrent::Map.new
-          @decoder = Decoder.new
+          @depth_level = cfg.market_depth_level.to_i == 200 ? 200 : 20
+          @decoder = Decoder.new(depth_level: @depth_level)
+          @books = {}
         end
 
         ##
@@ -50,7 +57,7 @@ module DhanHQ
         # @param symbols [Array<String, Hash>] Symbols (or metadata hashes) to subscribe to
         # @return [Client] self for method chaining
         def subscribe(symbols)
-          subscribe_to_symbols(Array(symbols))
+          subscribe_to_symbols(symbol_list(symbols))
           self
         end
 
@@ -59,7 +66,7 @@ module DhanHQ
         # @param symbols [Array<String, Hash>] Symbols (or metadata hashes) to unsubscribe from
         # @return [Client] self for method chaining
         def unsubscribe(symbols)
-          unsubscribe_from_symbols(Array(symbols))
+          unsubscribe_from_symbols(symbol_list(symbols))
           self
         end
 
@@ -135,14 +142,75 @@ module DhanHQ
         # Process incoming WebSocket message
         # @param data [String] Raw message data
         def process_message(data)
-          depth_data = @decoder.decode(data)
-          return unless depth_data
+          touched = []
+          @decoder.decode(data).each do |packet|
+            next handle_disconnect_packet(packet) if packet[:type] == :disconnect
 
-          emit(:depth_update, depth_data)
+            key = [packet[:exchange_segment], packet[:security_id]]
+            book = (@books[key] ||= { bids: [], asks: [] })
+            book[packet[:type] == :bid ? :bids : :asks] = packet[:levels]
+            touched << key unless touched.include?(key)
+          end
+
+          touched.each { |key| emit(:depth_update, depth_snapshot(*key)) }
           emit(:raw_depth, data) # For debugging
         rescue StandardError => e
           DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth] Error processing message: #{e.class} #{e.message}")
           emit(:error, e)
+        end
+
+        # A single instrument hash is one symbol; Array(hash) would split it into pairs.
+        def symbol_list(symbols)
+          symbols.is_a?(Hash) ? [symbols] : Array(symbols)
+        end
+
+        # Merged order book for one instrument, combining the latest bid and ask
+        # packets (they arrive separately on the wire).
+        def depth_snapshot(segment, security_id)
+          book = @books.fetch([segment, security_id])
+          meta = @subscriptions.values.find { |m| m[:security_id] == security_id && m[:exchange_segment] == segment }
+          best_bid = book[:bids].first&.fetch(:price)
+          best_ask = book[:asks].first&.fetch(:price)
+
+          {
+            type: :depth_update,
+            depth_level: @depth_level,
+            symbol: meta&.fetch(:symbol, nil),
+            exchange_segment: segment,
+            security_id: security_id,
+            timestamp: Time.now.to_i,
+            bids: book[:bids],
+            asks: book[:asks],
+            best_bid: best_bid,
+            best_ask: best_ask,
+            spread: best_bid && best_ask ? best_ask - best_bid : nil,
+            total_bid_qty: book[:bids].sum { |level| level[:quantity] },
+            total_ask_qty: book[:asks].sum { |level| level[:quantity] }
+          }
+        end
+
+        def handle_disconnect_packet(packet)
+          DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth] Server disconnect packet, reason code #{packet[:code]}")
+          emit(:disconnect, packet)
+        end
+
+        # 20-level takes an instrument list; 200-level takes one flat instrument
+        # (docs.dhanhq.co Full Market Depth, "Adding Instruments").
+        def subscription_message(resolution)
+          instrument = { "ExchangeSegment" => resolution[:exchange_segment], "SecurityId" => resolution[:security_id] }
+          return { "RequestCode" => SUBSCRIBE_REQUEST_CODE }.merge(instrument) if @depth_level == 200
+
+          { "RequestCode" => SUBSCRIBE_REQUEST_CODE, "InstrumentCount" => 1, "InstrumentList" => [instrument] }
+        end
+
+        def capacity_reached?(resolution)
+          return false if @subscriptions.size < MAX_INSTRUMENTS.fetch(@depth_level)
+
+          DhanHQ.logger&.error(
+            "[DhanHQ::WS::MarketDepth] Not subscribing #{resolution[:original_label]}: #{@depth_level}-level depth " \
+            "allows #{MAX_INSTRUMENTS.fetch(@depth_level)} instrument(s) per connection"
+          )
+          true
         end
 
         ##
@@ -155,19 +223,9 @@ module DhanHQ
 
             label = resolution[:label]
             next if @subscriptions.key?(label)
+            next if capacity_reached?(resolution)
 
-            subscription_message = {
-              "RequestCode" => SUBSCRIBE_REQUEST_CODE,
-              "InstrumentCount" => 1,
-              "InstrumentList" => [
-                {
-                  "ExchangeSegment" => resolution[:exchange_segment],
-                  "SecurityId" => resolution[:security_id]
-                }
-              ]
-            }
-
-            send_message(subscription_message)
+            send_message(subscription_message(resolution))
             @subscriptions[label] = resolution
             DhanHQ.logger&.info(
               "[DhanHQ::WS::MarketDepth] Subscribed to #{resolution[:original_label]} " \
@@ -200,6 +258,7 @@ module DhanHQ
 
             send_message(unsubscribe_message)
             @subscriptions.delete(label)
+            @books.delete([security_data[:exchange_segment], security_data[:security_id]])
             DhanHQ.logger&.info(
               "[DhanHQ::WS::MarketDepth] Unsubscribed from #{security_data[:original_label]} " \
               "(#{security_data[:exchange_segment]}:#{security_data[:security_id]})"

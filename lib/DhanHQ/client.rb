@@ -130,6 +130,8 @@ module DhanHQ
       payload = with_correlation_id(method, path, payload)
       return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
 
+      ensure_sandbox_supports!(method, path)
+
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
 
@@ -269,6 +271,29 @@ module DhanHQ
     end
 
     private
+
+    # Credentials for this client's API tier: the sandbox pair when the tier
+    # routes to the sandbox host, the production pair otherwise.
+    def request_access_token
+      @config.access_token_for(@api_type)
+    end
+
+    def request_client_id
+      @config.client_id_for(@api_type)
+    end
+
+    # Fails fast when this request would hit the sandbox host on a path it does
+    # not serve (see {Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES}), instead of
+    # surfacing an opaque 404. Never falls back to production.
+    def ensure_sandbox_supports!(method, path)
+      return unless environment == :sandbox
+      return unless Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
+
+      raise DhanHQ::SandboxUnsupportedError,
+            "#{method.to_s.upcase} #{path} is not available on the Dhan sandbox (#{@config.mode} mode routes " \
+            "#{@api_type} to it). For a read-only endpoint, route its tier to production with " \
+            "environment_overrides (e.g. { #{@api_type}: :live }); order-placing endpoints have no sandbox equivalent."
+    end
 
     def resolve_config(config_or_attrs, keyword_config, attrs = {})
       if config_or_attrs.is_a?(DhanHQ::Configuration)

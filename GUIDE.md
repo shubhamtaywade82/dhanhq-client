@@ -103,6 +103,9 @@ live market data from `api.dhan.co`, paper execution on `sandbox.dhan.co`:
 ```ruby
 DhanHQ.configure do |config|
   config.mode = :hybrid   # or DHAN_MODE=hybrid
+  # Sandbox credentials are separate from production ones (cloud.dhanhq.co)
+  config.sandbox_client_id    = ENV["DHAN_SANDBOX_CLIENT_ID"]
+  config.sandbox_access_token = ENV["DHAN_SANDBOX_ACCESS_TOKEN"]
   # Optional: per-tier escape hatch on top of the mode
   # config.environment_overrides = { non_trading_api: :live }
 end
