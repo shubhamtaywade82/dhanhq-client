@@ -1,4 +1,4 @@
-## [Unreleased]
+## [4.1.1] - 2026-10-11
 
 ### Fixed — pre-trade risk pipeline
 
@@ -34,8 +34,6 @@
 - **`max_quantity` defaults to 10 units, so one NIFTY lot (75) is rejected** on any order whose instrument resolves. This was already true for camelCase-keyed orders before this release; it now applies to every key style. F&O users must raise `max_quantity` (in units, not lots) and usually `max_notional`.
 - Checks that never ran before now run on every order: `OrderType`, `ProductSupport` (CO/BO support flags) and `Concentration` (one extra `GET /v2/fundlimit` per new-exposure order).
 - A risk-check failure still fails open: if the instrument lookup or a positions/funds fetch raises, the pipeline is skipped and logged as `DHAN_RISK_CHECK_SKIPPED` (unchanged behaviour).
-
-## [4.1.1] - 2026-10-11
 
 ### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)
 
