@@ -62,4 +62,62 @@ RSpec.describe DhanHQ::Resources::Positions do
       expect(result).to be_a(Hash).or be_a(DhanHQ::ErrorObject)
     end
   end
+
+  describe "request wire format" do
+    subject(:positions_resource) { described_class.new }
+
+    let(:base) { "https://api.dhan.co/v2/positions" }
+
+    before do
+      ENV["DHAN_CLIENT_ID"] = "test_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "test_access_token"
+      DhanHQ.configure_with_env
+    end
+
+    it "GETs /v2/positions and returns them with indifferent access" do
+      position = { securityId: "1333", exchangeSegment: "NSE_EQ", productType: "INTRADAY", netQty: 10 }
+      stub_request(:get, base)
+        .to_return(status: 200, body: [position].to_json, headers: { "Content-Type" => "application/json" })
+
+      response = positions_resource.all
+
+      expect(WebMock).to have_requested(:get, base)
+      expect(response.first["securityId"]).to eq("1333")
+      expect(response.first[:netQty]).to eq(10)
+    end
+
+    it "POSTs camelized params and injects dhanClientId to /v2/positions/convert" do
+      stub_request(:post, "#{base}/convert")
+        .to_return(status: 200, body: { orderId: "112025000000001", orderStatus: "TRANSIT" }.to_json,
+                   headers: { "Content-Type" => "application/json" })
+
+      positions_resource.convert(conversion_params)
+
+      expect(WebMock).to(have_requested(:post, "#{base}/convert").with do |req|
+        parsed = JSON.parse(req.body)
+        parsed.values_at("securityId", "fromProductType", "toProductType", "convertQty", "dhanClientId") ==
+          ["1333", "INTRADAY", "CNC", 1, "1100003626"]
+      end)
+    end
+
+    it "DELETEs /v2/positions for exit-all" do
+      stub_request(:delete, base)
+        .to_return(status: 202, body: "", headers: { "Content-Type" => "application/json" })
+
+      response = positions_resource.exit_all
+
+      expect(WebMock).to have_requested(:delete, base)
+      expect(response).to eq({ "status" => "accepted" })
+    end
+
+    it "raises InputExceptionError when the conversion is rejected" do
+      stub_request(:post, "#{base}/convert").to_return(
+        status: 400,
+        body: { errorCode: "DH-905", errorMessage: "Position conversion failed" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      expect { positions_resource.convert(conversion_params) }.to raise_error(DhanHQ::InputExceptionError)
+    end
+  end
 end

@@ -123,7 +123,7 @@ Paths are as built by the gem (HTTP_PATH + endpoint). Base URL is resolved per t
 | Purpose           | URL / path                     | Method |
 |-------------------|--------------------------------|--------|
 | Generate token    | `https://auth.dhan.co/app/generateAccessToken` | POST   |
-| Renew token       | `https://api.dhan.co/v2/RenewToken`           | POST   |
+| Renew token       | `https://api.dhan.co/v2/RenewToken`           | GET    |
 
 These are **not** mode-aware; they always use the URLs above.
 
