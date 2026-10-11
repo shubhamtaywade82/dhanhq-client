@@ -70,6 +70,35 @@ RSpec.describe DhanHQ::WS::MarketDepth::Decoder do
     end
   end
 
+  describe "wire variants" do
+    it "accepts a byte-array frame as delivered by faye-websocket" do
+      binary = frame(41, 2, 11_536, [[100.25, 10, 1]])
+
+      expect(decoder.decode(binary.bytes).first).to include(side: :bid, exchange_segment: "NSE_FNO", security_id: "11536")
+    end
+
+    it "stays aligned when the length field excludes the header" do
+      rows = Array.new(20) { |i| [10.0 + i, 1, 1].pack("EVV") }.join
+      bid = [320, 41, 1].pack("s<CC") + [1].pack("l<") + [0].pack("V") + rows
+      ask = [320, 51, 1].pack("s<CC") + [1].pack("l<") + [0].pack("V") + rows
+
+      expect(decoder.decode(bid + ask).map { |f| f[:side] }).to eq(%i[bid ask])
+    end
+
+    it "drops zeroed rows of a partially filled book" do
+      binary = frame(41, 1, 1333, [[100.0, 5, 1], [0.0, 0, 0]])
+
+      expect(decoder.decode(binary).first[:levels].size).to eq(1)
+    end
+
+    it "reads the 200-level row count from header bytes 8-11" do
+      rows = Array.new(3) { |i| [200.0 - i, 10 + i, 1] }
+      binary = frame(41, 1, 1333, rows, sequence: 3)
+
+      expect(described_class.new(depth_level: 200).decode(binary).first[:levels].size).to eq(3)
+    end
+  end
+
   describe "malformed input" do
     it "returns an empty array for JSON strings (old protocol assumption)" do
       expect(decoder.decode('{"Type":"depth_update"}')).to eq([])

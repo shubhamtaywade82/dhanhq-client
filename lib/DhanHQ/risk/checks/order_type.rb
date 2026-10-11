@@ -5,7 +5,9 @@ module DhanHQ
     module Checks
       # Restricts order types to MARKET and LIMIT only.
       class OrderType
-        VALID_TYPES = %w[MARKET LIMIT].freeze
+        # Every order type the Dhan order APIs accept. STOP_LOSS / STOP_LOSS_MARKET
+        # must pass: they are how a stop-loss is placed.
+        VALID_TYPES = DhanHQ::Constants::OrderType::ALL
 
         def self.run!(args:, **_unused)
           order_type = args["order_type"]

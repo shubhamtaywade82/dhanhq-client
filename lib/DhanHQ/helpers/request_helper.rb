@@ -40,7 +40,7 @@ module DhanHQ
       # Public CSV endpoint for segment-wise instruments requires no auth
       return { "Accept" => "text/csv" } if path.start_with?("/v2/instrument/")
 
-      token = resolved_access_token
+      token = request_access_token
       raise DhanHQ::AuthenticationError, "Missing access token" if token.nil? || token.empty?
 
       headers = {
@@ -51,7 +51,7 @@ module DhanHQ
 
       # Add client-id for DATA APIs (now including sandbox profile/funds)
       if data_api?(path)
-        client_id = current_config&.client_id
+        client_id = request_client_id
         unless client_id
           raise DhanHQ::InvalidAuthenticationError,
                 "client_id is required for DATA APIs but not set. Please configure DhanHQ with DHAN_CLIENT_ID."
@@ -64,6 +64,18 @@ module DhanHQ
 
     def resolved_access_token
       current_config&.resolved_access_token
+    end
+
+    # Access token for the request being built. Overridden by {DhanHQ::Client}
+    # to pick the sandbox or production token for its API tier.
+    def request_access_token
+      resolved_access_token
+    end
+
+    # Client ID for the request being built. Overridden by {DhanHQ::Client}
+    # to pick the sandbox or production client ID for its API tier.
+    def request_client_id
+      current_config&.client_id
     end
 
     # Determines if the API path requires a `client-id` header.
@@ -86,15 +98,20 @@ module DhanHQ
     # @return [Hash] the payload (a dup when injection happened)
     def with_injected_client_id(method, path, payload)
       return payload unless payload.is_a?(Hash)
+
+      payload = rebind_dhan_client_id(payload)
       return payload unless path && %i[post put patch].include?(method)
       # Mirror prepare_payload's early return: empty bodies on non-data paths
       # were never injected before contract validation existed, and changing
       # their wire shape now would break recorded-fixture consumers.
       return payload if payload.empty? && !data_api?(path)
 
-      client_id = current_config&.client_id
       needs_client_id = data_api?(path) || payload_requires_dhan_client_id?(path)
-      return payload if client_id.nil? || !needs_client_id
+      return payload unless needs_client_id
+
+      # Sandbox-routed requests carry the sandbox client id (see Configuration#client_id_for).
+      client_id = request_client_id
+      return payload if client_id.nil?
       return payload if payload.key?(:dhanClientId) || payload.key?("dhanClientId")
 
       out = payload.dup
@@ -126,6 +143,23 @@ module DhanHQ
       when :get then req.params = out
       else req.body = out.to_json
       end
+    end
+
+    # Models fill +dhanClientId+ from the production {Configuration#client_id}.
+    # When this request authenticates with a different client ID (the sandbox
+    # one, in +:hybrid+ mode) the body must name the same account as the
+    # token, so a production ID is swapped for the request's ID. Only a value
+    # equal to the production ID is rewritten; an explicitly different ID is
+    # left alone.
+    def rebind_dhan_client_id(payload)
+      production_id = current_config&.client_id
+      request_id = request_client_id
+      return payload if production_id.nil? || request_id.nil? || production_id.to_s == request_id.to_s
+
+      key = [:dhanClientId, "dhanClientId"].find { |k| payload.key?(k) }
+      return payload unless key && payload[key].to_s == production_id.to_s
+
+      payload.merge(key => request_id)
     end
 
     # True when the path is one where the request body must include dhanClientId (order-api style).

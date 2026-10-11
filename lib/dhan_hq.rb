@@ -62,6 +62,8 @@ module DhanHQ
   # Eager-load risk utilities (PositionSizer, SLCalculator, TrailManager)
   # and the pre-execution risk pipeline so they are available immediately.
   require_relative "DhanHQ/risk"
+  require_relative "DhanHQ/risk/limits"
+  require_relative "DhanHQ/risk/exposure"
   require_relative "DhanHQ/risk/checks/trading_permission"
   require_relative "DhanHQ/risk/checks/asm_gsm"
   require_relative "DhanHQ/risk/checks/product_support"

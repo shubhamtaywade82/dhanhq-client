@@ -3,6 +3,30 @@
 require "spec_helper"
 
 RSpec.describe DhanHQ::Contract::SpecLoader do
+  # The vendored specs contain non-ASCII bytes. A process started without a
+  # locale (minimal Docker images, cron) has a US-ASCII default external
+  # encoding, under which an encoding-less File.read made every request fail.
+  it "loads the vendored contracts under a US-ASCII default external encoding" do
+    previous = Encoding.default_external
+    cache = described_class.instance_variable_get(:@cache)
+    described_class.instance_variable_set(:@cache, nil)
+    silence_warnings_for_encoding { Encoding.default_external = Encoding::US_ASCII }
+
+    expect(described_class.load(:live)).to include("paths")
+    expect(described_class.load(:sandbox)).to include("paths")
+  ensure
+    silence_warnings_for_encoding { Encoding.default_external = previous }
+    described_class.instance_variable_set(:@cache, cache)
+  end
+
+  def silence_warnings_for_encoding
+    verbose = $VERBOSE
+    $VERBOSE = nil
+    yield
+  ensure
+    $VERBOSE = verbose
+  end
+
   describe ".load" do
     it "loads the live document with its overlays applied" do
       doc = described_class.load(:live)

@@ -66,6 +66,11 @@ RSpec.describe DhanHQ::Contract::SchemaValidator do
       expect(described_class.validate_request!(news_headline, payload)).to be(true)
     end
 
+    it "validates a nil body as empty instead of skipping it" do
+      expect { described_class.validate_request!(place_order, nil) }
+        .to raise_error(DhanHQ::ValidationError, /contract validation/)
+    end
+
     it "is a no-op for operations without a request schema" do
       fundlimit = DhanHQ::Contract::Registry.operation("fundlimit")
 

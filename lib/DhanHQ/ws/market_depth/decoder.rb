@@ -6,96 +6,148 @@ module DhanHQ
   module WS
     module MarketDepth
       ##
-      # Decoder for the Full Market Depth (FMD) WebSocket binary protocol.
+      # Decoder for the binary 20/200-level Full Market Depth feed.
       #
-      # Wire format (all fields little-endian, per the official Dhan
-      # "Full Market Depth" documentation):
+      # Wire format (docs.dhanhq.co "Full Market Depth", little-endian, no padding):
       #
-      #   12-byte frame header:
-      #     0:  int16  message_length — total frame size including this header
-      #     2:  uint8  response code  — 41 = bid frame, 51 = ask frame, 50 = disconnect
-      #     3:  uint8  exchange segment
-      #     4:  int32  security id
-      #     8:  uint32 sequence number (ignore)
+      #   Header (12 bytes)
+      #     0-1   int16   message length of the packet
+      #     2     byte    feed response code: 41 = bid side, 51 = ask side, 50 = disconnect
+      #     3     byte    exchange segment (Annexure numeric enum)
+      #     4-7   int32   security id
+      #     8-11  uint32  20-level: message sequence (ignored) / 200-level: number of rows
+      #   Rows (16 bytes each; 20 for 20-level, "number of rows" for 200-level)
+      #     0-7   float64 price
+      #     8-11  uint32  quantity
+      #     12-15 uint32  number of orders
       #
-      #   followed by N rows of 16 bytes (bid and ask frames carry one side each):
-      #     0:  float64 price
-      #     8:  uint32 quantity
-      #     12: uint32 number of orders
-      #
-      # A 20-level frame is 12 + 20*16 = 332 bytes; a 200-level frame is 3212
-      # bytes. A single WebSocket message may stack multiple frames back to
-      # back — each frame's extent is given by its message_length, so frames
-      # are split by consuming exactly that many bytes per iteration.
+      # Bid and ask arrive as separate packets, and several packets (per side,
+      # per instrument) are stacked in one WebSocket message, so {#decode}
+      # walks the frame packet by packet using each header's length.
       class Decoder
-        RESPONSE_CODES = { bid: 41, ask: 51, disconnect: 50 }.freeze
         HEADER_SIZE = 12
         ROW_SIZE = 16
+        BID_CODE = 41
+        ASK_CODE = 51
+        DISCONNECT_CODE = 50
+        TWENTY_LEVEL_ROWS = 20
+
+        # @param depth_level [Integer] 20 or 200; decides how header bytes 8-11 are read.
+        def initialize(depth_level: 20)
+          @depth_level = depth_level.to_i == 200 ? 200 : 20
+        end
 
         ##
-        # Decode a raw WebSocket message into an array of frame hashes.
+        # Decode one WebSocket message into its side packets.
         #
-        # @param data [String] Raw binary WebSocket message (may contain
-        #   multiple stacked frames).
-        # @return [Array<Hash>] One hash per frame:
-        #   { security_id:, exchange_segment:, side:, levels: [{price:, quantity:, orders:}] }
-        #   or { security_id:, exchange_segment:, side: :disconnect, disconnect_code: }
+        # @param data [String, Array<Integer>] Raw frame (Faye delivers binary frames as byte arrays).
+        # @return [Array<Hash>] One entry per packet, in wire order. Side packets are
+        #   +{ side: :bid | :ask, exchange_segment:, security_id:, message_length:, levels: [{ price:, quantity:, orders: }] }+;
+        #   a disconnect packet is +{ side: :disconnect, exchange_segment:, security_id:, message_length:, disconnect_code: }+.
+        #   A truncated trailing packet and malformed trailing bytes are dropped (and logged), never raised.
         def decode(data)
-          return [] if data.nil? || data.empty?
-
-          bytes = data.b
-          frames = []
+          bytes = to_binary(data)
+          packets = []
           offset = 0
-          while offset + HEADER_SIZE <= bytes.bytesize
-            frame, next_offset = parse_frame(bytes, offset)
-            break if frame.nil?
 
-            frames << frame
-            offset = next_offset
+          while bytes.bytesize - offset >= HEADER_SIZE
+            packet, consumed = read_packet(bytes, offset)
+            break unless packet
+
+            packets << packet
+            offset += consumed
           end
-          frames
+
+          log_trailing(bytes.bytesize - offset) if offset < bytes.bytesize
+          packets
         rescue StandardError => e
-          DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth::Decoder] Decode error: #{e.class}: #{e.message}")
+          DhanHQ.logger&.error("[DhanHQ::WS::MarketDepth::Decoder] Decode error: #{e.class} #{e.message}")
           []
         end
 
         private
 
-        # Parses a single frame starting at +offset+ and returns
-        # [frame_hash, next_offset], or [nil, offset] when the frame is truncated.
-        def parse_frame(bytes, offset)
-          message_length, code, segment, security_id = bytes.byteslice(offset, HEADER_SIZE).unpack("s<CCl<")
-          return [nil, offset] if message_length.nil? || message_length <= HEADER_SIZE || offset + message_length > bytes.bytesize
+        def to_binary(data)
+          return "".b if data.nil?
 
-          base = {
-            security_id: security_id.to_s,
-            exchange_segment: Segments.from_code(segment),
-            message_length: message_length
-          }
-
-          case code
-          when RESPONSE_CODES[:bid], RESPONSE_CODES[:ask]
-            side = code == RESPONSE_CODES[:bid] ? :bid : :ask
-            [base.merge(side: side, levels: parse_rows(bytes, offset + HEADER_SIZE, message_length)), offset + message_length]
-          when RESPONSE_CODES[:disconnect]
-            disconnect_code = bytes.byteslice(offset + HEADER_SIZE, 2)&.unpack1("v")
-            [base.merge(side: :disconnect, disconnect_code: disconnect_code), offset + message_length]
-          else
-            DhanHQ.logger&.debug("[DhanHQ::WS::MarketDepth::Decoder] Unknown frame code=#{code}")
-            [nil, offset]
-          end
+          data.is_a?(Array) ? data.pack("C*") : data.to_s.b
         end
 
-        # Decodes the fixed-size price rows of a bid/ask frame.
-        def parse_rows(bytes, start, message_length)
-          row_bytes = message_length - HEADER_SIZE
-          row_count = [row_bytes / ROW_SIZE, 0].max
-          rows = []
-          row_count.times do |i|
-            price, quantity, orders = bytes.byteslice(start + (i * ROW_SIZE), ROW_SIZE).unpack("EVV")
-            rows << { price: price, quantity: quantity, orders: orders }
+        # @return [Array(Hash, Integer), nil] The packet and the bytes it spans, or
+        #   nil when the packet is unknown or extends past the end of the frame.
+        def read_packet(bytes, offset)
+          length, code, segment, security_id, tail = bytes.byteslice(offset, HEADER_SIZE).unpack("s<CCl<L<")
+          segment_name = Segments.from_code(segment)
+
+          if code == DISCONNECT_CODE
+            span = packet_span(length, HEADER_SIZE + 2)
+            return nil if truncated?(bytes, offset, span)
+
+            return [disconnect(bytes, offset, segment_name, security_id, span), span]
           end
-          rows
+
+          unless [BID_CODE, ASK_CODE].include?(code)
+            DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth::Decoder] Unknown response code #{code}; dropping rest of frame")
+            return nil
+          end
+
+          rows = @depth_level == 200 ? tail : TWENTY_LEVEL_ROWS
+          span = side_span(length, rows)
+          return nil if truncated?(bytes, offset, span)
+
+          available = [rows, (span - HEADER_SIZE) / ROW_SIZE].min
+
+          packet = {
+            side: code == BID_CODE ? :bid : :ask,
+            exchange_segment: segment_name,
+            security_id: security_id.to_s,
+            message_length: span,
+            levels: read_levels(bytes, offset + HEADER_SIZE, available)
+          }
+          [packet, span]
+        end
+
+        def truncated?(bytes, offset, span)
+          return false if offset + span <= bytes.bytesize
+
+          DhanHQ.logger&.debug("[DhanHQ::WS::MarketDepth::Decoder] Truncated packet at byte #{offset}; dropping")
+          true
+        end
+
+        # Packet span from the header's length field, falling back to the
+        # documented fixed size when the field is absent or implausible.
+        def packet_span(length, expected)
+          length.to_i >= HEADER_SIZE ? length : expected
+        end
+
+        # The docs call the length field "message length of the entire payload
+        # packet" without saying whether the 12-byte header is included. A value
+        # equal to exactly the rows (rows * 16) is read as payload-only; anything
+        # else as the full packet. Both readings stay aligned on stacked frames.
+        def side_span(length, rows)
+          payload = rows * ROW_SIZE
+          return HEADER_SIZE + payload if length.to_i == payload
+
+          packet_span(length, HEADER_SIZE + payload)
+        end
+
+        def read_levels(bytes, start, count)
+          levels = Array.new([count, 0].max) do |i|
+            price, quantity, orders = bytes.byteslice(start + (i * ROW_SIZE), ROW_SIZE).unpack("EL<L<")
+            { price: price, quantity: quantity, orders: orders }
+          end
+          # Unfilled rows of a partially populated book are zeroed on the wire.
+          levels.reject { |level| level[:quantity].zero? && level[:price].zero? }
+        end
+
+        def disconnect(bytes, offset, segment_name, security_id, span)
+          code = bytes.byteslice(offset + HEADER_SIZE, 2)&.unpack1("v")
+          { side: :disconnect, exchange_segment: segment_name, security_id: security_id.to_s, message_length: span,
+            disconnect_code: code }
+        end
+
+        def log_trailing(count)
+          DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth::Decoder] Ignoring #{count} trailing byte(s) in depth frame")
         end
       end
     end

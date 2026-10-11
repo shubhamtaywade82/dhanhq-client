@@ -102,9 +102,20 @@ RSpec.describe DhanHQ::Risk::Pipeline do
       end
     end
 
+    context "with stop-loss order types" do
+      it "accepts STOP_LOSS and STOP_LOSS_MARKET" do
+        %w[STOP_LOSS STOP_LOSS_MARKET].each do |order_type|
+          expect do
+            described_class.run!(instrument: instrument, args: base_args.merge("order_type" => order_type),
+                                 now: market_time, type: :equity)
+          end.not_to raise_error
+        end
+      end
+    end
+
     context "when order type is invalid" do
       it "raises RiskViolation" do
-        args = base_args.merge("order_type" => "STOP_LOSS")
+        args = base_args.merge("order_type" => "BRACKET")
 
         expect do
           described_class.run!(

@@ -153,9 +153,10 @@ RSpec.describe DhanHQ::RateLimiter do
     context "when api type is data_api" do
       let(:api_type) { :data_api }
 
-      it "caps at 5 per second and 100,000 per day per the published limits" do
+      # The two official doc sites disagree (100,000 vs 7,000/day); the stricter applies.
+      it "caps at 5 per second and 7,000 per day" do
         expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_second]).to eq(5)
-        expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_day]).to eq(100_000)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_day]).to eq(7_000)
       end
 
       it "allows unlimited minute/hour traffic but caps per_second (via timestamps) and per_day" do
@@ -168,7 +169,7 @@ RSpec.describe DhanHQ::RateLimiter do
 
         buckets[:per_minute].value = 0
         buckets[:per_hour].value = 0
-        buckets[:per_day].value = 100_000
+        buckets[:per_day].value = 7_000
         expect(rate_limiter.send(:allow_request?)).to be false
       end
     end

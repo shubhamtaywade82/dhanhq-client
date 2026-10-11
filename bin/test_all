@@ -6,7 +6,8 @@
 # CLI (run as script):
 #   bin/test_all                    # run all read endpoints (GET + data-fetch POSTs)
 #   bin/test_all --list             # print endpoint list and exit
-#   bin/test_all --all              # include write endpoints (requires DHAN_SANDBOX=true)
+#   bin/test_all --all              # include write endpoints (requires order tier on the sandbox:
+#                                   #   DHAN_MODE=sandbox, or DHAN_MODE=hybrid for live data + sandbox execution)
 #   bin/test_all --skip-unavailable # skip endpoints that often 404/timeout
 #   bin/test_all --ip current       # fetch current IP and exit
 #   bin/test_all --ip secondary     # test updating SECONDARY IP and exit
@@ -58,7 +59,7 @@ if __FILE__ == $PROGRAM_NAME
 
   OptionParser.new do |opts|
     opts.banner = "Usage: bin/test_all [options]"
-    opts.on("--all", "Include write endpoints (requires DHAN_SANDBOX=true)") { options[:all] = true }
+    opts.on("--all", "Include write endpoints (order tier must route to the sandbox: DHAN_MODE=sandbox|hybrid)") { options[:all] = true }
     opts.on("--list", "Print endpoint list and exit") { options[:list] = true }
     opts.on("--json", "Output results as JSON") { options[:json] = true }
     opts.on("--verbose", "Print each result") { options[:verbose] = true }
@@ -88,8 +89,12 @@ if __FILE__ == $PROGRAM_NAME
     exit 0
   end
 
-  if options[:all] && !DhanHQ.configuration&.sandbox?
-    puts "Write endpoints require sandbox. Set DHAN_SANDBOX=true."
+  # Write endpoints place/cancel orders, exit positions and flip the kill switch. Run them
+  # only when the order tier (which every write endpoint uses) resolves to the sandbox host,
+  # so an environment_overrides entry can never point them at the real account.
+  if options[:all] && DhanHQ.configuration.environment_for(:order_api) != :sandbox
+    puts "Write endpoints require the order tier on the sandbox. Set DHAN_MODE=sandbox, or DHAN_MODE=hybrid " \
+         "(live market data + sandbox execution), and do not override order_api to live."
     exit 1
   end
 
@@ -383,7 +388,9 @@ if __FILE__ == $PROGRAM_NAME
     exit 0
   end
 
-  unless options[:skip_unavailable]
+  # Creating an alert is a write: only do it when write endpoints are enabled (and therefore
+  # sandbox-routed). A read-only run must never create anything on the account.
+  if options[:all] && !options[:skip_unavailable]
     begin
       created = DhanHQ::Models::AlertOrder.create(alert_create_params(security_id: security_id, expiry_date: expiry_date))
       if created&.alert_id
@@ -404,6 +411,11 @@ if __FILE__ == $PROGRAM_NAME
     duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
     results << { path: path, name: name, write: write, status: "ok", duration_ms: duration_ms }
     puts "ok (#{duration_ms}ms)" if progress
+  rescue DhanHQ::SandboxUnsupportedError
+    # Not a failure: the Dhan sandbox does not serve this endpoint, and the gem refused
+    # to send it there (it never falls back to production).
+    results << { path: path, name: name, write: write, status: "unsupported", duration_ms: 0, error: "not served by the Dhan sandbox" }
+    puts "unsupported on sandbox" if progress
   rescue Timeout::Error
     duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
     results << { path: path, name: name, write: write, status: "error", duration_ms: duration_ms, error: "Timeout::Error (25s)" }
@@ -441,22 +453,28 @@ if __FILE__ == $PROGRAM_NAME
       puts "Calling #{write_list.size} write endpoints..." if progress
       write_list.each { |path, name, blk| run_endpoint(results, path, name, write: true, progress: progress, &blk) }
     end
-    summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" } }
+    summary = { total: results.size, ok: results.count { |r| r[:status] == "ok" }, error: results.count { |r| r[:status] == "error" },
+                unsupported_on_sandbox: results.count { |r| r[:status] == "unsupported" } }
     summary[:skipped] = skipped_count if skipped_count.positive?
     if options[:json]
       puts JSON.pretty_generate(summary: summary, results: results)
       exit(summary[:error].zero? ? 0 : 1)
     end
-    puts "Sandbox: #{DhanHQ.configuration&.sandbox?} | Read-only: #{!options[:all]}"
+    cfg = DhanHQ.configuration
+    routing = %i[data_api quote_api option_chain order_api non_trading_api].map { |tier| "#{tier}=#{cfg.environment_for(tier)}" }
+    puts "Mode: #{cfg.mode} | Read-only: #{!options[:all]}"
+    puts "Routing: #{routing.join(", ")}"
     puts "Skipped: #{skipped_count}" if skipped_count.positive?
     puts "-" * 60
     if options[:verbose]
-      results.each { |r| puts (r[:status] == "ok" ? "[OK]" : "[ERR]") + " #{r[:path]} (#{r[:duration_ms]}ms) #{r[:error] || ""}" }
+      tags = { "ok" => "[OK]", "error" => "[ERR]", "unsupported" => "[N/A]" }
+      results.each { |r| puts "#{tags.fetch(r[:status])} #{r[:path]} (#{r[:duration_ms]}ms) #{r[:error] || ""}" }
     else
       results.select { |r| r[:status] == "error" }.each { |r| puts "[ERR] #{r[:path]} — #{r[:error]}" }
     end
     puts "-" * 60
-    puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]}"
+    puts "Total: #{summary[:total]} | OK: #{summary[:ok]} | Error: #{summary[:error]} | " \
+         "Unsupported on sandbox: #{summary[:unsupported_on_sandbox]}"
     exit(summary[:error].zero? ? 0 : 1)
   ensure
     DhanHQ::Models::AlertOrder.find(created_alert_id)&.destroy if created_alert_id

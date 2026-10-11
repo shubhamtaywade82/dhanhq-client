@@ -21,7 +21,7 @@ RSpec.describe "docs/ws_lifecycle.asyncapi.yml" do
     DhanHQ::WS::Protocol.reset!
     generated = DhanHQ::Contract::Generator.send(:asyncapi_source)
     DhanHQ::WS::Protocol.reset!
-    expect(generated).to eq(File.read(path))
+    expect(generated).to eq(File.read(path, encoding: "UTF-8"))
   end
 
   describe "servers" do

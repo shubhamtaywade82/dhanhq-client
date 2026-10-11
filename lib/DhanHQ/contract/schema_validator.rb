@@ -27,7 +27,10 @@ module DhanHQ
         # @raise [DhanHQ::ValidationError] on schema violations
         def validate_request!(operation, payload)
           return if operation.nil? || operation.request_schema_name.nil?
-          return if payload.nil?
+
+          # A missing body is validated as an empty one: otherwise client.post(path, nil)
+          # would skip validation for every operation with a required request body.
+          payload = {} if payload.nil?
           return true if request_schemer(operation).valid?(stringify_keys(payload))
 
           errors = request_errors(operation, payload)

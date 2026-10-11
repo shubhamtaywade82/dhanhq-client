@@ -69,7 +69,7 @@ namespace :contract do
         next
       end
 
-      current = File.exist?(target) ? JSON.parse(File.read(target)) : nil
+      current = File.exist?(target) ? JSON.parse(File.read(target, encoding: "UTF-8")) : nil
       fresh = JSON.parse(body)
       if current == fresh
         puts "#{name}: unchanged"
@@ -117,7 +117,7 @@ namespace :contract do
       # Deep-compare PARSED documents: byte/serializer differences (key order,
       # unicode escaping, float formatting) are not contract drift — only
       # semantic content is.
-      drift << name if fresh != JSON.parse(File.read(vendored))
+      drift << name if fresh != JSON.parse(File.read(vendored, encoding: "UTF-8"))
     end
 
     unless unavailable.empty?

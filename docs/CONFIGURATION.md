@@ -25,6 +25,13 @@ Set these _before_ calling `configure_with_env` to override defaults:
 | Variable                         | Default    | Description                                             |
 | -------------------------------- | ---------- | ------------------------------------------------------- |
 | `DHAN_MODE`                      | `live`     | `live`, `sandbox`, or `hybrid`. `hybrid` routes market data (quotes, option chain, charts, instruments, ScanX) to production and trading/account calls (orders, positions, funds, statements) to `https://sandbox.dhan.co/v2` — live prices, paper execution. Takes precedence over `DHAN_SANDBOX`. |
+| `DHAN_RISK_MAX_QUANTITY`         | `10`       | Pre-trade cap on order quantity, in units (one NIFTY lot = 75). Applies to new exposure only; exits are never capped. Also `config.risk_limits[:max_quantity]`. |
+| `DHAN_RISK_MAX_NOTIONAL`         | `100000`   | Cap on quantity × price for new exposure. |
+| `DHAN_RISK_MAX_OPEN_POSITIONS`   | `20`       | New entries are refused at this many open positions. |
+| `DHAN_RISK_DAILY_MAX_LOSS`       | `50000`    | New entries are refused once realized + unrealized day P&L is below minus this value. |
+| `DHAN_RISK_MAX_CONCENTRATION_PCT`| `25`       | Max exposure in one instrument (open position + this order) as % of available funds. |
+| `DHAN_SANDBOX_CLIENT_ID`         | unset      | Client ID for `https://sandbox.dhan.co/v2` (Dhan Cloud). Used for every request routed to the sandbox. Required in `hybrid`; falls back to `DHAN_CLIENT_ID` in `sandbox` mode. |
+| `DHAN_SANDBOX_ACCESS_TOKEN`      | unset      | Sandbox access token. Dhan rejects production tokens on the sandbox and vice versa. Required in `hybrid`; falls back to `DHAN_ACCESS_TOKEN` in `sandbox` mode. |
 | `DHAN_SANDBOX`                   | `false`    | Legacy alias: set `"true"` to route all REST calls to `https://sandbox.dhan.co/v2`. Note: Dhan's sandbox validates request/response plumbing only — it does not execute real order fills/matching. Placed orders stay `PENDING` indefinitely. See [ENDPOINTS_AND_SANDBOX.md](ENDPOINTS_AND_SANDBOX.md). |
 | `DHAN_ENV_OVERRIDES`             | unset      | String-form per-tier overrides on top of the mode, e.g. `"non_trading_api=live,data_api=sandbox"`. Equivalent to `config.environment_overrides`. |
 | `DHAN_BASE_URL`                  | Dhan prod  | Point REST calls to a different API hostname. Takes precedence over `DHAN_SANDBOX` only when explicitly set to something other than the production default. |

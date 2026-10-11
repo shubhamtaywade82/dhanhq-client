@@ -177,7 +177,7 @@ RSpec.describe DhanHQ::Contract::Params do
           file, line = method.source_location
           next unless file
 
-          body = File.readlines(file)[line..(line + 2)].join
+          body = File.readlines(file, encoding: "UTF-8")[line..(line + 2)].join
           coerced = body.match?(/(?:params|orders) = contract_params\((?:params|orders)\)/)
           offenders << "#{klass}##{method_name} (#{File.basename(file)})" unless coerced
         end

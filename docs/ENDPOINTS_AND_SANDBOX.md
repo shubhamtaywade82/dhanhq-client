@@ -31,6 +31,24 @@ client = DhanHQ::Client.new(config: shared_config, mode: :hybrid)
 Resolution order for any request: explicit `config.base_url` (if set, it wins for every
 request) → `environment_overrides[tier]` → mode default for that tier.
 
+### Credentials per environment
+
+Dhan treats sandbox and production as separate environments with separate credentials
+("Do not reuse production tokens for sandbox requests or sandbox tokens for production
+requests" — docs.dhanhq.co, *Sandbox*). The gem therefore resolves credentials per tier
+alongside the host:
+
+| Request routed to | `access-token` header | `client-id` header / body `dhanClientId` |
+| ----------------- | --------------------- | ---------------------------------------- |
+| production        | `access_token` (`DHAN_ACCESS_TOKEN`) | `client_id` (`DHAN_CLIENT_ID`) |
+| sandbox           | `sandbox_access_token` (`DHAN_SANDBOX_ACCESS_TOKEN`) | `sandbox_client_id` (`DHAN_SANDBOX_CLIENT_ID`) |
+
+A body `dhanClientId` equal to the production `client_id` (models fill it in) is rewritten
+to the sandbox ID on sandbox-bound requests; an explicitly different ID is left alone. In
+`:sandbox` mode the sandbox pair falls back to the primary pair; in `:hybrid` (or with a
+tier overridden to the sandbox) missing sandbox credentials raise
+`DhanHQ::AuthenticationError` before any I/O.
+
 ## Sandbox behavior
 
 - **Sandbox does NOT execute real order fills/matching.** Confirmed both via Dhan's own docs ("the sandbox behaves like the live API but does not execute real orders") and empirically: a `MARKET` order placed on sandbox validates and returns a real `orderId`, but stays at `PENDING` indefinitely — it never transitions to `TRADED`, even after 24+ seconds of polling. Use sandbox to validate request/response plumbing (auth, payload shape, error codes), not to test fill, cancel, or square-off behavior.
@@ -44,36 +62,24 @@ request) → `environment_overrides[tier]` → mode default for that tier.
 
 ---
 
-## Sandbox: verified vs not working / unverified
+## Sandbox endpoint support
 
-> **Definitive surface (verified 2026-10-10 against the official sandbox
-> OpenAPI spec at `https://sandbox.dhan.co/v2/v3/api-docs` — 22 paths / 26
-> operations):** the sandbox implements orders CRUD + slicing + correlation
-> lookup, trades (all 3 variants), forever orders, positions + convert,
-> holdings, fundlimit, ledger, `POST /killswitch`, single-scrip
-> margincalculator, EDIS (tpin/form/bulkform/inquire) and
-> `charts/historical` + `charts/intraday`. It does **not** implement super
-> orders, alerts (incl. multi orders), pnlExit, `/ip/*`,
-> `charts/rollingoption`, `/data/*` (ScanX), `marketfeed/*`, `optionchain*`,
-> `instrument/*`, `margincalculator/multi`, `globalstocks/*`,
-> `DELETE /positions` (exit-all) or `GET /killswitch` — and it has **no
-> WebSocket of any kind**. Requests to those endpoints now raise
-> `DhanHQ::SandboxUnsupportedError` instead of an opaque 404/DH-905 — see
-> `lib/DhanHQ/sandbox_capabilities.rb` and `GAP_ANALYSIS.md` §7.
+The guard is **contract-derived**: an operation runs on the sandbox exactly when the vendored
+sandbox OpenAPI document (`contracts/dhanhq/sandbox.openapi.json`, captured from
+`https://sandbox.dhan.co/v2/v3/api-docs`, plus overlays) serves that method + path. Anything else
+raises `DhanHQ::SandboxUnsupportedError` before any I/O, failing closed — see
+`lib/DhanHQ/sandbox_capabilities.rb`. An unauthenticated probe of each path (an existing route
+answers 401/400, a missing one 404) agrees with the contract on every 404.
 
-| Status    | Endpoints |
-|-----------|-----------|
-| **Verified on sandbox** (gem specs) | `GET /v2/profile`, `GET /v2/fundlimit` |
-| **Sandbox connectivity spec** | `spec/dhan_hq/sandbox_connectivity_spec.rb` — uses VCR `record: :new_episodes`. In CI, use committed cassettes or skip without sandbox credentials; locally, run with `VCR_RECORD=new_episodes` and sandbox credentials to record. |
-| **Not supported in sandbox** | All WebSocket endpoints (order updates, market feed, market depth). Use production only. Super orders, alerts, pnlExit, `/ip/*`, ScanX, quotes, option chain, global stocks (see the definitive surface above — now guarded by `SandboxCapabilities`). |
-| **Not verified on sandbox** | `GET /v2/profile` works empirically but is absent from the sandbox spec (undocumented). All other spec-listed sandbox endpoints above are implemented in the gem and follow the documented request shapes. |
+| Status | Endpoints |
+|--------|-----------|
+| **Served by the sandbox** | `/orders` (place, modify, cancel, book, by id, by correlation id), `/orders/slicing`, `/trades` (all three variants), `/holdings`, `/positions`, `/positions/convert`, `POST /killswitch`, `/edis/tpin`, `/edis/form`, `/edis/bulkform`, `/edis/inquire/{isin}`, `/fundlimit`, `POST /margincalculator`, `/ledger`, `/charts/historical`, `/charts/intraday`, `/forever/orders`, `GET /profile` (absent from the sandbox spec; added by overlay after a recorded sandbox response) |
+| **Not served — 404** | `/super/orders`, `/alerts/orders`, `/alerts/multi/orders`, `/pnlExit`, `/margincalculator/multi`, `/ip/*`, `/marketfeed/*`, `/optionchain`, `/optionchain/expirylist`, `/charts/rollingoption`, `/data/*` (ScanX), `/globalstocks/*` |
+| **Refused by the guard, route unclear** | `GET /killswitch` and `DELETE /positions` (exit-all) answer 400 rather than 404 on the sandbox but are absent from its spec. Iceberg/TWAP (`/v2/orders/iceberg`, `/v2/orders/twap`) appear in no Dhan document. |
+| **Not supported** | All WebSocket endpoints (order updates, market feed, market depth). Production only. |
 
-**Historical note (superseded by the definitive surface above):** before the
-sandbox OpenAPI spec was retrieved, every endpoint except profile/fundlimit
-was listed as "unverified". That list is preserved in git history; the
-spec-derived matrix in `GAP_ANALYSIS.md` §7 and the `SandboxCapabilities`
-guard replace it. `bin/call_all_endpoints.rb` remains the tool for a live
-confirmation pass against both hosts.
+In `:hybrid` mode a refused request is **never** redirected to production — that would turn a
+paper order into a real one. Route a read-only tier to production with `environment_overrides`.
 
 ---
 

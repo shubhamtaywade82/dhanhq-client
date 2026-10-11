@@ -88,8 +88,12 @@ module DhanHQ
       TRADED = "TRADED"
       EXPIRED = "EXPIRED"
       MODIFIED = "MODIFIED"
+      # Listed in the orderStatus response enum of the order, super order and
+      # slicing endpoints (docs.dhanhq.co).
+      INACTIVE = "INACTIVE"
 
-      ALL = [TRANSIT, PENDING, CLOSED, TRIGGERED, REJECTED, CANCELLED, PART_TRADED, TRADED, EXPIRED, MODIFIED].freeze
+      ALL = [TRANSIT, PENDING, CLOSED, TRIGGERED, REJECTED, CANCELLED, PART_TRADED, TRADED, EXPIRED, MODIFIED,
+             INACTIVE].freeze
     end
 
     # AMO (after market order) timing options.
@@ -505,8 +509,9 @@ module DhanHQ
     module RateLimit
       # Order APIs: 10/sec, 250/min, 1,000/hr, 7,000/day (25 modifications/order).
       ORDER_API = { per_second: 10, per_minute: 250, per_hour: 1_000, per_day: 7_000 }.freeze
-      # Data APIs: 5/sec, 100,000/day.
-      DATA_API = { per_second: 5, per_day: 100_000 }.freeze
+      # Data APIs: 5/sec, 7,000/day — the stricter of the two official doc sites
+      # (dhanhq.co/docs/v2 says 100,000/day; docs.dhanhq.co says 7,000/day).
+      DATA_API = { per_second: 5, per_day: 7_000 }.freeze
       # Market Quote APIs: 1/sec (up to 1,000 instruments per call).
       QUOTE_API = { per_second: 1 }.freeze
       # Option chain: 1 unique request per 3 seconds.

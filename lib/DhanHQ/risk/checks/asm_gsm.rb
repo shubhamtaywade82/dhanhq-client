@@ -5,7 +5,10 @@ module DhanHQ
     module Checks
       # Blocks trading on ASM/GSM restricted instruments.
       class AsmGsm
-        def self.run!(instrument:, **_unused)
+        # Exits are allowed: a position held before the instrument entered ASM/GSM
+        # must still be closable.
+        def self.run!(instrument:, reducing: false, **_unused)
+          return if reducing
           return unless instrument.asm_gsm_flag == "Y"
 
           raise DhanHQ::RiskViolation,

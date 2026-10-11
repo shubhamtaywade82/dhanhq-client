@@ -309,6 +309,16 @@ module DhanHQ
 
     private
 
+    # Credentials for this client's API tier: the sandbox pair when the tier
+    # routes to the sandbox host, the production pair otherwise.
+    def request_access_token
+      @config.access_token_for(@api_type)
+    end
+
+    def request_client_id
+      @config.client_id_for(@api_type)
+    end
+
     # Fails fast with a clear error when the effective target host is the
     # sandbox but the endpoint is not part of the sandbox API surface. Without
     # this the caller would see an opaque 404/405 or DH-905 from the host.

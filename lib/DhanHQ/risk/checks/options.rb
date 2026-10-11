@@ -5,7 +5,10 @@ module DhanHQ
     module Checks
       # Enforces option-specific risk rules (index-only, stop loss, target, risk-reward).
       class Options
-        def self.run!(args:, instrument:, **_unused)
+        # Entry rules only: closing an option position needs no stop loss or target.
+        def self.run!(args:, instrument:, reducing: false, **_unused)
+          return if reducing
+
           enforce_index!(instrument)
           enforce_stop_loss!(args)
           enforce_target!(args)

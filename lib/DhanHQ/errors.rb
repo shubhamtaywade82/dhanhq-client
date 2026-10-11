@@ -68,7 +68,9 @@ module DhanHQ
   class OtherError < Error; end
   # 404
   class NotFoundError < Error; end
-  # Raised when a request would target the sandbox host with an endpoint the
-  # sandbox does not implement (see DhanHQ::SandboxCapabilities).
+  # Raised before any network I/O when a request would target the sandbox host
+  # with an endpoint the sandbox does not implement (see DhanHQ::SandboxCapabilities).
+  # The request is never redirected to production instead: in +:hybrid+ mode
+  # that would turn a paper order into a real one.
   class SandboxUnsupportedError < Error; end
 end

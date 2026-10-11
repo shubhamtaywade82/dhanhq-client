@@ -37,7 +37,7 @@ module DhanHQ
         def load(name)
           @cache ||= {}
           @cache[name] ||= begin
-            doc = JSON.parse(File.read(spec_path(name)))
+            doc = JSON.parse(File.read(spec_path(name), encoding: "UTF-8"))
             apply_overlays!(doc, name)
             doc.freeze
           end
@@ -49,7 +49,7 @@ module DhanHQ
         # @param name [Symbol]
         # @return [Hash]
         def load_raw(name)
-          JSON.parse(File.read(spec_path(name)))
+          JSON.parse(File.read(spec_path(name), encoding: "UTF-8"))
         end
 
         # @param name [Symbol]
@@ -83,7 +83,7 @@ module DhanHQ
 
         def apply_overlays!(doc, name)
           OVERLAYS.fetch(name, []).each do |file|
-            patch = JSON.parse(File.read(File.join(OVERLAYS_DIR, file)))
+            patch = JSON.parse(File.read(File.join(OVERLAYS_DIR, file), encoding: "UTF-8"))
             apply_patch!(doc, patch)
           rescue Errno::ENOENT
             raise "Overlay #{file} referenced for :#{name} but missing in #{OVERLAYS_DIR}"
