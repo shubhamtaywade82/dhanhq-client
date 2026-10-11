@@ -42,6 +42,37 @@ RSpec.describe DhanHQ::Risk::Checks::Concentration do
         .to raise_error(DhanHQ::RiskViolation, /Concentration 30.0%/)
     end
 
+    it "prices a MARKET entry from the instrument's LTP" do
+      instrument = double("instrument", ltp: 100.0)
+
+      expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+        .to raise_error(DhanHQ::RiskViolation, /Concentration 30.0%/)
+    end
+
+    it "prices a STOP_LOSS_MARKET entry from its trigger price without fetching LTP" do
+      instrument = double("instrument")
+
+      expect do
+        described_class.run!(args: { "security_id" => "2885", "quantity" => 300, "trigger_price" => 100.0 },
+                             instrument: instrument)
+      end.to raise_error(DhanHQ::RiskViolation, /Concentration 30.0%/)
+    end
+
+    it "refuses an entry it cannot price instead of counting it as zero" do
+      instrument = double("instrument", ltp: nil)
+
+      expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+        .to raise_error(DhanHQ::RiskViolation, /Cannot price 2885/)
+    end
+
+    it "refuses the entry when the LTP fetch fails, rather than escaping and skipping every check" do
+      instrument = double("instrument")
+      allow(instrument).to receive(:ltp).and_raise(DhanHQ::NetworkError, "timeout")
+
+      expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+        .to raise_error(DhanHQ::RiskViolation, /Cannot price/)
+    end
+
     it "never blocks a risk-reducing order" do
       expect { described_class.run!(args: { "security_id" => "2885" }, positions: [position_double(500, 5000.0)], reducing: true) }
         .not_to raise_error
