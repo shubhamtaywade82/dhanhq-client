@@ -1,4 +1,4 @@
-## [Unreleased]
+## [4.1.1] - 2026-10-11
 
 ### Fixed — pre-trade risk pipeline
 
