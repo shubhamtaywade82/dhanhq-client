@@ -54,7 +54,7 @@ module DhanHQ
     def handle_error(response)
       body = parse_json(response.body)
 
-      error_code = body[:errorCode] || response.status.to_s
+      error_code = (body[:errorCode] || response.status).to_s
       error_message = body[:errorMessage] || body[:message] || "Unknown error"
       if error_code == DhanHQ::Constants::TradingErrorCode::NO_HOLDINGS
         error_message = "No holdings found for this account. Add holdings or wait for them to settle before retrying."

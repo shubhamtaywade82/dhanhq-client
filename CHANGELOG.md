@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Fixed
+
+- **Data-API error codes sent as integers never matched the error mapping.** Dhan's data APIs answer with numeric codes (`{"errorCode":807,"errorMessage":"Token expired"}` — see `spec/vcr_cassettes/client/error_806.yml`), but `ResponseHelper#handle_error` compared them against string-keyed `DHAN_ERROR_MAPPING`, so every integer code fell through to the HTTP-status fallback: token expiry (807) surfaced as `InvalidAuthenticationError`, invalid expiry date (811) as a generic `InputExceptionError`, and so on. The code is now normalized with `.to_s` before the lookup. New wire-format specs in `spec/dhan_hq/resources/historical_data_spec.rb` and `expired_options_data_spec.rb` cover the mapping.
+- **`Resources::Instruments#by_segment` swallowed HTTP errors.** On 4xx/5xx it returned the raw JSON error body as if it were CSV — no exception, unlike every other resource. Failures now raise the status-mapped `DhanHQ::Error` subclass (`NotFoundError`, `InvalidAuthenticationError`, …). New spec in `spec/dhan_hq/resources/instruments_spec.rb`.
+- **`Resources::MarginCalculator#calculate_multi` sent nested `scripList` entries in snake_case.** Only top-level keys were camelized, so the API received `security_id`/`exchange_segment` inside each scrip (the `Models::Margin` layer pre-camelized as a workaround; the raw resource did not). The resource now deep-camelizes like `multi_orders` does for its legs. New spec in `spec/dhan_hq/resources/margin_calculator_spec.rb`.
+- New WebMock wire-format specs for every non-order REST endpoint — funds, holdings, trades, positions, profile, statements, market feed (ltp/ohlc/quote), option chain, charts, expired options, margin calculator, instruments, EDIS, IP setup, kill switch — asserting method, path, headers, body shape, param camelization/titleization, and typed error mapping. (Orders endpoints excluded per scope.)
+- **`DhanHQ::Auth.renew_token` called the wrong URL.** `conn.post("/RenewToken")` on the `https://api.dhan.co/v2` base made Faraday drop `/v2` (a leading slash is an absolute path), so renewals hit `https://api.dhan.co/RenewToken`. It now requests `/v2/RenewToken` with **GET**, matching Dhan's documented curl example (`dhanhq.co/docs/v2/authentication`) and the official Python SDK (`dhanhq` 2.3.0). `generate_access_token` also uses a relative path now.
+- **Successful auth responses returned `{}`.** The auth connection had no JSON parsing, so the body arrived as a string and `handle_response` discarded it — the new `accessToken` was lost on every successful renewal or generation. Bodies are now parsed regardless of `Content-Type`.
+- **Auth failures are typed by cause.** 429 raises `DhanHQ::RateLimitError`, 5xx `DhanHQ::InternalServerError`, timeouts and connection failures `DhanHQ::NetworkError`; only refused credentials raise `DhanHQ::InvalidAuthenticationError`. Previously every failure, including outages, looked like bad credentials. All remain `DhanHQ::Error` subclasses, and `response_body` now carries the parsed error payload.
+- **Auth requests have timeouts** (`DHAN_CONNECT_TIMEOUT` / `DHAN_READ_TIMEOUT` / `DHAN_WRITE_TIMEOUT`, defaults 10/30/30s, as `Client#build_connection`). They were unbounded.
+- New `spec/dhan_hq/auth_spec.rb` covers both endpoints, error mapping, timeouts and `Auth::TokenRenewal`; the auth module previously had no specs.
+
 ## [4.1.0] - 2026-10-10
 
 ### Fixed (full-gem review pass — `ruby-agent-skills` audit)

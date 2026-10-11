@@ -59,4 +59,62 @@ RSpec.describe DhanHQ::Resources::IPSetup do
       expect(client).to have_received(:put).with("/v2/ip/modifyIP", expected_params)
     end
   end
+
+  describe "request wire format" do
+    subject(:ip_setup) { described_class.new }
+
+    let(:base) { "https://api.dhan.co/v2/ip" }
+
+    before do
+      allow(DhanHQ::Client).to receive(:new).and_call_original
+      ENV["DHAN_CLIENT_ID"] = "test_client_id"
+      ENV["DHAN_ACCESS_TOKEN"] = "test_access_token"
+      DhanHQ.configure_with_env
+    end
+
+    it "GETs /v2/ip/getIP and returns the whitelisted IPs" do
+      stub_request(:get, "#{base}/getIP").to_return(
+        status: 200,
+        body: { primaryIP: "1.2.3.4", secondaryIP: "5.6.7.8" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      response = ip_setup.current
+
+      expect(WebMock).to have_requested(:get, "#{base}/getIP")
+      expect(response["primaryIP"]).to eq("1.2.3.4")
+    end
+
+    it "POSTs camelized params to /v2/ip/setIP with the configured client id" do
+      stub_request(:post, "#{base}/setIP")
+        .to_return(status: 200, body: { status: "success" }.to_json, headers: { "Content-Type" => "application/json" })
+
+      ip_setup.set(ip: "1.2.3.4", ip_flag: "SECONDARY")
+
+      expect(WebMock).to(have_requested(:post, "#{base}/setIP").with do |req|
+        JSON.parse(req.body).values_at("ip", "ipFlag", "dhanClientId") == ["1.2.3.4", "SECONDARY", "test_client_id"]
+      end)
+    end
+
+    it "PUTs camelized params to /v2/ip/modifyIP" do
+      stub_request(:put, "#{base}/modifyIP")
+        .to_return(status: 200, body: { status: "success" }.to_json, headers: { "Content-Type" => "application/json" })
+
+      ip_setup.update(ip: "9.9.9.9", ip_flag: "PRIMARY", dhan_client_id: "9999999999")
+
+      expect(WebMock).to(have_requested(:put, "#{base}/modifyIP").with do |req|
+        JSON.parse(req.body).values_at("ip", "ipFlag", "dhanClientId") == ["9.9.9.9", "PRIMARY", "9999999999"]
+      end)
+    end
+
+    it "raises InputExceptionError when the IP is rejected" do
+      stub_request(:post, "#{base}/setIP").to_return(
+        status: 400,
+        body: { errorCode: "DH-905", errorMessage: "Invalid IP" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      expect { ip_setup.set(ip: "not-an-ip") }.to raise_error(DhanHQ::InputExceptionError)
+    end
+  end
 end
