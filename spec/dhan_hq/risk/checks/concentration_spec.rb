@@ -30,6 +30,23 @@ RSpec.describe DhanHQ::Risk::Checks::Concentration do
       expect { described_class.run!(args: { "trading_symbol" => "RELIANCE" }) }.not_to raise_error
     end
 
+    it "matches order params that carry only a security id" do
+      allow(DhanHQ::Models::Position).to receive(:all).and_return([position_double(500, 5000.0)])
+
+      expect { described_class.run!(args: { "security_id" => "2885" }) }
+        .to raise_error(DhanHQ::RiskViolation, /Concentration/)
+    end
+
+    it "counts the new order's notional" do
+      expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300, "price" => 100.0 }) }
+        .to raise_error(DhanHQ::RiskViolation, /Concentration 30.0%/)
+    end
+
+    it "never blocks a risk-reducing order" do
+      expect { described_class.run!(args: { "security_id" => "2885" }, positions: [position_double(500, 5000.0)], reducing: true) }
+        .not_to raise_error
+    end
+
     it "raises when concentration exceeds limits" do
       allow(DhanHQ::Models::Position).to receive(:all).and_return([position_double(500, 5000.0)])
 

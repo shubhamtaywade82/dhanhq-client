@@ -7,16 +7,21 @@ module DhanHQ
       class MaxLoss
         DAILY_MAX_LOSS = 50_000
 
-        def self.run!(**_unused)
-          positions = DhanHQ::Models::Position.all
-          total_unrealized_loss = positions.sum do |p|
-            p.unrealized_profit.to_f
-          end
+        # Day P&L is realized plus unrealized: a loss booked earlier in the day
+        # counts against the limit just as an open one does.
+        def self.run!(positions: nil, reducing: false, **_unused)
+          return if reducing
 
-          return if total_unrealized_loss >= -DAILY_MAX_LOSS
+          positions ||= DhanHQ::Models::Position.all
+          day_pnl = positions.sum do |p|
+            p.realized_profit.to_f + p.unrealized_profit.to_f
+          end
+          limit = Limits.value(:daily_max_loss, DAILY_MAX_LOSS)
+
+          return if day_pnl >= -limit
 
           raise DhanHQ::RiskViolation,
-                "Daily loss limit of ₹#{DAILY_MAX_LOSS} exceeded (current: ₹#{total_unrealized_loss.round(0)})"
+                "Daily loss limit of ₹#{limit} exceeded (current: ₹#{day_pnl.round(0)})"
         end
       end
     end

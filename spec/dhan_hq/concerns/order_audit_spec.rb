@@ -106,6 +106,20 @@ RSpec.describe DhanHQ::Concerns::OrderAudit do
       expect(DhanHQ::Risk::Pipeline).to have_received(:run!)
     end
 
+    it "hands the pipeline snake_case String keys whatever the caller used" do
+      allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(FakeInstrument.build)
+      seen = []
+      allow(DhanHQ::Risk::Pipeline).to receive(:run!) { |args:, **| seen << args }
+
+      instance.run_risk_checks!("securityId" => "2885", "exchangeSegment" => "NSE_EQ", "orderType" => "LIMIT")
+      instance.run_risk_checks!(security_id: "2885", exchange_segment: "NSE_EQ", quantity: 75)
+
+      expect(seen).to eq([
+                           { "security_id" => "2885", "exchange_segment" => "NSE_EQ", "order_type" => "LIMIT" },
+                           { "security_id" => "2885", "exchange_segment" => "NSE_EQ", "quantity" => 75 }
+                         ])
+    end
+
     it "lets a RiskViolation through so the order is blocked" do
       allow(DhanHQ::Models::Instrument).to receive(:find_by_security_id).and_return(FakeInstrument.build)
       allow(DhanHQ::Risk::Pipeline).to receive(:run!).and_raise(DhanHQ::RiskViolation, "blocked")
