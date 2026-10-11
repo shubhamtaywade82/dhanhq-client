@@ -42,9 +42,9 @@ module DhanHQ
         #
         # @param data [String, Array<Integer>] Raw frame (Faye delivers binary frames as byte arrays).
         # @return [Array<Hash>] One entry per packet, in wire order. Side packets are
-        #   +{ type: :bid | :ask, exchange_segment:, security_id:, levels: [{ price:, quantity:, orders: }] }+;
-        #   a disconnect packet is +{ type: :disconnect, exchange_segment:, security_id:, code: }+.
-        #   Malformed trailing bytes are dropped (and logged), never raised.
+        #   +{ side: :bid | :ask, exchange_segment:, security_id:, message_length:, levels: [{ price:, quantity:, orders: }] }+;
+        #   a disconnect packet is +{ side: :disconnect, exchange_segment:, security_id:, message_length:, disconnect_code: }+.
+        #   A truncated trailing packet and malformed trailing bytes are dropped (and logged), never raised.
         def decode(data)
           bytes = to_binary(data)
           packets = []
@@ -73,12 +73,18 @@ module DhanHQ
           data.is_a?(Array) ? data.pack("C*") : data.to_s.b
         end
 
-        # @return [Array(Hash, Integer), nil] The packet and the bytes it spans.
+        # @return [Array(Hash, Integer), nil] The packet and the bytes it spans, or
+        #   nil when the packet is unknown or extends past the end of the frame.
         def read_packet(bytes, offset)
           length, code, segment, security_id, tail = bytes.byteslice(offset, HEADER_SIZE).unpack("s<CCl<L<")
           segment_name = Segments.from_code(segment)
 
-          return [disconnect(bytes, offset, segment_name, security_id), packet_span(length, HEADER_SIZE + 2)] if code == DISCONNECT_CODE
+          if code == DISCONNECT_CODE
+            span = packet_span(length, HEADER_SIZE + 2)
+            return nil if truncated?(bytes, offset, span)
+
+            return [disconnect(bytes, offset, segment_name, security_id, span), span]
+          end
 
           unless [BID_CODE, ASK_CODE].include?(code)
             DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth::Decoder] Unknown response code #{code}; dropping rest of frame")
@@ -87,15 +93,25 @@ module DhanHQ
 
           rows = @depth_level == 200 ? tail : TWENTY_LEVEL_ROWS
           span = side_span(length, rows)
-          available = [(bytes.bytesize - offset - HEADER_SIZE) / ROW_SIZE, rows, (span - HEADER_SIZE) / ROW_SIZE].min
+          return nil if truncated?(bytes, offset, span)
+
+          available = [rows, (span - HEADER_SIZE) / ROW_SIZE].min
 
           packet = {
-            type: code == BID_CODE ? :bid : :ask,
+            side: code == BID_CODE ? :bid : :ask,
             exchange_segment: segment_name,
             security_id: security_id.to_s,
+            message_length: span,
             levels: read_levels(bytes, offset + HEADER_SIZE, available)
           }
           [packet, span]
+        end
+
+        def truncated?(bytes, offset, span)
+          return false if offset + span <= bytes.bytesize
+
+          DhanHQ.logger&.debug("[DhanHQ::WS::MarketDepth::Decoder] Truncated packet at byte #{offset}; dropping")
+          true
         end
 
         # Packet span from the header's length field, falling back to the
@@ -124,9 +140,10 @@ module DhanHQ
           levels.reject { |level| level[:quantity].zero? && level[:price].zero? }
         end
 
-        def disconnect(bytes, offset, segment_name, security_id)
-          code = bytes.byteslice(offset + HEADER_SIZE, 2)&.unpack1("s<")
-          { type: :disconnect, exchange_segment: segment_name, security_id: security_id.to_s, code: code }
+        def disconnect(bytes, offset, segment_name, security_id, span)
+          code = bytes.byteslice(offset + HEADER_SIZE, 2)&.unpack1("v")
+          { side: :disconnect, exchange_segment: segment_name, security_id: security_id.to_s, message_length: span,
+            disconnect_code: code }
         end
 
         def log_trailing(count)

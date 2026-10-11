@@ -5,17 +5,9 @@ module DhanHQ
     # Utility helpers for translating between various exchange segment
     # representations used by the streaming API.
     module Segments
-      # Canonical enum mapping (per Dhan spec)
-      STRING_TO_CODE = {
-        "IDX_I" => 0,
-        "NSE_EQ" => 1,
-        "NSE_FNO" => 2,
-        "NSE_CURRENCY" => 3,
-        "BSE_EQ" => 4,
-        "MCX_COMM" => 5,
-        "BSE_CURRENCY" => 7,
-        "BSE_FNO" => 8
-      }.freeze
+      # Canonical enum mapping — derived from the WebSocket protocol manifest
+      # (contracts/dhanhq/ws_protocol.yml), not hand-transcribed.
+      STRING_TO_CODE = WS::Protocol.exchange_segments.dup.freeze
 
       # Lookup table converting numeric feed codes into exchange strings.
       CODE_TO_STRING = STRING_TO_CODE.invert.freeze

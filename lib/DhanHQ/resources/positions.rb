@@ -22,6 +22,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash]
       def convert(params)
+        params = contract_params(params)
         post("/convert", params: params)
       end
 

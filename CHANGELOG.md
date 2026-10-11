@@ -1,3 +1,117 @@
+## [Unreleased]
+
+### Fixed — WebSocket feed protocol and runtime
+
+- **Live Market Feed subscribed every mode as ticker** — `WS::Connection::SUB_CODES` mapped `ticker/quote/full` all to RequestCode **15** (LTP-only packets), so `mode: :full` silently delivered 8-byte ticker ticks instead of the 162-byte 26-field + 5-level-depth packets. Each mode now maps to its documented code: **15 / 17 / 21**.
+- **Unsubscribe sent the disconnect frame** — `UNSUB_CODES` used RequestCode **12** (the official Disconnect Feed code), so any per-instrument unsubscribe told the server to close the socket. Unsubscribe codes are now subscribe+1: **16 / 18 / 22**. `WS::MarketDepth::Client::UNSUBSCRIBE_REQUEST_CODE` likewise fixed 12 → **24**.
+- **Market depth decoder parsed JSON; the wire is binary** — `WS::MarketDepth::Decoder` expected `{"Type":"depth_update"}` JSON that the Full Market Depth WebSocket never sends. 4.1.1 shipped a binary decoder too; the two are reconciled here: frames decode per the documented 12-byte little-endian header + 16-byte rows, split by `message_length` (with `side:`, `levels:`, `disconnect_code:`), and the client still emits one merged-book `:depth_update` per instrument (`bids`, `asks`, `best_bid`, `best_ask`, `spread`) plus `:disconnect`.
+- **Index packets were dropped** — IDX_I instruments stream response-code-1 packets, but `Decoder::FEED_KIND` had no mapping, so NIFTY/SENSEX subscriptions produced nothing. Index packets now decode per the documented 32-byte layout (latest/open/close/high/low + update time) as `kind: :index`.
+- **Market-status packets were unreachable** — the parser referenced a `RESPONSE_CODES[:market_status]` key that was never defined; code 7 (market open/close notification) now parses and decodes.
+- **Disconnect codes read big-endian** — the disconnect payload is a uint16 little-endian (805–809); it was read as big-endian signed, mangling the codes (805 → 9475). Fixed in the parser and `Packets::DisconnectPacket`; `Packets::Header` is now little-endian throughout per the spec.
+- **Rate limits follow the stricter of Dhan's two doc sites.** dhanhq.co/docs/v2 lists Order 10/s, 250/min, 1,000/hr, 7,000/day and Data 5/s, 100,000/day; docs.dhanhq.co lists Order 10/s, 100,000/day and Data 5/s, 7,000/day. `RateLimiter` and `Constants::RateLimit` now apply the stricter value per tier: **Order 10/s, 250/min, 1,000/hr, 7,000/day; Data 5/s, 7,000/day** (was Order 100,000/day with no minute/hour caps, Data 7,000/day).
+- **`ws_market_feed` tick-callback race** — the tick callback was registered after the socket thread started; it is now registered before `start`, so the first ticks can no longer be dropped.
+- **`WS::Registry#stop_all` deadlock** — the registry mutex is no longer held while clients are stopped. Both `WS::Client#stop` and `WS::Orders::Client#stop` call `Registry.unregister` (same mutex) from `stop`, so stopping under the mutex raised a recursive-locking `ThreadError` that the per-client rescue silently swallowed — killing the market feed's `emit(:close, true)` notification (orders clients emit before unregistering, so only theirs survived). `stop_all` now snapshots and clears the client list under the mutex, then stops each client outside it; unregister during that later stop is a no-op delete. Regression spec `spec/dhan_hq/ws/registry_stop_all_spec.rb` covers self-unregistering clients, close-listener notification for both orderings, failing-client isolation, and the empty-registry case.
+- **Typed order guards on derivative order models** — `SuperOrder`, `ForeverOrder`, `TwapOrder` and `IcebergOrder` id guards now raise `DhanHQ::OrderError` (was bare `RuntimeError`), so `rescue DhanHQ::Error` catches them consistently with `Models::Order`. Guard assertions strengthened to the error class; new coverage for `TwapOrder`/`IcebergOrder` (`spec/dhan_hq/models/typed_order_guards_spec.rb`).
+- **`RateLimiter` deadlocked once a minute/hour/day bucket was exhausted.** `throttle!` waited for the reset while holding the per-tier mutex that the reset thread also needs, so the first caller past a cap — and every later caller on that tier — blocked forever. Newly reachable with the 250/min order cap (polling the order book or positions at 5/s hits it in under a minute). Admission is now decided under the mutex and every wait happens outside it.
+- **Contract loading failed without a UTF-8 locale.** `Contract::SpecLoader` and `JsonLoader` read files with the process's default external encoding; under `LANG` unset / `C` (minimal Docker images, cron) that is US-ASCII and the vendored specs' non-ASCII bytes raised, failing every request. Files are now read as UTF-8 explicitly.
+- **A `nil` request body skipped contract validation** for operations with a required body (`client.post("/v2/orders", nil)`). It is now validated as `{}`.
+- **Sandbox requests in `:hybrid` mode carry the sandbox client id again.** The contract-validation path injected `dhanClientId` from the production `client_id`, undoing 4.1.1's per-environment credentials; injection now uses the request tier's client id and rebinds a production id.
+- **Market depth unsubscribe is 24, not 25.** 4.1.1 changed it to 25 following docs.dhanhq.co; the official DhanHQ-py SDK (2.3.0, `fulldepth.py`) sends `request_code + 1` = 24, matching the dhanhq.co/docs/v2 annexure and the WS protocol manifest.
+- **One sandbox guard.** 4.1.1's path-prefix deny-list (`Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES`) is replaced by the contract-derived `SandboxCapabilities`, which is method-aware and fails closed. `GET /killswitch`, `DELETE /positions` and the undocumented iceberg/TWAP endpoints are now refused on the sandbox as well.
+
+### Added — sandbox guard and review docs
+
+- **Sandbox capability guard** — `DhanHQ::SandboxCapabilities` (derived from the official sandbox OpenAPI spec at `sandbox.dhan.co/v2/v3/api-docs`) and `DhanHQ::SandboxUnsupportedError`. Requests that would target the sandbox host for endpoints the sandbox does not implement (super orders, alerts/multi orders, pnlExit, `/ip/*`, `charts/rollingoption`, `/data/*`, `marketfeed/*`, `optionchain*`, `instrument/*`, `margincalculator/multi`, `globalstocks/*`, `DELETE /positions`, `GET /killswitch`) now fail fast with an actionable message instead of an opaque 404/DH-905. `:hybrid` mode is unaffected — its data tiers keep resolving to production.
+- **Review documentation** — `REVIEW.md` (protocol-verified review with findings F1–F9 and recommendations M1–M9) and `GAP_ANALYSIS.md` (endpoint-by-endpoint matrix: 47 live-spec paths ✅, sandbox matrix, WS packet coverage, auth surface, rate limits, error codes).
+
+### Contract-first architecture (branch `contract-first`)
+
+The gem's wire knowledge now flows from **machine-readable contracts** instead of
+hand transcription. See [CONTRACT_FIRST.md](CONTRACT_FIRST.md) for the
+architecture, [contracts/overlays/README.md](contracts/overlays/README.md) for
+the vendor-spec patch log, and the generated
+[docs/ENDPOINTS.md](docs/ENDPOINTS.md) catalogue.
+
+#### Added
+
+- **Generated request-param structs (P6a)** — `rake contract:generate` now also
+  emits `lib/DhanHQ/contract/params.rb`: one frozen, self-validating struct per
+  request-body schema in the vendored contract (26 classes, e.g.
+  `DhanHQ::Contract::Params::OrderParams` for `placeorder`/`placesliceorder`).
+  Construction fails fast — unknown keys, missing required fields, enum and
+  type violations raise `DhanHQ::ValidationError` at the call site, before any
+  request leaves the process; IDEs autocomplete the fields. Required lists omit
+  the transport-injected `dhanClientId`. Resource methods accept a struct or a
+  hash interchangeably (`orders.create(OrderParams.new(...))`), and a
+  bindings-driven conformance example enforces that every bound params-taking
+  resource method coerces its params — structurally, not by convention.
+- **AsyncAPI lifecycle document (P6b)** — `docs/ws_lifecycle.asyncapi.yml`,
+  generated from `contracts/dhanhq/ws_protocol.yml` (`rake contract:asyncapi`):
+  AsyncAPI 2.6 description of the live feed with servers (feed + 20/200-level
+  depth sockets), the JSON command frames (per-family subscribe/unsubscribe and
+  the whole-connection disconnect, each stamped with its manifest RequestCode),
+  every binary packet carrying its byte layout in `x-dhan-struct`, disconnect
+  code examples (805–809), and the `x-dhan-lifecycle` extension (heartbeat
+  10s / dead-after-40s silence, 5 connections/user, 5,000 instruments per
+  connection). Spec-checked: regeneration must be byte-identical to the
+  committed artifact, and every message must match the manifest.
+- **`request_payload:` section in `ws_protocol.yml`** — the JSON command-frame
+  shape (`instruments` + `requestCode`), verified against the official docs and
+  SDKs, so the AsyncAPI document derives command payloads from the manifest.
+
+- **Vendored contracts** — `contracts/dhanhq/live.openapi.json` (47 paths /
+  63 operations) and `sandbox.openapi.json` (22 paths / 27 operations),
+  unmodified downloads from the `v3/api-docs` endpoints; `contracts/dhanhq/ws_protocol.yml`,
+  the byte-level WebSocket wire manifest (packets, request codes, segment enum,
+  FMD frame geometry, disconnect codes, limits). Both ship in the gem.
+- **Contract overlays** (`contracts/overlays/*.jsonpatch`, RFC 6902) — reviewed
+  patches for the vendor spec's defects, applied by `DhanHQ::Contract::SpecLoader`:
+  docs-only endpoints (`/profile`, `/RenewToken`, `/instrument/{exchangeSegment}`,
+  `/marketfeed/{ltp,ohlc,quote}`, `/optionchain`, `/optionchain/expirylist`),
+  rate-limit class annotations on all 71 operations, sandbox behaviour quirks,
+  the VCR-verified `GET /profile` on the sandbox host, and the exchangeSegment
+  enum reconciled with the official annexure (the vendor spec omits `IDX_I`,
+  `NSE_CURRENCY`, `BSE_CURRENCY`).
+- **`DhanHQ::Contract::Registry`** — the executable operation index: resolves
+  resource calls (verb + path) back to operations, knows each operation's tier,
+  param-key style, schemas and sandbox support. `DhanHQ::Contract::Bindings`
+  (`bindings.yml`) declares the resource-method → operationId map (57 bindings),
+  the intentionally unbound operations and the spec-absent gem endpoints
+  (iceberg / TWAP, REVIEW.md M1); the conformance suite enforces completeness
+  in all three directions.
+- **Schema-derived validation** — `DhanHQ::Contract::SchemaValidator`
+  (json_schemer) validates wire payloads against the contract before they are
+  sent. `config.validate_requests` defaults to **on** (set
+  `DHAN_VALIDATE_REQUESTS=false` to opt out); `config.validate_responses`
+  (default off) logs upstream drift instead of raising. Semantic rules
+  (lot/tick multiples etc.) remain in the dry-validation contracts.
+- **`DhanHQ::WS::Protocol`** — runtime wire knowledge (segment enum,
+  subscribe/unsubscribe codes, FMD codes) is now derived from the manifest;
+  `spec/dhan_hq/ws/protocol_spec.rb` packs binary fixtures FROM the manifest
+  and round-trips them through the real decoders, structurally preventing the
+  F1–F7 bug class.
+- **Generated artifacts** (`rake contract:generate`, `rake contract:docs`) —
+  `lib/DhanHQ/contract/metadata.rb` (frozen schema metadata for all 75
+  component schemas) and `docs/ENDPOINTS.md` (endpoint catalogue with tiers,
+  param-key styles and sandbox availability).
+- **Governance** — `rake contract:refresh` / `contract:check` (vendor spec
+  drift as a git diff; CI exit on drift), `rake contract:fuzz` (deterministic
+  offline property harness over the sandbox's read-only operations), and the
+  scheduled `contract-drift` GitHub workflow.
+
+#### Fixed (contract-driven)
+
+- **Model parity gaps** the contract caught immediately: `Models::Order` now
+  exposes `exchange_order_id`; `Models::Holding` exposes `mtf_qty`,
+  `mtf_t1_qty` and `last_traded_price` (served by GET /holdings, previously
+  dropped on the floor).
+- Parameter-key casing in `BaseAPI` is declared per operation in the contract
+  (replacing the `path.include?("/marketfeed")` URL sniffing; the sniffed
+  strategy remains only as the fallback for unbound legacy paths).
+- `dhanClientId` injection moved ahead of contract validation via
+  `RequestHelper#with_injected_client_id` (idempotent; `prepare_payload`
+  reuses it and wire behaviour is unchanged, including empty-body requests).
+
 ## [4.1.1] - 2026-10-11
 
 ### Fixed — pre-trade risk pipeline

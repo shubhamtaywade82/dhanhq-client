@@ -72,9 +72,13 @@ RSpec.describe DhanHQ::Resources::Edis do
         .to_return(status: 200, body: { dhanClientId: "1100003626", edisFormHtml: "<html/>" }.to_json,
                    headers: { "Content-Type" => "application/json" })
 
-      edis.bulk_form(bulk_list: [{ isin: "INE733E01010", qty: 1, exchange: "NSE", segment: "EQ", bulk: true }])
+      # Documented body: isin (array), exchange and segment are required.
+      edis.bulk_form(isin: %w[INE733E01010 INE002A01018], exchange: "NSE", segment: "EQ", bulk: true)
 
-      expect(WebMock).to have_requested(:post, "#{base}/bulkform")
+      expect(WebMock).to(have_requested(:post, "#{base}/bulkform").with do |req|
+        JSON.parse(req.body).values_at("isin", "exchange", "segment") ==
+          [%w[INE733E01010 INE002A01018], "NSE", "EQ"]
+      end)
     end
 
     it "returns an accepted status hash when tpin generation answers 202" do

@@ -180,6 +180,29 @@ module DhanHQ
     # @return [Boolean]
     attr_accessor :auto_correlation_id
 
+    # Contract-first request validation: when +true+, every request whose
+    # operation has a request schema in the vendored OpenAPI contract is
+    # structurally validated (required fields, types, enums, bounds) before it
+    # leaves the process, and violations raise {DhanHQ::ValidationError} the
+    # same way the dry-validation contracts do. The vendor spec is patched by
+    # the overlays in contracts/overlays/ (see overlay 0005 for the enum
+    # reconciliation), so validated enums match the documented reality.
+    #
+    # Defaults to +true+: a payload the contract rejects is a bug this side of
+    # the wire, and failing locally is strictly better than a DH-905 round trip.
+    # Set to +false+ to skip (e.g. while migrating a large app), or via
+    # +DHAN_VALIDATE_REQUESTS=false+.
+    # @return [Boolean]
+    attr_accessor :validate_requests
+
+    # Contract-first response validation: when +true+, parsed 2xx responses are
+    # checked against the operation's response schema and mismatches are logged
+    # (never raised) — an early-warning system for upstream drift such as the
+    # casing inconsistencies documented in REVIEW.md. Defaults to +false+;
+    # enable via +DHAN_VALIDATE_RESPONSES=true+ or in {DhanHQ.configure}.
+    # @return [Boolean]
+    attr_accessor :validate_responses
+
     # URL for the compact CSV format of instruments.
     # @return [String] URL for compact CSV.
     attr_accessor :compact_csv_url
@@ -358,6 +381,18 @@ module DhanHQ
       @dry_run == true
     end
 
+    # @return [Boolean] True when wire payloads are structurally validated
+    #   against the vendored contract before being sent.
+    def validate_requests?
+      @validate_requests != false
+    end
+
+    # @return [Boolean] True when 2xx responses are checked against the
+    #   contract (logged drift, never raised).
+    def validate_responses?
+      @validate_responses == true
+    end
+
     # @return [Boolean] True when non-idempotent writes may be auto-retried.
     def retry_non_idempotent_writes?
       @retry_non_idempotent_writes == true
@@ -389,6 +424,8 @@ module DhanHQ
       @dry_run = attrs.key?(:dry_run) ? attrs[:dry_run] : env_flag("DHAN_DRY_RUN", default: false)
       @retry_non_idempotent_writes = attrs.key?(:retry_non_idempotent_writes) ? attrs[:retry_non_idempotent_writes] : env_flag("DHAN_RETRY_WRITES", default: false)
       @auto_correlation_id = attrs.key?(:auto_correlation_id) ? attrs[:auto_correlation_id] : env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
+      @validate_requests = attrs.key?(:validate_requests) ? attrs[:validate_requests] : env_flag("DHAN_VALIDATE_REQUESTS", default: true)
+      @validate_responses = attrs.key?(:validate_responses) ? attrs[:validate_responses] : env_flag("DHAN_VALIDATE_RESPONSES", default: false)
       @warn_on_ambiguous_write_failure = if attrs.key?(:warn_on_ambiguous_write_failure)
                                            attrs[:warn_on_ambiguous_write_failure]
                                          else

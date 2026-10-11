@@ -35,7 +35,9 @@ Gem::Specification.new do |spec|
   # adds its directory here.
   # `skills/` is the Claude Agent Skill pack (SKILL.md, references, examples,
   # helper scripts) that ships with the gem as product content, not build output.
-  shipped_directories = %w[lib exe sig config docs skills].freeze
+  # `contracts/` ships the vendored OpenAPI documents the contract-first layer
+  # reads at runtime (DhanHQ::Contract::SpecLoader).
+  shipped_directories = %w[lib exe sig config docs skills contracts].freeze
   shipped_root_files = %w[README.md CHANGELOG.md ARCHITECTURE.md GUIDE.md LICENSE.txt
                           CODE_OF_CONDUCT.md AGENTS.md].freeze
   # Draft PR write-ups live under docs/ but are not user documentation.
@@ -87,6 +89,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "eventmachine", ">= 1.2"
   spec.add_dependency "faraday", "~> 2.14"
   spec.add_dependency "faye-websocket", ">= 0.11"
+  spec.add_dependency "json_schemer", ">= 2.0"
   spec.add_dependency "rotp", ">= 6.0"
   spec.add_dependency "zeitwerk", ">= 2.6"
 

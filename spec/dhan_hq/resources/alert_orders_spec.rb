@@ -32,6 +32,10 @@ RSpec.describe DhanHQ::Resources::AlertOrders do
   describe "#create audit log" do
     before do
       stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
+      # These specs exercise the audit-log formatting only; the flat fake
+      # payload intentionally does not carry the nested condition/orders the
+      # AlertOrderRequest contract requires.
+      DhanHQ.configuration.validate_requests = false
       stub_request(:post, %r{/v2/alerts/orders}).to_return(
         status: 200,
         body: { alertId: "AID-1" }.to_json,
@@ -53,6 +57,8 @@ RSpec.describe DhanHQ::Resources::AlertOrders do
   describe "#update audit log" do
     before do
       stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
+      # Audit-log formatting spec; see the #create block above.
+      DhanHQ.configuration.validate_requests = false
       stub_request(:put, %r{/v2/alerts/orders/AID-1}).to_return(
         status: 200,
         body: { status: "success" }.to_json,

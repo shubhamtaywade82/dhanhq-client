@@ -60,7 +60,7 @@ the account.
 - Market feed ticker / quote / full on NIFTY: at least one packet must decode to a positive LTP.
 - Full Market Depth at 20 and 200 levels on RELIANCE: subscribe, decode, sanity-check the book
   (non-empty, at most N levels per side, positive prices and quantities, no crossed book), then
-  unsubscribe (request code 25).
+  unsubscribe (request code 24).
 - Order updates: connection only. In `:hybrid`/`:sandbox` this stream reports the real account,
   so sandbox orders never appear on it.
 

@@ -50,6 +50,9 @@ RSpec.describe DhanHQ::Resources::SuperOrders do
   describe "#create audit log" do
     before do
       stub_const("ENV", ENV.to_h.merge("LIVE_TRADING" => "true"))
+      # Audit-log formatting spec; the fake payload does not carry the
+      # transactionType/exchangeSegment the SuperOrderRequest contract requires.
+      DhanHQ.configuration.validate_requests = false
       stub_request(:post, %r{/v2/super/orders}).to_return(
         status: 200,
         body: { orderId: "OID-1" }.to_json,

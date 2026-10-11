@@ -28,6 +28,7 @@ module DhanHQ
       #   }
       # @return [HashWithIndifferentAccess]
       def company_info(params)
+        params = contract_params(params)
         validate_with!(Contracts::CompanyInfoContract, params)
         post("/companyinfo", params: params)
       end
@@ -48,6 +49,7 @@ module DhanHQ
       #   For EQUITY rankings pass +universe:+ (e.g. "NIFTY_50") instead of expiry.
       # @return [HashWithIndifferentAccess]
       def market_movers(params)
+        params = contract_params(params)
         validate_with!(Contracts::MarketMoversContract, params)
         post("/marketmovers", params: params)
       end
@@ -61,6 +63,7 @@ module DhanHQ
       #   { categories: ["ALL"], limit: 10, stock_list: ["1333"] }
       # @return [HashWithIndifferentAccess]
       def news_headlines(params)
+        params = contract_params(params)
         validate_with!(Contracts::NewsHeadlineContract, params)
         post("/newsheadline", params: params)
       end
@@ -80,6 +83,7 @@ module DhanHQ
       #   }
       # @return [HashWithIndifferentAccess]
       def technical_data(params)
+        params = contract_params(params)
         validate_with!(Contracts::TechnicalDataContract, params)
         post("/technical", params: params)
       end

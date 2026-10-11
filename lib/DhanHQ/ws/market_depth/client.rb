@@ -13,13 +13,14 @@ module DhanHQ
       # WebSocket client for Full Market Depth data
       # Provides real-time market depth (bid/ask levels) for specified symbols
       class Client < BaseConnection
-        # Feed request codes per the Annexure "Feed Request Code" table and the
-        # Full Market Depth "Feed Disconnect" section (docs.dhanhq.co):
-        # 23 = Subscribe - Full Market Depth, 25 = Unsubscribe - Full Market Depth.
-        # Never 12 - that is the whole-connection disconnect, not a
-        # per-instrument unsubscribe.
-        SUBSCRIBE_REQUEST_CODE    = 23
-        UNSUBSCRIBE_REQUEST_CODE  = 25
+        # Feed request codes, read from the WS protocol manifest
+        # (contracts/dhanhq/ws_protocol.yml): 23 = Subscribe - Full Market Depth,
+        # 24 = Unsubscribe - Full Market Depth, as sent by the official DhanHQ-py
+        # SDK (fulldepth.py: request_code + 1) and listed in the dhanhq.co/docs/v2
+        # annexure. docs.dhanhq.co currently says 25; the shipping SDK is the
+        # tie-breaker. Never 12 - that is the whole-connection disconnect.
+        SUBSCRIBE_REQUEST_CODE    = WS::Protocol.request_code(:market_depth, :subscribe)
+        UNSUBSCRIBE_REQUEST_CODE  = WS::Protocol.request_code(:market_depth, :unsubscribe)
 
         # Instruments one connection may carry: 50 for 20-level depth, exactly
         # one for 200-level depth.
@@ -144,11 +145,11 @@ module DhanHQ
         def process_message(data)
           touched = []
           @decoder.decode(data).each do |packet|
-            next handle_disconnect_packet(packet) if packet[:type] == :disconnect
+            next handle_disconnect_packet(packet) if packet[:side] == :disconnect
 
             key = [packet[:exchange_segment], packet[:security_id]]
             book = (@books[key] ||= { bids: [], asks: [] })
-            book[packet[:type] == :bid ? :bids : :asks] = packet[:levels]
+            book[packet[:side] == :bid ? :bids : :asks] = packet[:levels]
             touched << key unless touched.include?(key)
           end
 
@@ -190,7 +191,7 @@ module DhanHQ
         end
 
         def handle_disconnect_packet(packet)
-          DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth] Server disconnect packet, reason code #{packet[:code]}")
+          DhanHQ.logger&.warn("[DhanHQ::WS::MarketDepth] Server disconnect packet, reason code #{packet[:disconnect_code]}")
           emit(:disconnect, packet)
         end
 

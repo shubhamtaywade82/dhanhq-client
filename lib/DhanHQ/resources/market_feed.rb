@@ -20,6 +20,7 @@ module DhanHQ
       #   }
       # @return [HashWithIndifferentAccess]
       def ltp(params)
+        params = contract_params(params)
         post("/marketfeed/ltp", params: params)
       end
 
@@ -30,6 +31,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [HashWithIndifferentAccess]
       def ohlc(params)
+        params = contract_params(params)
         post("/marketfeed/ohlc", params: params)
       end
 
@@ -40,6 +42,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [HashWithIndifferentAccess]
       def quote(params)
+        params = contract_params(params)
         quote_resource.post("/marketfeed/quote", params: params)
       end
 

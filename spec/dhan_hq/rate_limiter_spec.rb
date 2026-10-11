@@ -123,20 +123,29 @@ RSpec.describe DhanHQ::RateLimiter do
 
   describe "configured limits" do
     context "when api type is order_api" do
-      it "caps at 10 per second and 100,000 per day per the published limits" do
+      it "caps at 10/sec, 250/min, 1,000/hr and 7,000/day per the published limits" do
         expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_second]).to eq(10)
-        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_day]).to eq(100_000)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_minute]).to eq(250)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_hour]).to eq(1_000)
+        expect(DhanHQ::RateLimiter::RATE_LIMITS[:order_api][:per_day]).to eq(7_000)
       end
 
-      it "allows unlimited minute/hour traffic but blocks at the daily cap" do
+      it "blocks once any window (minute, hour or day) is exhausted" do
         buckets = rate_limiter.instance_variable_get(:@buckets)
 
-        # per_second is handled via timestamps in throttle!, not in allow_request?
-        buckets[:per_minute].value = 10_000
-        buckets[:per_hour].value = 50_000
+        buckets[:per_minute].value = 249
+        buckets[:per_hour].value = 500
         expect(rate_limiter.send(:allow_request?)).to be true
 
-        buckets[:per_day].value = 100_000
+        buckets[:per_minute].value = 250
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_minute].value = 0
+        buckets[:per_hour].value = 1_000
+        expect(rate_limiter.send(:allow_request?)).to be false
+
+        buckets[:per_hour].value = 0
+        buckets[:per_day].value = 7_000
         expect(rate_limiter.send(:allow_request?)).to be false
       end
     end
@@ -144,7 +153,8 @@ RSpec.describe DhanHQ::RateLimiter do
     context "when api type is data_api" do
       let(:api_type) { :data_api }
 
-      it "caps at 5 per second and 7,000 per day per the published limits" do
+      # The two official doc sites disagree (100,000 vs 7,000/day); the stricter applies.
+      it "caps at 5 per second and 7,000 per day" do
         expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_second]).to eq(5)
         expect(DhanHQ::RateLimiter::RATE_LIMITS[:data_api][:per_day]).to eq(7_000)
       end

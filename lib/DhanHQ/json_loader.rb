@@ -11,7 +11,7 @@ module DhanHQ
     # @return [Hash] Parsed JSON payload with symbolised keys.
     def self.load(file)
       file_path = File.expand_path("requests/#{file}", __dir__)
-      JSON.parse(File.read(file_path), symbolize_names: true)
+      JSON.parse(File.read(file_path, encoding: "UTF-8"), symbolize_names: true)
     rescue Errno::ENOENT
       puts "File not found: #{file_path}"
       {}

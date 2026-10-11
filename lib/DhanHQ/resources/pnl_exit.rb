@@ -18,6 +18,7 @@ module DhanHQ
       # @param params [Hash] Request body with profitValue, lossValue, productType, enableKillSwitch.
       # @return [Hash] API response containing pnlExitStatus and message.
       def configure(params)
+        params = contract_params(params)
         ensure_live_trading!
         run_risk_checks!(params)
         log_order_context("DHAN_PNL_EXIT_CONFIGURE_ATTEMPT", params)

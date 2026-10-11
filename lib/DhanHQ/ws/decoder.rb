@@ -9,8 +9,11 @@ module DhanHQ
     # consumed by client code.
     class Decoder
       # Mapping of feed response codes to semantic event kinds.
+      # Includes 1 = index packet (IDX_I instruments stream these instead of
+      # ticker/quote packets) and 7 = market status (open/close notification).
       FEED_KIND = {
-        2 => :ticker, 4 => :quote, 5 => :oi, 6 => :prev_close, 8 => :full, 50 => :disconnect, 41 => :depth_bid, 51 => :depth_ask
+        1 => :index, 2 => :ticker, 3 => :depth, 4 => :quote, 5 => :oi, 6 => :prev_close,
+        7 => :market_status, 8 => :full, 50 => :disconnect, 41 => :depth_bid, 51 => :depth_ask
       }.freeze
 
       # Parses a binary packet and returns a normalized hash representation.
@@ -38,10 +41,13 @@ module DhanHQ
         def dispatch(pkt, kind, segstr, sid)
           case kind
           when :ticker      then decode_ticker(pkt, segstr, sid)
+          when :index       then decode_index(pkt, segstr, sid)
           when :quote       then decode_quote(pkt, segstr, sid)
           when :full        then decode_full(pkt, segstr, sid)
+          when :depth       then decode_depth_packet(pkt, segstr, sid)
           when :oi          then decode_oi(pkt, segstr, sid)
           when :prev_close  then decode_prev_close(pkt, segstr, sid)
+          when :market_status then decode_market_status(pkt, segstr, sid)
           when :depth_bid, :depth_ask then decode_depth(pkt, kind, segstr, sid)
           when :disconnect then handle_disconnect(pkt, segstr, sid)
           else handle_unknown(pkt)
@@ -52,6 +58,18 @@ module DhanHQ
           {
             kind: :ticker, segment: segstr, security_id: sid,
             ltp: pkt[:ltp].to_f, ts: pkt[:ltt]&.to_i
+          }
+        end
+
+        # Index packet (response code 1) for IDX_I instruments: latest price
+        # plus open/close/high/low and the update timestamp in epoch seconds.
+        def decode_index(pkt, segstr, sid)
+          {
+            kind: :index, segment: segstr, security_id: sid,
+            ltp: pkt[:latest].to_f, latest: pkt[:latest].to_f,
+            day_open: pkt[:open]&.to_f, day_high: pkt[:high]&.to_f,
+            day_low: pkt[:low]&.to_f, day_close: pkt[:close]&.to_f,
+            ts: pkt[:update_time]&.to_i
           }
         end
 
@@ -78,6 +96,23 @@ module DhanHQ
 
         def decode_oi(pkt, segstr, sid)
           { kind: :oi, segment: segstr, security_id: sid, oi: pkt[:open_interest].to_i }
+        end
+
+        # 5-level depth packet (response code 3) delivered to subscriptions
+        # made with depth RequestCode 19.
+        def decode_depth_packet(pkt, segstr, sid)
+          out = {
+            kind: :depth, segment: segstr, security_id: sid,
+            ltp: pkt[:ltp].to_f
+          }
+          merge_depth(out, pkt[:market_depth])
+          out
+        end
+
+        # Market-status packet (response code 7): header-only frame signalling
+        # that the market opened or closed. No OHLC payload is attached.
+        def decode_market_status(_pkt, segstr, sid)
+          { kind: :market_status, segment: segstr, security_id: sid }
         end
 
         def decode_prev_close(pkt, segstr, sid)

@@ -73,7 +73,7 @@ module DhanHQ
       ].freeze
 
       # Define attributes that are part of an order
-      attributes :dhan_client_id, :order_id, :correlation_id, :order_status,
+      attributes :dhan_client_id, :order_id, :exchange_order_id, :correlation_id, :order_status,
                  :transaction_type, :exchange_segment, :product_type, :order_type,
                  :validity, :trading_symbol, :security_id, :quantity,
                  :disclosed_quantity, :price, :trigger_price, :after_market_order,

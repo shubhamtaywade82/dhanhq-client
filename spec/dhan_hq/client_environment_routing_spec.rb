@@ -111,7 +111,7 @@ RSpec.describe DhanHQ::Client do
       bare = DhanHQ::Configuration.new(client_id: "1000000001", access_token: "test-token", mode: :hybrid)
 
       expect { described_class.new(config: bare).orders.create(place_params) }
-        .to raise_error(DhanHQ::AuthenticationError, /DHAN_SANDBOX_ACCESS_TOKEN/)
+        .to raise_error(DhanHQ::AuthenticationError, /DHAN_SANDBOX_(CLIENT_ID|ACCESS_TOKEN)/)
       expect(WebMock).not_to have_requested(:any, /sandbox\.dhan\.co/)
     end
 

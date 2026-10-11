@@ -16,6 +16,7 @@ module DhanHQ
       # --------------------------------------------------
 
       def create(params)
+        params = contract_params(params)
         ensure_live_trading!
         run_risk_checks!(params)
         log_order_context("DHAN_ORDER_ATTEMPT", params)
@@ -24,6 +25,7 @@ module DhanHQ
       end
 
       def update(order_id, params)
+        params = contract_params(params)
         ensure_live_trading!
         log_order_context("DHAN_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         validate_modify_order!(params.merge(order_id: order_id))
@@ -31,6 +33,7 @@ module DhanHQ
       end
 
       def slicing(params)
+        params = contract_params(params)
         ensure_live_trading!
         run_risk_checks!(params)
         log_order_context("DHAN_ORDER_SLICING_ATTEMPT", params)

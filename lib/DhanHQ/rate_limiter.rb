@@ -7,18 +7,18 @@ module DhanHQ
   class RateLimiter
     # Per-interval thresholds keyed by API type.
     #
-    # Values are deliberately conservative client-side budgets: they follow this
-    # repo's own documented operational limits (docs/DATA_API_PARAMETERS.md — market
-    # feed 1/s, option chain 1 per 3s; skills/dhanhq-ruby/references/option-chain.md),
-    # NOT the platform's published table, so the SDK stays well inside whatever
-    # per-account enforcement the broker applies. Per-minute caps are not enforced
-    # yet (all per_minute values are infinite except option chain); see the 4.1.0
-    # review notes for the open question.
+    # Dhan's two official doc sites disagree on the daily caps:
+    #   dhanhq.co/docs/v2   — Order 10/s, 250/min, 1,000/hr, 7,000/day;  Data 5/s, 100,000/day
+    #   docs.dhanhq.co      — Order 10/s, 100,000/day;                   Data 5/s, 7,000/day
+    # Exceeding a real cap risks DH-904/805 and connection blocking, so every
+    # tier takes the stricter value from either source: Order 10/s, 250/min,
+    # 1,000/hr, 7,000/day; Data 5/s, 7,000/day. Market Quote 1/s; Option Chain
+    # 1 per 3 s.
     # Global Stocks shares the order-API limits on its own tier so it can be
     # routed independently (it always stays on the production host).
     RATE_LIMITS = {
-      order_api: { per_second: 10, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
-      global_stocks_api: { per_second: 10, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      order_api: { per_second: 10, per_minute: 250, per_hour: 1_000, per_day: 7_000 },
+      global_stocks_api: { per_second: 10, per_minute: 250, per_hour: 1_000, per_day: 7_000 },
       data_api: { per_second: 5, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 7_000 },
       quote_api: { per_second: 1, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: Float::INFINITY },
       option_chain: { per_second: 1.0 / 3, per_minute: 20, per_hour: 600, per_day: 4800 },
@@ -62,59 +62,59 @@ module DhanHQ
     #
     # @return [void]
     def throttle!
-      mutex.synchronize do
-        if @api_type == :option_chain
-          last_request_time = @buckets[:last_request_time]
+      # Admission is decided under the per-tier mutex, but every wait happens
+      # outside it: the reset threads take the same mutex to clear exhausted
+      # minute/hour/day buckets, so sleeping while holding it deadlocked the
+      # first caller past a cap (and every later caller on that tier).
+      loop do
+        wait = mutex.synchronize { try_acquire }
+        return if wait.nil?
 
-          sleep_time = 3 - (Time.now - last_request_time)
-          if sleep_time.positive?
-            DhanHQ.logger&.debug("[DhanHQ::RateLimiter] Sleeping #{sleep_time.round(2)}s (option_chain limit)")
-            sleep(sleep_time)
-          end
-
-          @buckets[:last_request_time] = Time.now
-          return
-        end
-
-        # For per-second limits, use timestamp-based sliding window
-        per_second_limit = RATE_LIMITS[@api_type][:per_second]
-        if per_second_limit && per_second_limit != Float::INFINITY
-          now = Time.now
-          # Remove requests older than 1 second
-          @request_times.reject! { |t| now - t >= 1.0 }
-
-          # Check if we've hit the per-second limit
-          if @request_times.size >= per_second_limit
-            # Calculate how long to wait until the oldest request is 1 second old
-            oldest_time = @request_times.min
-            wait_time = 1.0 - (now - oldest_time)
-
-            if wait_time.positive?
-              sleep(wait_time)
-              # Recalculate after sleep
-              now = Time.now
-              @request_times.reject! { |t| now - t >= 1.0 }
-            end
-          end
-
-          # Record this request time
-          @request_times << Time.now
-        end
-
-        # Check other limits (per_minute, per_hour, per_day)
-        loop do
-          break if allow_request?
-
-          sleep(0.1)
-        end
-        record_request
+        sleep(wait)
       end
     end
 
-    # NOTE: @request_times is only touched inside #throttle!, which holds the
-    # per-tier mutex, so the plain Array needs no synchronization of its own.
+    # NOTE: @request_times is only touched inside #try_acquire, which runs under
+    # the per-tier mutex, so the plain Array needs no synchronization of its own.
 
     private
+
+    # Admits one request if every window allows it. Must be called with the
+    # per-tier mutex held; never sleeps.
+    #
+    # @return [Float, nil] nil when admitted (and recorded); otherwise the
+    #   seconds to wait, outside the mutex, before trying again.
+    def try_acquire
+      return option_chain_wait if @api_type == :option_chain
+
+      now = Time.now
+      per_second_limit = RATE_LIMITS[@api_type][:per_second]
+      finite_per_second = per_second_limit && per_second_limit != Float::INFINITY
+      if finite_per_second
+        @request_times.reject! { |t| now - t >= 1.0 }
+        return [1.0 - (now - @request_times.min), 0.01].max if @request_times.size >= per_second_limit
+      end
+      return 0.1 unless allow_request?
+
+      @request_times << now if finite_per_second
+      record_request
+      nil
+    end
+
+    # Option chain: one request per 3 seconds (the documented limit). Its
+    # minute/hour/day entries in RATE_LIMITS have never been counted, and
+    # enforcing the 600/hour cap would stall 3-second polling for half of every
+    # hour, so they stay unenforced.
+    def option_chain_wait
+      remaining = 3 - (Time.now - @buckets[:last_request_time])
+      if remaining.positive?
+        DhanHQ.logger&.debug("[DhanHQ::RateLimiter] Waiting #{remaining.round(2)}s (option_chain limit)")
+        return remaining
+      end
+
+      @buckets[:last_request_time] = Time.now
+      nil
+    end
 
     # Gets or creates a mutex for this API type for thread-safe throttling
     def mutex

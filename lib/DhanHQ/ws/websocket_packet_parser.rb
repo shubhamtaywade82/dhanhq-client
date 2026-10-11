@@ -11,6 +11,7 @@ require_relative "packets/prev_close_packet"
 require_relative "packets/disconnect_packet"
 require_relative "packets/index_packet"
 require_relative "packets/market_status_packet"
+require_relative "packets/depth_packet"
 # optional:
 require_relative "packets/depth_delta_packet"
 
@@ -22,9 +23,11 @@ module DhanHQ
       RESPONSE_CODES = {
         index: 1,
         ticker: 2,
+        depth: 3,
         quote: 4,
         oi: 5,
         prev_close: 6,
+        market_status: 7,
         full: 8,
         depth_bid: 41,
         depth_ask: 51,
@@ -45,16 +48,17 @@ module DhanHQ
       def parse
         body =
           case header.feed_response_code
-          when RESPONSE_CODES[:index]       then parse_index
-          when RESPONSE_CODES[:ticker]      then parse_ticker
-          when RESPONSE_CODES[:quote]       then parse_quote
-          when RESPONSE_CODES[:oi]          then parse_oi
-          when RESPONSE_CODES[:prev_close]  then parse_prev_close
+          when RESPONSE_CODES[:index]         then parse_index
+          when RESPONSE_CODES[:ticker]        then parse_ticker
+          when RESPONSE_CODES[:depth]         then parse_depth_packet
+          when RESPONSE_CODES[:quote]         then parse_quote
+          when RESPONSE_CODES[:oi]            then parse_oi
+          when RESPONSE_CODES[:prev_close]    then parse_prev_close
           when RESPONSE_CODES[:market_status] then parse_market_status
-          when RESPONSE_CODES[:full]        then parse_full
-          when RESPONSE_CODES[:depth_bid]   then parse_depth(:bid)
-          when RESPONSE_CODES[:depth_ask]   then parse_depth(:ask)
-          when RESPONSE_CODES[:disconnect]  then parse_disconnect
+          when RESPONSE_CODES[:full]          then parse_full
+          when RESPONSE_CODES[:depth_bid]     then parse_depth(:bid)
+          when RESPONSE_CODES[:depth_ask]     then parse_depth(:ask)
+          when RESPONSE_CODES[:disconnect]    then parse_disconnect
           else
             DhanHQ.logger&.debug("[WS::Parser] Unknown feed code=#{header.feed_response_code}")
             {}
@@ -74,13 +78,22 @@ module DhanHQ
       private
 
       def parse_index
-        rec = Packets::IndexPacket.new(@binary_stream.string)
-        { index_raw: rec.raw } # keep raw until official layout is known
+        rec = Packets::IndexPacket.read(@binary_stream.string)
+        {
+          latest: rec.latest,
+          open: rec.open,
+          close: rec.close,
+          high: rec.high,
+          low: rec.low,
+          update_time: rec.update_time
+        }
       end
 
       def parse_market_status
-        rec = Packets::MarketStatusPacket.new(@binary_stream.string)
-        { market_status_raw: rec.raw } # keep raw until official layout is known
+        # The market-status packet carries no payload: the response code 7 itself
+        # signals that the market opened or closed. The 8-byte header (already
+        # parsed) is the whole frame.
+        { market_status: true }
       end
 
       def parse_ticker
@@ -151,10 +164,21 @@ module DhanHQ
         }
       end
 
-      def parse_disconnect
+      # The 5-level depth packet (response code 3, 112 bytes): LTP followed by
+      # five 20-byte depth levels. Only delivered when subscribed with the
+      # depth RequestCode 19.
+      def parse_depth_packet
+        rec = Packets::DepthPacket.read(@binary_stream.string)
         {
-          disconnection_code: binary_stream.read(2).unpack1("s>")
+          ltp: rec.ltp,
+          market_depth: rec.market_depth
         }
+      end
+
+      def parse_disconnect
+        # Disconnect code is a uint16 LITTLE-endian (805–809).
+        rec = Packets::DisconnectPacket.read(@binary_stream.string)
+        { disconnection_code: rec.code }
       end
 
       def debug_log(data)
