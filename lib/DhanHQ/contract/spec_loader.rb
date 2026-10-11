@@ -20,7 +20,8 @@ module DhanHQ
         live: [
           "0001-docs-only-endpoints.jsonpatch",
           "0002-rate-limit-annotations.jsonpatch",
-          "0005-enum-reconciliation.jsonpatch"
+          "0005-enum-reconciliation.jsonpatch",
+          "0006-type-reconciliation.jsonpatch"
         ],
         sandbox: [
           "0003-sandbox-quirks.jsonpatch",

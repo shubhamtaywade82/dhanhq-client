@@ -1910,8 +1910,8 @@ module DhanHQ
         "description" => "Represents time interval in minute, refer charts annexure for possible values."
       },
       "securityId" => {
-        "type" => "integer",
-        "description" => "Underlying security Id"
+        "type" => "string|integer",
+        "description" => "Underlying security Id (docs.dhanhq.co Historical Rolling Options Data: string; the vendor spec says int32)"
       },
       "instrument" => {
         "type" => "string",

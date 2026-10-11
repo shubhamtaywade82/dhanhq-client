@@ -982,7 +982,7 @@ module DhanHQ
           "security_id" => {
             "wire_key" => "securityId",
             "required" => false,
-            "type" => "integer"
+            "type" => "string|integer"
           },
           "instrument" => {
             "wire_key" => "instrument",

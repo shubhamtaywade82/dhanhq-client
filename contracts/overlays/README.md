@@ -78,6 +78,14 @@ published annexure table (dhanhq.co/docs/v2/annexure) and the gem's audited
 (`config.validate_requests`, default on) accepts exactly the documented
 segments. Enforced bidirectionally by `spec/dhan_hq/contract/enum_parity_spec.rb`.
 
+## 0006-type-reconciliation.jsonpatch *(applies to: live)*
+
+Widens `OptionChartRequest.securityId` (`POST /charts/rollingoption`) from the
+vendor spec's `int32` to `string | integer`. The prose docs (docs.dhanhq.co,
+*Historical Rolling Options Data*) type it as a string, so with request
+validation on by default the vendor type alone would refuse every documented
+call; `Models::ExpiredOptionsData` sends an integer, which stays valid.
+
 ## Refreshing the vendored documents
 
 ```bash
