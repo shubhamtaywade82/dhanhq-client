@@ -50,12 +50,34 @@ module DhanHQ
 
         def self.order_price!(args, instrument)
           price = [args["price"], args["trigger_price"]].map(&:to_f).find(&:positive?)
-          price ||= live_price(instrument)
+          return price if price
+          return unpriced_paper_order(args) if paper_order_without_quotes?
+
+          price = live_price(instrument)
           return price if price&.positive?
 
           raise DhanHQ::RiskViolation,
                 "Cannot price #{args["security_id"] || args["trading_symbol"]} for the concentration check " \
                 "(no price, trigger price or LTP)"
+        end
+
+        # Full sandbox: the order is a paper order and the sandbox serves no quotes
+        # (GET /marketfeed/ltp is refused there), so a MARKET entry cannot be
+        # priced. Refusing it would block every paper market order for no money at
+        # risk; count only existing exposure instead. A real order is never let
+        # through this way: it needs the order tier on the sandbox too.
+        def self.paper_order_without_quotes?
+          config = DhanHQ.configuration
+          return false unless config
+
+          config.environment_for(:order_api) == :sandbox && config.environment_for(:data_api) == :sandbox
+        end
+
+        def self.unpriced_paper_order(args)
+          DhanHQ.logger&.info(
+            "[DhanHQ::Risk::Concentration] Sandbox has no quotes; #{args["security_id"]} order notional not counted"
+          )
+          0.0
         end
 
         # A failed LTP fetch must refuse the entry, not escape as a generic error:
@@ -76,7 +98,8 @@ module DhanHQ
             (args["exchange_segment"].nil? || position.exchange_segment.to_s == args["exchange_segment"].to_s)
         end
 
-        private_class_method :order_notional, :order_price!, :live_price, :same_instrument?
+        private_class_method :order_notional, :order_price!, :paper_order_without_quotes?, :unpriced_paper_order,
+                             :live_price, :same_instrument?
       end
     end
   end

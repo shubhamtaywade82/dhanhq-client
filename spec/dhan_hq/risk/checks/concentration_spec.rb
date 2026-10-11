@@ -73,6 +73,34 @@ RSpec.describe DhanHQ::Risk::Checks::Concentration do
         .to raise_error(DhanHQ::RiskViolation, /Cannot price/)
     end
 
+    context "with orders and market data both on the sandbox" do
+      # spec_helper rebuilds the configuration before every example, so no restore is needed.
+      before { DhanHQ.configuration.mode = :sandbox }
+
+      it "lets a paper MARKET entry through without fetching LTP (the sandbox serves no quotes)" do
+        instrument = double("instrument")
+
+        expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+          .not_to raise_error
+      end
+
+      it "still refuses a real order whose data tier points at the sandbox" do
+        DhanHQ.configuration.environment_overrides = { order_api: :live }
+        instrument = double("instrument", ltp: nil)
+
+        expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+          .to raise_error(DhanHQ::RiskViolation, /Cannot price/)
+      end
+    end
+
+    it "prices a hybrid-mode MARKET entry from the live LTP" do
+      DhanHQ.configuration.mode = :hybrid
+      instrument = double("instrument", ltp: 100.0)
+
+      expect { described_class.run!(args: { "security_id" => "2885", "quantity" => 300 }, instrument: instrument) }
+        .to raise_error(DhanHQ::RiskViolation, /Concentration 30.0%/)
+    end
+
     it "never blocks a risk-reducing order" do
       expect { described_class.run!(args: { "security_id" => "2885" }, positions: [position_double(500, 5000.0)], reducing: true) }
         .not_to raise_error
