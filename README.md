@@ -264,9 +264,11 @@ surface) without risking money.
 
 ```ruby
 DhanHQ.configure do |config|
-  config.client_id    = ENV["DHAN_CLIENT_ID"]
-  config.access_token = ENV["DHAN_ACCESS_TOKEN"]
-  config.mode         = :hybrid   # or :live (default) / :sandbox
+  config.client_id            = ENV["DHAN_CLIENT_ID"]             # production — market data
+  config.access_token         = ENV["DHAN_ACCESS_TOKEN"]
+  config.sandbox_client_id    = ENV["DHAN_SANDBOX_CLIENT_ID"]     # sandbox — execution
+  config.sandbox_access_token = ENV["DHAN_SANDBOX_ACCESS_TOKEN"]  # (generate on cloud.dhanhq.co)
+  config.mode                 = :hybrid   # or :live (default) / :sandbox
 end
 
 # Same code, split routing:
@@ -284,6 +286,18 @@ config.environment_overrides = { non_trading_api: :live }  # e.g. read the real 
 ```
 
 - Env vars: `DHAN_MODE=live|sandbox|hybrid` (or the legacy `DHAN_SANDBOX=true`).
+- **Two credential sets.** Dhan's sandbox and production are separate environments and
+  each rejects the other's tokens, so `:hybrid` needs both: sandbox-bound requests
+  authenticate with `DHAN_SANDBOX_CLIENT_ID` / `DHAN_SANDBOX_ACCESS_TOKEN` (header *and*
+  body `dhanClientId`), production-bound ones with `DHAN_CLIENT_ID` / `DHAN_ACCESS_TOKEN`.
+  Missing sandbox credentials raise `DhanHQ::AuthenticationError` before any request.
+  In `:sandbox` mode the sandbox pair falls back to the primary pair, so existing setups
+  keep working.
+- **Endpoints the sandbox does not serve** (super orders, conditional/multi orders, P&L
+  exit, multi-scrip margin, IP setup, ScanX, market quotes, option chain, rolling options,
+  Global Stocks) raise `DhanHQ::SandboxUnsupportedError` when routed there — they are
+  never silently sent to production. Route a read-only tier to production with
+  `environment_overrides` if you need it.
 - The `LIVE_TRADING` guard is **relaxed automatically** for requests routed to the
   sandbox host — no real money can move there. Orders still hit the guard on `:live`.
 - Per-client override: `DhanHQ::Client.new(config: shared_config, mode: :hybrid)` forks

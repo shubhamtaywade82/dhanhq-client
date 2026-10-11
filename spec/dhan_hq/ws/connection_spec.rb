@@ -24,9 +24,9 @@ RSpec.describe DhanHQ::WS::Connection do
       end
     end
 
-    it "subscribes full market depth with 23 and unsubscribes with 24" do
+    it "subscribes full market depth with 23 and unsubscribes with 25" do
       expect(DhanHQ::WS::MarketDepth::Client::SUBSCRIBE_REQUEST_CODE).to eq(23)
-      expect(DhanHQ::WS::MarketDepth::Client::UNSUBSCRIBE_REQUEST_CODE).to eq(24)
+      expect(DhanHQ::WS::MarketDepth::Client::UNSUBSCRIBE_REQUEST_CODE).to eq(25)
     end
   end
 

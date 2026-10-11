@@ -31,6 +31,24 @@ client = DhanHQ::Client.new(config: shared_config, mode: :hybrid)
 Resolution order for any request: explicit `config.base_url` (if set, it wins for every
 request) → `environment_overrides[tier]` → mode default for that tier.
 
+### Credentials per environment
+
+Dhan treats sandbox and production as separate environments with separate credentials
+("Do not reuse production tokens for sandbox requests or sandbox tokens for production
+requests" — docs.dhanhq.co, *Sandbox*). The gem therefore resolves credentials per tier
+alongside the host:
+
+| Request routed to | `access-token` header | `client-id` header / body `dhanClientId` |
+| ----------------- | --------------------- | ---------------------------------------- |
+| production        | `access_token` (`DHAN_ACCESS_TOKEN`) | `client_id` (`DHAN_CLIENT_ID`) |
+| sandbox           | `sandbox_access_token` (`DHAN_SANDBOX_ACCESS_TOKEN`) | `sandbox_client_id` (`DHAN_SANDBOX_CLIENT_ID`) |
+
+A body `dhanClientId` equal to the production `client_id` (models fill it in) is rewritten
+to the sandbox ID on sandbox-bound requests; an explicitly different ID is left alone. In
+`:sandbox` mode the sandbox pair falls back to the primary pair; in `:hybrid` (or with a
+tier overridden to the sandbox) missing sandbox credentials raise
+`DhanHQ::AuthenticationError` before any I/O.
+
 ## Sandbox behavior
 
 - **Sandbox does NOT execute real order fills/matching.** Confirmed both via Dhan's own docs ("the sandbox behaves like the live API but does not execute real orders") and empirically: a `MARKET` order placed on sandbox validates and returns a real `orderId`, but stays at `PENDING` indefinitely — it never transitions to `TRADED`, even after 24+ seconds of polling. Use sandbox to validate request/response plumbing (auth, payload shape, error codes), not to test fill, cancel, or square-off behavior.
@@ -44,37 +62,22 @@ request) → `environment_overrides[tier]` → mode default for that tier.
 
 ---
 
-## Sandbox: verified vs not working / unverified
+## Sandbox endpoint support
 
-| Status    | Endpoints |
-|-----------|-----------|
-| **Verified on sandbox** (gem specs) | `GET /v2/profile`, `GET /v2/fundlimit` |
-| **Sandbox connectivity spec** | `spec/dhan_hq/sandbox_connectivity_spec.rb` — uses VCR `record: :new_episodes`. In CI, use committed cassettes or skip without sandbox credentials; locally, run with `VCR_RECORD=new_episodes` and sandbox credentials to record. |
-| **Not supported in sandbox** | All WebSocket endpoints (order updates, market feed, market depth). Use production only. |
-| **Not verified on sandbox** | All other REST endpoints below. They may fail, return differently, or be unavailable in sandbox. Use Dhan documentation or manual testing before relying on them in sandbox. |
+Source: the sandbox's own OpenAPI document (`https://sandbox.dhan.co/v2/v3/api-docs`), the
+*Sandbox* page on docs.dhanhq.co, and an unauthenticated probe of each path (an existing
+route answers 401/400, a missing one 404).
 
-**REST endpoints not verified / may not work on sandbox** (only profile and funds are verified):
+| Status | Endpoints |
+|--------|-----------|
+| **Served by the sandbox** | `/orders` (place, modify, cancel, book, by id, by correlation id), `/orders/slicing`, `/trades`, `/trades/{order-id}`, `/holdings`, `/positions`, `/positions/convert`, `POST /killswitch`, `/edis/tpin`, `/edis/form`, `/edis/bulkform`, `/edis/inquire/{isin}`, `/fundlimit`, `POST /margincalculator`, `/ledger`, `/trades/{from}/{to}/{page}`, `/charts/historical`, `/charts/intraday`, `/forever/orders` (in the sandbox OpenAPI document, not on the docs page), `/profile` (route exists; not documented) |
+| **Not served — 404** (gem raises `DhanHQ::SandboxUnsupportedError`) | `/super/orders`, `/alerts/orders`, `/alerts/multi/orders`, `/pnlExit`, `/margincalculator/multi`, `/ip/*`, `/marketfeed/*`, `/optionchain`, `/optionchain/expirylist`, `/charts/rollingoption`, `/data/*` (ScanX), `/globalstocks/*` |
+| **Unclear** | `GET /killswitch` and `DELETE /positions` answer 400 rather than 404 but are absent from both sandbox sources. Iceberg/TWAP (`/v2/orders/iceberg`, `/v2/orders/twap`) are not in any Dhan documentation; the gateway answers any `/v2/orders/*` path, so a probe cannot tell. |
+| **Not supported** | All WebSocket endpoints (order updates, market feed, market depth). Production only. |
 
-- `/v2/ledger`, `/v2/trades/{from}/{to}/{page}` (statements)
-- `/v2/orders` (all order CRUD, slicing, external)
-- `/v2/positions`, `/v2/positions/convert`
-- `/v2/holdings`
-- `/v2/trades`, `/v2/trades/{order_id}`
-- `/v2/forever/orders` (all)
-- `/v2/super/orders` (all)
-- `/v2/killswitch`
-- `/trader-control`
-- `/ip/getIP`, `/ip/setIP`, `/ip/modifyIP`
-- `/edis/tpin`, `/edis/form`, `/edis/bulkform`, `/edis/inquire/{isin}`
-- `/alerts/orders`
-- `/v2/pnlExit`
-- `/v2/margincalculator`, `/v2/margincalculator/multi`
-- `/v2/instrument/{segment}`
-- `/v2/marketfeed/ltp`, `/v2/marketfeed/ohlc`, `/v2/marketfeed/quote`
-- `/v2/optionchain`, `/v2/optionchain/expirylist`
-- `/v2/charts/historical`, `/v2/charts/intraday`, `/v2/charts/rollingoption`
-- `/v2/data/companyinfo`, `/v2/data/marketmovers`, `/v2/data/newsheadline`, `/v2/data/technical` (ScanX)
-- `/v2/globalstocks/*` (Global Stocks — assumed unavailable on sandbox; always production in `:hybrid`)
+The deny-list lives in `DhanHQ::Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES`. In
+`:hybrid` mode a blocked request is **never** redirected to production — that would turn a
+paper order into a real one.
 
 ---
 

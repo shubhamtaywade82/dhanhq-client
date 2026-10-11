@@ -88,8 +88,12 @@ module DhanHQ
       TRADED = "TRADED"
       EXPIRED = "EXPIRED"
       MODIFIED = "MODIFIED"
+      # Listed in the orderStatus response enum of the order, super order and
+      # slicing endpoints (docs.dhanhq.co).
+      INACTIVE = "INACTIVE"
 
-      ALL = [TRANSIT, PENDING, CLOSED, TRIGGERED, REJECTED, CANCELLED, PART_TRADED, TRADED, EXPIRED, MODIFIED].freeze
+      ALL = [TRANSIT, PENDING, CLOSED, TRIGGERED, REJECTED, CANCELLED, PART_TRADED, TRADED, EXPIRED, MODIFIED,
+             INACTIVE].freeze
     end
 
     # AMO (after market order) timing options.
@@ -595,6 +599,28 @@ module DhanHQ
       "/v2/instrument/",
       "/v2/charts",
       "/v2/data"
+    ].freeze
+
+    # Path prefixes the Dhan sandbox (https://sandbox.dhan.co/v2) does not serve.
+    #
+    # Derived from the sandbox's own OpenAPI document (sandbox.dhan.co/v2/v3/api-docs)
+    # and the "Sandbox" page of docs.dhanhq.co, and confirmed by each prefix
+    # answering HTTP 404 on the sandbox host. Requests routed to the sandbox for
+    # these paths fail fast with {DhanHQ::SandboxUnsupportedError}.
+    #
+    # Deliberately a deny-list of verified gaps rather than an allow-list: a
+    # sandbox route Dhan adds later keeps working without a gem release.
+    SANDBOX_UNSUPPORTED_PATH_PREFIXES = %w[
+      /v2/marketfeed/
+      /v2/optionchain
+      /v2/charts/rollingoption
+      /v2/data/
+      /v2/super/orders
+      /v2/alerts/
+      /v2/pnlExit
+      /v2/margincalculator/multi
+      /v2/ip/
+      /v2/globalstocks/
     ].freeze
 
     # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.

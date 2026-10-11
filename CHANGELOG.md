@@ -1,3 +1,15 @@
+## [Unreleased]
+
+### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)
+
+- **`:hybrid` mode sent the production token to the sandbox host.** Dhan runs sandbox and production with separate credentials and rejects each other's tokens (docs.dhanhq.co, *Sandbox*), so every sandbox-bound request in `:hybrid` was a guaranteed DH-901. New `sandbox_client_id` / `sandbox_access_token` (`DHAN_SANDBOX_CLIENT_ID` / `DHAN_SANDBOX_ACCESS_TOKEN`) are used for every request routed to the sandbox — `access-token` and `client-id` headers, and a body `dhanClientId` that equals the production ID. In `:sandbox` mode they fall back to `client_id` / `access_token`, so existing setups are unaffected; in `:hybrid` they are required and their absence raises `DhanHQ::AuthenticationError` before any I/O.
+- **Sandbox-unsupported endpoints now fail fast.** Requests routed to the sandbox for super orders, conditional/multi orders, P&L exit, multi-scrip margin, IP setup, ScanX, market quotes, option chain, rolling options and Global Stocks raise `DhanHQ::SandboxUnsupportedError` instead of returning an opaque 404. They are never redirected to production. The list (`Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES`) is the set of paths that are absent from the sandbox OpenAPI document and answer 404 on `sandbox.dhan.co`.
+- **Full Market Depth (20/200-level) WebSocket never emitted data.** The decoder parsed frames as JSON, while Dhan sends binary packets (12-byte header plus 16-byte `float64`/`uint32`/`uint32` rows, bid and ask as separate stacked packets). Rewritten as a binary decoder; the client merges each instrument's bid and ask packets into one `:depth_update` (`bids`, `asks`, `best_bid`, `best_ask`, `spread`, totals) and emits `:disconnect` for server disconnect packets (code 50).
+- **Market depth unsubscribe request code is now 25** (was 24). docs.dhanhq.co gives 25 in both its Annexure and the Full Market Depth page; the older dhanhq.co/docs/v2 Annexure says 24. Not verified against the live feed (it is geo-restricted from CI).
+- **200-level depth subscription uses the documented flat format** (`{RequestCode, ExchangeSegment, SecurityId}`), not the 20-level instrument list, and a second instrument on a 200-level connection is refused (one instrument per connection). 20-level connections cap at 50 instruments.
+- **`MarketDepth::Client#subscribe(hash)`** subscribed nothing — `Array(hash)` split the instrument hash into key/value pairs.
+- **`OrderStatus::INACTIVE`** added; it is in the documented `orderStatus` response enum.
+
 ## [4.1.0] - 2026-10-10
 
 ### Fixed (full-gem review pass — `ruby-agent-skills` audit)
