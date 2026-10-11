@@ -84,7 +84,7 @@ module DhanHQ
 
         DhanHQ::Risk::Pipeline.run!(
           instrument: instrument,
-          args: params,
+          args: risk_args(params),
           type: trade_type_for(exchange_segment),
           now: Time.now
         )
@@ -116,6 +116,18 @@ module DhanHQ
             message: error.message
           )
         )
+      end
+
+      # The risk checks read snake_case String keys ("quantity", "order_type", ...).
+      # Order params arrive as camelCase Strings from the models and as Symbols or
+      # Strings from direct resource callers; without this, every check that reads a
+      # multi-word key silently saw nil, and Symbol-keyed callers failed
+      # "Quantity must be > 0" on a valid quantity.
+      #
+      # @param params [Hash]
+      # @return [Hash{String => Object}]
+      def risk_args(params)
+        (params || {}).to_h.transform_keys { |key| key.to_s.gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase }
       end
 
       # Maps an exchange segment string to a pipeline trade type.

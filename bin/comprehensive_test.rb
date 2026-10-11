@@ -7,7 +7,62 @@
 
 module DhanHQ
   module ComprehensiveTest
+    # Assertions for live streams: data is only required while the exchange is open.
+    module StreamAssertions
+      # Seconds to wait for the first packet on a stream.
+      STREAM_WAIT_SECONDS = 10
+
+      # Raised to mark a test as skipped rather than passed or failed.
+      class SkipTest < StandardError; end
+
+      # Sanity checks that catch a misread wire format (wrong side, offset or row size).
+      def validate_depth!(update, level)
+        bids = update[:bids]
+        asks = update[:asks]
+        raise DhanHQ::Error, "depth update without bid/ask arrays: #{update.inspect}" unless bids.is_a?(Array) && asks.is_a?(Array)
+        raise DhanHQ::Error, "depth update with an empty book" if bids.empty? && asks.empty?
+        raise DhanHQ::Error, "more than #{level} levels on one side" if bids.size > level || asks.size > level
+
+        bad = (bids + asks).reject { |l| l[:price].to_f.positive? && l[:price].to_f.finite? && l[:quantity].to_i.positive? }
+        raise DhanHQ::Error, "implausible depth levels (decoder misaligned?): #{bad.first(3).inspect}" if bad.any?
+        return unless update[:best_bid] && update[:best_ask] && update[:best_bid] > update[:best_ask]
+
+        raise DhanHQ::Error, "crossed book #{update[:best_bid]} > #{update[:best_ask]} (bid/ask sides swapped?)"
+      end
+
+      def wait_for(seconds)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
+        sleep(0.25) until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+      end
+
+      # No data while the market is open is a failure; while it is closed the
+      # stream legitimately stays silent, so the test is skipped instead.
+      def expect_stream_data!(received, what)
+        return puts("    Received #{what}") if received
+        raise SkipTest, "no #{what} — market closed" unless market_open?
+
+        raise DhanHQ::Error, "no #{what} within #{STREAM_WAIT_SECONDS}s during market hours " \
+                             "(on an exchange holiday set DHAN_TEST_MARKET_OPEN=false)"
+      end
+
+      # Weekday and 09:15-15:30 IST. No holiday calendar: DHAN_TEST_MARKET_OPEN=true|false overrides.
+      def market_open?
+        override = ENV.fetch("DHAN_TEST_MARKET_OPEN", "").strip
+        return override.casecmp("true").zero? unless override.empty?
+
+        now = Time.now.getlocal(DhanHQ::Risk::Checks::MarketHours::TIMEZONE_OFFSET)
+        return false unless now.wday.between?(1, 5)
+
+        DhanHQ::Risk::Checks::MarketHours.run!(now: now)
+        true
+      rescue DhanHQ::RiskViolation
+        false
+      end
+    end
+
     class TestRunner
+      include StreamAssertions
+
       attr_reader :results, :errors
 
       def initialize
@@ -555,112 +610,85 @@ module DhanHQ
 
       def test_websocket_market_feed
         section("WebSocket - Market Feed")
-        test("Ticker Mode WebSocket (5 seconds)") do
-          received_data = false
-          client = DhanHQ::WS.connect(mode: :ticker) do |tick|
-            timestamp = tick[:ts] ? Time.at(tick[:ts]) : Time.now
-            puts "    [#{timestamp}] Complete Ticker Mode Packet Data:"
-            puts "      #{tick.inspect}"
-            received_data = true
-          end
-          @websocket_clients << client
-          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13") # NIFTY
-          sleep(5)
-          if received_data
-            puts "  ✓ Received ticker mode data (LTP + LTT)"
-          else
-            puts "  ⚠ No data received (may be market closed)"
-          end
-          client.stop
-        end
+        { ticker: "ticker data (LTP + LTT)", quote: "quote data (OHLCV + totals)", full: "full data (quote + OI + depth)" }
+          .each do |mode, what|
+          test("#{mode.to_s.capitalize} Mode WebSocket") do
+            packets = []
+            client = DhanHQ::WS.connect(mode: mode) { |data| packets << data }
+            @websocket_clients << client
+            begin
+              client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13") # NIFTY
+              priced = -> { packets.find { |p| p[:ltp].to_f.positive? } }
+              wait_for(STREAM_WAIT_SECONDS) { priced.call }
+              expect_stream_data!(packets.any?, what)
+              # OI / prev-close packets carry no LTP; at least one price packet must decode to a real price.
+              raise DhanHQ::Error, "#{packets.size} packet(s) but none with a positive LTP: #{packets.first.inspect}" unless priced.call
 
-        test("Quote Mode WebSocket (5 seconds)") do
-          received_data = false
-          client = DhanHQ::WS.connect(mode: :quote) do |data|
-            puts "    Complete Quote Mode Packet Data (OHLCV + totals):"
-            puts "      #{data.inspect}"
-            received_data = true
+              puts "    #{priced.call.inspect}"
+            ensure
+              client.stop
+            end
           end
-          @websocket_clients << client
-          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
-          sleep(5)
-          if received_data
-            puts "  ✓ Received quote mode data (OHLCV + totals)"
-          else
-            puts "  ⚠ No data received (may be market closed)"
-          end
-          client.stop
-        end
-
-        test("Full Mode WebSocket (5 seconds)") do
-          received_data = false
-          client = DhanHQ::WS.connect(mode: :full) do |data|
-            puts "    Complete Full Mode Packet Data (Quote + OI + Market Depth):"
-            puts "      #{data.inspect}"
-            received_data = true
-          end
-          @websocket_clients << client
-          client.subscribe_one(segment: DhanHQ::Constants::ExchangeSegment::IDX_I, security_id: "13")
-          sleep(5)
-          if received_data
-            puts "  ✓ Received full mode data (Quote + OI + Market Depth)"
-          else
-            puts "  ⚠ No data received (may be market closed)"
-          end
-          client.stop
         end
       end
 
       def test_websocket_order_updates
         section("WebSocket - Order Updates")
-        test("Order update WebSocket (5 seconds)") do
-          received_update = false
+        if DhanHQ.configuration.environment_for(:order_api) == :sandbox
+          puts "  ⚠ Orders route to the sandbox (#{DhanHQ.configuration.mode} mode), which has no WebSocket:"
+          puts "    this stream reports the REAL account, so sandbox orders will not appear on it."
+        end
+        test("Order update WebSocket connects (#{STREAM_WAIT_SECONDS} seconds)") do
+          updates = []
           client = DhanHQ::WS::Orders.client
-          client.on(:update) do |order|
-            puts "    Complete Order Update Packet Data:"
-            puts "      #{order.inspect}"
-            received_update = true
-          end
+          client.on(:update) { |order| updates << order }
           @websocket_clients << client
-          client.start
-          puts "  ✓ Order tracking started"
-          sleep(5)
-          if received_update
-            puts "  ✓ Received order update"
-          else
-            puts "  ⚠ No order updates (no active orders)"
+          begin
+            client.start
+            wait_for(STREAM_WAIT_SECONDS) { updates.any? }
+            # Updates only flow when an order changes, so silence is not a failure here.
+            puts(updates.any? ? "    #{updates.first.inspect}" : "    (no order activity in the window)")
+          ensure
+            client.stop
           end
-          client.stop
         end
       end
 
       def test_websocket_market_depth
-        section("WebSocket - Market Depth")
-        test("Market Depth WebSocket (5 seconds)") do
-          reliance = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
-          if reliance
-            symbols = [{
-              symbol: "RELIANCE",
-              exchange_segment: reliance.exchange_segment,
-              security_id: reliance.security_id
-            }]
-            received_data = false
-            client = DhanHQ::WS::MarketDepth.connect(symbols: symbols) do |depth_data|
-              puts "    Complete Market Depth Packet Data:"
-              puts "      #{depth_data.inspect}"
-              received_data = true
-            end
-            @websocket_clients << client
-            sleep(5)
-            if received_data
-              puts "  ✓ Received market depth data"
-            else
-              puts "  ⚠ No data received (may be market closed)"
-            end
-            client.stop
-          else
-            puts "  ⚠ RELIANCE instrument not found, skipping"
+        section("WebSocket - Full Market Depth")
+        reliance = DhanHQ::Models::Instrument.find(DhanHQ::Constants::ExchangeSegment::NSE_EQ, "RELIANCE")
+        symbols = reliance && [{ symbol: "RELIANCE", exchange_segment: reliance.exchange_segment, security_id: reliance.security_id }]
+
+        [20, 200].each do |level|
+          test("#{level}-level depth: subscribe, decode, unsubscribe") do
+            raise SkipTest, "RELIANCE instrument not found" unless symbols
+
+            run_depth_check(symbols, level)
           end
+        end
+      end
+
+      def run_depth_check(symbols, level)
+        config = DhanHQ.configuration.dup
+        config.market_depth_level = level
+        updates = []
+        errors = []
+        client = DhanHQ::WS::MarketDepth.connect(symbols: symbols, config: config) { |update| updates << update }
+        client.on(:error) { |e| errors << e }
+        @websocket_clients << client
+        begin
+          wait_for(STREAM_WAIT_SECONDS) { updates.any? }
+          expect_stream_data!(updates.any?, "#{level}-level depth")
+          validate_depth!(updates.last, level)
+          update = updates.last
+          puts "    #{update[:bids].size} bids / #{update[:asks].size} asks, " \
+               "best #{update[:best_bid]} x #{update[:best_ask]}, spread #{update[:spread]}"
+
+          client.unsubscribe(symbols.first)
+          raise DhanHQ::Error, "unsubscribe left #{client.subscriptions.inspect}" if client.subscribed?(symbols.first)
+          raise DhanHQ::Error, "depth client errors: #{errors.map(&:message).join("; ")}" if errors.any?
+        ensure
+          client.stop
         end
       end
 
@@ -724,6 +752,9 @@ module DhanHQ
           yield
           @results[:passed] += 1
           puts "✓"
+        rescue SkipTest => e
+          @results[:skipped] += 1
+          puts "– skipped (#{e.message})"
         rescue StandardError => e
           @results[:failed] += 1
           @errors << { test: name, error: e }

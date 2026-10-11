@@ -1,3 +1,25 @@
+## [Unreleased]
+
+### Fixed — pre-trade risk pipeline
+
+- **The risk checks only saw parameters whose key happened to be a single lowercase word.** Checks read snake_case String keys (`"order_type"`, `"product_type"`, `"security_id"`), but orders arrive as camelCase Strings (models) or Symbols (direct resource calls). `OrderType`, `ProductSupport` and `Concentration` therefore never ran on real orders, and Symbol-keyed callers failed `Quantity must be > 0` on a valid quantity — which blocked every `SuperOrder.create`. `OrderAudit` now normalises keys before running the pipeline.
+- **Risk-reducing orders are never blocked by a limit.** An order on the opposite side of an open position, same security / segment / product, for no more than the position size, skips the size caps, open-position count, daily loss, concentration and ASM/GSM checks; it still gets trading-permission, product, order-type, quantity > 0 and market-hours validation. Previously a stop-out could be refused precisely because the account was over its loss or position limit.
+- **`OrderType` accepts `STOP_LOSS` and `STOP_LOSS_MARKET`** (was `MARKET`/`LIMIT` only). With the key fix above, the old list would have rejected every stop-loss order.
+- **`Concentration` matches positions by security id** (and segment) when the order names no trading symbol, and counts the new order's notional; it compared a trading symbol against a security id and so never matched an order.
+- **`MaxLoss` counts realized plus unrealized P&L** for the day (was unrealized only).
+- **Positions are fetched once per order** and shared by every check (was up to three `GET /v2/positions` calls per order).
+- **`SuperOrder.create`, `IcebergOrder.create` and `TwapOrder.create` raised `ArgumentError` after a successful placement** (Ruby 3 keyword arguments: the attributes hash was splatted into keywords). The order existed at Dhan while the caller saw an exception — a retry would duplicate it. The super-order spec stubbed `.new` with the same broken signature, which hid it.
+
+### Added
+
+- **Configurable risk limits** — `config.risk_limits = { max_quantity:, max_notional:, max_open_positions:, daily_max_loss:, max_concentration_pct: }` or `DHAN_RISK_MAX_QUANTITY`, `DHAN_RISK_MAX_NOTIONAL`, `DHAN_RISK_MAX_OPEN_POSITIONS`, `DHAN_RISK_DAILY_MAX_LOSS`, `DHAN_RISK_MAX_CONCENTRATION_PCT`. Defaults are unchanged (10 units, ₹1,00,000 notional, 20 positions, ₹50,000 daily loss, 25%). Unknown names or non-positive values raise `ArgumentError` at configuration time.
+
+### Upgrade notes
+
+- **`max_quantity` defaults to 10 units, so one NIFTY lot (75) is rejected** on any order whose instrument resolves. This was already true for camelCase-keyed orders before this release; it now applies to every key style. F&O users must raise `max_quantity` (in units, not lots) and usually `max_notional`.
+- Checks that never ran before now run on every order: `OrderType`, `ProductSupport` (CO/BO support flags) and `Concentration` (one extra `GET /v2/fundlimit` per new-exposure order).
+- A risk-check failure still fails open: if the instrument lookup or a positions/funds fetch raises, the pipeline is skipped and logged as `DHAN_RISK_CHECK_SKIPPED` (unchanged behaviour).
+
 ## [4.1.1] - 2026-10-11
 
 ### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)

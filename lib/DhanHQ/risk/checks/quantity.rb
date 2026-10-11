@@ -8,10 +8,13 @@ module DhanHQ
         MAX_QUANTITY = 10
         MAX_NOTIONAL = 100_000
 
-        def self.run!(args:, **_unused)
+        # Size caps apply to new exposure only; an exit of any size that does not
+        # exceed the open position is allowed.
+        def self.run!(args:, reducing: false, **_unused)
           quantity = args["quantity"].to_i
           raise DhanHQ::RiskViolation, "Quantity must be > 0" unless quantity.positive?
-          raise DhanHQ::RiskViolation, "Quantity exceeds limit" if quantity > MAX_QUANTITY
+          return if reducing
+          raise DhanHQ::RiskViolation, "Quantity exceeds limit" if quantity > Limits.value(:max_quantity, MAX_QUANTITY)
 
           enforce_notional_limit!(quantity, args["price"])
         end
@@ -20,7 +23,7 @@ module DhanHQ
           return unless price
 
           notional = quantity * price.to_f
-          return if notional <= MAX_NOTIONAL
+          return if notional <= Limits.value(:max_notional, MAX_NOTIONAL)
 
           raise DhanHQ::RiskViolation, "Notional exceeds limit"
         end

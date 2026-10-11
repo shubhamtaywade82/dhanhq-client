@@ -7,16 +7,19 @@ module DhanHQ
       class PositionLimits
         MAX_OPEN_POSITIONS = 20
 
-        def self.run!(**_unused)
-          positions = DhanHQ::Models::Position.all
+        def self.run!(positions: nil, reducing: false, **_unused)
+          return if reducing
+
+          positions ||= DhanHQ::Models::Position.all
           open_count = positions.count do |p|
             p.net_qty.to_i != 0
           end
+          limit = Limits.value(:max_open_positions, MAX_OPEN_POSITIONS)
 
-          return if open_count < MAX_OPEN_POSITIONS
+          return if open_count < limit
 
           raise DhanHQ::RiskViolation,
-                "Maximum #{MAX_OPEN_POSITIONS} open positions exceeded (#{open_count} open)"
+                "Maximum #{limit} open positions exceeded (#{open_count} open)"
         end
       end
     end

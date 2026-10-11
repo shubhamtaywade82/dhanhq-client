@@ -105,7 +105,7 @@ module DhanHQ
           response = resource.create(formatted)
           return nil unless response.is_a?(Hash) && response["orderId"]
 
-          new(order_id: response["orderId"], order_status: response["orderStatus"], skip_validation: true)
+          new({ order_id: response["orderId"], order_status: response["orderStatus"] }, skip_validation: true)
         end
       end
 

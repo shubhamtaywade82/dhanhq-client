@@ -334,6 +334,19 @@ module DhanHQ
       end
     end
 
+    # Thresholds for the pre-trade risk checks, keyed by {Risk::Limits::NAMES}
+    # (+max_quantity+, +max_notional+, +max_open_positions+, +daily_max_loss+,
+    # +max_concentration_pct+). Unset limits keep each check's built-in default.
+    # Also settable through +DHAN_RISK_*+ variables (see {Risk::Limits::ENV_KEYS}).
+    # @return [Hash{Symbol => Numeric}]
+    attr_reader :risk_limits
+
+    # @param value [Hash, nil]
+    # @raise [ArgumentError] On an unknown limit or a non-positive value.
+    def risk_limits=(value)
+      @risk_limits = Risk::Limits.coerce(value)
+    end
+
     # True when {#mode} is +:hybrid+ — live market data, sandbox execution.
     # @return [Boolean]
     def hybrid?
@@ -387,6 +400,7 @@ module DhanHQ
         attrs[:environment_overrides] || ENV.fetch("DHAN_ENV_OVERRIDES", nil)
       )
       @mode = resolve_mode(attrs)
+      @risk_limits = attrs.key?(:risk_limits) ? Risk::Limits.coerce(attrs[:risk_limits]) : Risk::Limits.from_env
       @ws_version = (attrs[:ws_version] || ENV.fetch("DHAN_WS_VERSION", 2)).to_i
       @ws_order_url = attrs[:ws_order_url] || ENV.fetch("DHAN_WS_ORDER_URL", nil)
       @ws_market_feed_url = attrs[:ws_market_feed_url] || ENV.fetch("DHAN_WS_MARKET_FEED_URL", nil)

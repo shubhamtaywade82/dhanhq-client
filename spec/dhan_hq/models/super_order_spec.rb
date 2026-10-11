@@ -31,14 +31,13 @@ RSpec.describe DhanHQ::Models::SuperOrder do
       expect(described_class.create({})).to be_nil
     end
 
+    # Builds the real model: stubbing .new here once hid a Ruby 3 keyword-argument
+    # error that raised after Dhan had already accepted the order.
     it "returns model with id and status when orderId present" do
       allow(resource_double).to receive(:create).and_return({ "orderId" => "OID-1", "orderStatus" => "PENDING" })
-      dummy = double(order_id: "OID-1", order_status: "PENDING")
-      allow(described_class).to receive(:new).with(order_id: "OID-1", order_status: "PENDING",
-                                                   skip_validation: true)
-                                             .and_return(dummy)
 
       record = described_class.create({})
+      expect(record).to be_a(described_class)
       expect(record.order_id).to eq("OID-1")
       expect(record.order_status).to eq("PENDING")
     end
