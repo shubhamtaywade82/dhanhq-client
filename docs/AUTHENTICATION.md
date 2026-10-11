@@ -77,7 +77,18 @@ config.access_token_provider = lambda do
 end
 ```
 
-**Note:** RenewToken is only for tokens generated from Dhan Web. For API key or Partner flows, obtain a new token using Dhan’s consent APIs in your app.
+**Note:** RenewToken is only for tokens generated from Dhan Web, and only while the token is still active: renewing an expired token returns an error, so renew before expiry and fall back to `generate_access_token` (PIN + TOTP) if renewal is refused. For API key or Partner flows, obtain a new token using Dhan’s consent APIs in your app.
+
+`renew_token` and `generate_access_token` raise by failure class, so callers can tell "retry later" from "re-authenticate":
+
+| Error | When |
+|---|---|
+| `DhanHQ::InvalidAuthenticationError` | Dhan refused the token or credentials (4xx other than 429) |
+| `DhanHQ::RateLimitError` | 429 — back off and retry |
+| `DhanHQ::InternalServerError` | 5xx — retry later |
+| `DhanHQ::NetworkError` | Timeout or connection failure — retry later |
+
+All inherit from `DhanHQ::Error`, and `error.response_body` holds Dhan's parsed error payload.
 
 ## Retry-on-401
 
@@ -193,7 +204,7 @@ Behavior:
 On first use: calls TOTP TokenGenerator → applies token.
 Before each request: ensure_valid_token!:
 If no token → generate.
-If needs_refresh? → TokenRenewal (POST /v2/RenewToken) with current token + dhanClientId.
+If needs_refresh? → TokenRenewal (GET /v2/RenewToken) with current token + dhanClientId.
 If renewal fails with auth error → falls back to full generate.
 
 6️⃣ Web-token renewal only (RenewToken)
