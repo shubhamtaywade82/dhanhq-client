@@ -1,39 +1,4 @@
-## [4.1.1] - 2026-10-11
-
-### Fixed — pre-trade risk pipeline
-
-- **The risk checks only saw parameters whose key happened to be a single lowercase word.** Checks read snake_case String keys (`"order_type"`, `"product_type"`, `"security_id"`), but orders arrive as camelCase Strings (models) or Symbols (direct resource calls). `OrderType`, `ProductSupport` and `Concentration` therefore never ran on real orders, and Symbol-keyed callers failed `Quantity must be > 0` on a valid quantity — which blocked every `SuperOrder.create`. `OrderAudit` now normalises keys before running the pipeline.
-- **Risk-reducing orders are never blocked by a limit.** An order on the opposite side of an open position, same security / segment / product, for no more than the position size, skips the size caps, open-position count, daily loss, concentration and ASM/GSM checks; it still gets trading-permission, product, order-type, quantity > 0 and market-hours validation. Previously a stop-out could be refused precisely because the account was over its loss or position limit.
-- **`OrderType` accepts `STOP_LOSS` and `STOP_LOSS_MARKET`** (was `MARKET`/`LIMIT` only). With the key fix above, the old list would have rejected every stop-loss order.
-- **`Concentration` matches positions by security id** (and segment) when the order names no trading symbol, and counts the new order's notional; it compared a trading symbol against a security id and so never matched an order. A MARKET entry (which carries no price) is priced from its trigger price or the instrument's LTP; an entry that cannot be priced is refused rather than counted as zero exposure.
-- **`MaxLoss` counts realized plus unrealized P&L** for the day (was unrealized only).
-- **Positions are fetched once per order** and shared by every check (was up to three `GET /v2/positions` calls per order).
-- **`SuperOrder.create`, `IcebergOrder.create` and `TwapOrder.create` raised `ArgumentError` after a successful placement** (Ruby 3 keyword arguments: the attributes hash was splatted into keywords). The order existed at Dhan while the caller saw an exception — a retry would duplicate it. The super-order spec stubbed `.new` with the same broken signature, which hid it.
-
-### Fixed — endpoint wire format and error mapping
-
-- **Data-API error codes sent as integers never matched the error mapping.** Dhan's data APIs answer with numeric codes (`{"errorCode":807,"errorMessage":"Token expired"}` — see `spec/vcr_cassettes/client/error_806.yml`), but `ResponseHelper#handle_error` compared them against string-keyed `DHAN_ERROR_MAPPING`, so every integer code fell through to the HTTP-status fallback: token expiry (807) surfaced as `InvalidAuthenticationError`, invalid expiry date (811) as a generic `InputExceptionError`, and so on. The code is now normalized with `.to_s` before the lookup. New wire-format specs in `spec/dhan_hq/resources/historical_data_spec.rb` and `expired_options_data_spec.rb` cover the mapping.
-- **`Resources::Instruments#by_segment` swallowed HTTP errors.** On 4xx/5xx it returned the raw JSON error body as if it were CSV — no exception, unlike every other resource. Failures now raise the status-mapped `DhanHQ::Error` subclass (`NotFoundError`, `InvalidAuthenticationError`, …). New spec in `spec/dhan_hq/resources/instruments_spec.rb`.
-- **`Resources::MarginCalculator#calculate_multi` sent nested `scripList` entries in snake_case.** Only top-level keys were camelized, so the API received `security_id`/`exchange_segment` inside each scrip (the `Models::Margin` layer pre-camelized as a workaround; the raw resource did not). The resource now deep-camelizes like `multi_orders` does for its legs. New spec in `spec/dhan_hq/resources/margin_calculator_spec.rb`.
-- New WebMock wire-format specs for every non-order REST endpoint — funds, holdings, trades, positions, profile, statements, market feed (ltp/ohlc/quote), option chain, charts, expired options, margin calculator, instruments, EDIS, IP setup, kill switch — asserting method, path, headers, body shape, param camelization/titleization, and typed error mapping. (Orders endpoints excluded per scope.)
-
-### Fixed — authentication
-
-- **`DhanHQ::Auth.renew_token` called the wrong URL.** `conn.post("/RenewToken")` on the `https://api.dhan.co/v2` base made Faraday drop `/v2` (a leading slash is an absolute path), so renewals hit `https://api.dhan.co/RenewToken`. It now requests `/v2/RenewToken` with **GET**, matching Dhan's documented curl example (`dhanhq.co/docs/v2/authentication`) and the official Python SDK (`dhanhq` 2.3.0). `generate_access_token` also uses a relative path now.
-- **Successful auth responses returned `{}`.** The auth connection had no JSON parsing, so the body arrived as a string and `handle_response` discarded it — the new `accessToken` was lost on every successful renewal or generation. Bodies are now parsed regardless of `Content-Type`.
-- **Auth failures are typed by cause.** 429 raises `DhanHQ::RateLimitError`, 5xx `DhanHQ::InternalServerError`, timeouts and connection failures `DhanHQ::NetworkError`; only refused credentials raise `DhanHQ::InvalidAuthenticationError`. Previously every failure, including outages, looked like bad credentials. All remain `DhanHQ::Error` subclasses, and `response_body` now carries the parsed error payload.
-- **Auth requests have timeouts** (`DHAN_CONNECT_TIMEOUT` / `DHAN_READ_TIMEOUT` / `DHAN_WRITE_TIMEOUT`, defaults 10/30/30s, as `Client#build_connection`). They were unbounded.
-- New `spec/dhan_hq/auth_spec.rb` covers both endpoints, error mapping, timeouts and `Auth::TokenRenewal`; the auth module previously had no specs.
-
-### Added
-
-- **Configurable risk limits** — `config.risk_limits = { max_quantity:, max_notional:, max_open_positions:, daily_max_loss:, max_concentration_pct: }` or `DHAN_RISK_MAX_QUANTITY`, `DHAN_RISK_MAX_NOTIONAL`, `DHAN_RISK_MAX_OPEN_POSITIONS`, `DHAN_RISK_DAILY_MAX_LOSS`, `DHAN_RISK_MAX_CONCENTRATION_PCT`. Defaults are unchanged (10 units, ₹1,00,000 notional, 20 positions, ₹50,000 daily loss, 25%). Unknown names or non-positive values raise `ArgumentError` at configuration time.
-
-### Upgrade notes
-
-- **`max_quantity` defaults to 10 units, so one NIFTY lot (75) is rejected** on any order whose instrument resolves. This was already true for camelCase-keyed orders before this release; it now applies to every key style. F&O users must raise `max_quantity` (in units, not lots) and usually `max_notional`.
-- Checks that never ran before now run on every order: `OrderType`, `ProductSupport` (CO/BO support flags) and `Concentration` (one extra `GET /v2/fundlimit` per new-exposure order).
-- A risk-check failure still fails open: if the instrument lookup or a positions/funds fetch raises, the pipeline is skipped and logged as `DHAN_RISK_CHECK_SKIPPED` (unchanged behaviour).
+## [Unreleased]
 
 ### Fixed — WebSocket feed protocol and runtime
 
@@ -148,6 +113,41 @@ the vendor-spec patch log, and the generated
   reuses it and wire behaviour is unchanged, including empty-body requests).
 
 ## [4.1.1] - 2026-10-11
+
+### Fixed — pre-trade risk pipeline
+
+- **The risk checks only saw parameters whose key happened to be a single lowercase word.** Checks read snake_case String keys (`"order_type"`, `"product_type"`, `"security_id"`), but orders arrive as camelCase Strings (models) or Symbols (direct resource calls). `OrderType`, `ProductSupport` and `Concentration` therefore never ran on real orders, and Symbol-keyed callers failed `Quantity must be > 0` on a valid quantity — which blocked every `SuperOrder.create`. `OrderAudit` now normalises keys before running the pipeline.
+- **Risk-reducing orders are never blocked by a limit.** An order on the opposite side of an open position, same security / segment / product, for no more than the position size, skips the size caps, open-position count, daily loss, concentration and ASM/GSM checks; it still gets trading-permission, product, order-type, quantity > 0 and market-hours validation. Previously a stop-out could be refused precisely because the account was over its loss or position limit.
+- **`OrderType` accepts `STOP_LOSS` and `STOP_LOSS_MARKET`** (was `MARKET`/`LIMIT` only). With the key fix above, the old list would have rejected every stop-loss order.
+- **`Concentration` matches positions by security id** (and segment) when the order names no trading symbol, and counts the new order's notional; it compared a trading symbol against a security id and so never matched an order. A MARKET entry (which carries no price) is priced from its trigger price or the instrument's LTP; an entry that cannot be priced is refused rather than counted as zero exposure.
+- **`MaxLoss` counts realized plus unrealized P&L** for the day (was unrealized only).
+- **Positions are fetched once per order** and shared by every check (was up to three `GET /v2/positions` calls per order).
+- **`SuperOrder.create`, `IcebergOrder.create` and `TwapOrder.create` raised `ArgumentError` after a successful placement** (Ruby 3 keyword arguments: the attributes hash was splatted into keywords). The order existed at Dhan while the caller saw an exception — a retry would duplicate it. The super-order spec stubbed `.new` with the same broken signature, which hid it.
+
+### Fixed — endpoint wire format and error mapping
+
+- **Data-API error codes sent as integers never matched the error mapping.** Dhan's data APIs answer with numeric codes (`{"errorCode":807,"errorMessage":"Token expired"}` — see `spec/vcr_cassettes/client/error_806.yml`), but `ResponseHelper#handle_error` compared them against string-keyed `DHAN_ERROR_MAPPING`, so every integer code fell through to the HTTP-status fallback: token expiry (807) surfaced as `InvalidAuthenticationError`, invalid expiry date (811) as a generic `InputExceptionError`, and so on. The code is now normalized with `.to_s` before the lookup. New wire-format specs in `spec/dhan_hq/resources/historical_data_spec.rb` and `expired_options_data_spec.rb` cover the mapping.
+- **`Resources::Instruments#by_segment` swallowed HTTP errors.** On 4xx/5xx it returned the raw JSON error body as if it were CSV — no exception, unlike every other resource. Failures now raise the status-mapped `DhanHQ::Error` subclass (`NotFoundError`, `InvalidAuthenticationError`, …). New spec in `spec/dhan_hq/resources/instruments_spec.rb`.
+- **`Resources::MarginCalculator#calculate_multi` sent nested `scripList` entries in snake_case.** Only top-level keys were camelized, so the API received `security_id`/`exchange_segment` inside each scrip (the `Models::Margin` layer pre-camelized as a workaround; the raw resource did not). The resource now deep-camelizes like `multi_orders` does for its legs. New spec in `spec/dhan_hq/resources/margin_calculator_spec.rb`.
+- New WebMock wire-format specs for every non-order REST endpoint — funds, holdings, trades, positions, profile, statements, market feed (ltp/ohlc/quote), option chain, charts, expired options, margin calculator, instruments, EDIS, IP setup, kill switch — asserting method, path, headers, body shape, param camelization/titleization, and typed error mapping. (Orders endpoints excluded per scope.)
+
+### Fixed — authentication
+
+- **`DhanHQ::Auth.renew_token` called the wrong URL.** `conn.post("/RenewToken")` on the `https://api.dhan.co/v2` base made Faraday drop `/v2` (a leading slash is an absolute path), so renewals hit `https://api.dhan.co/RenewToken`. It now requests `/v2/RenewToken` with **GET**, matching Dhan's documented curl example (`dhanhq.co/docs/v2/authentication`) and the official Python SDK (`dhanhq` 2.3.0). `generate_access_token` also uses a relative path now.
+- **Successful auth responses returned `{}`.** The auth connection had no JSON parsing, so the body arrived as a string and `handle_response` discarded it — the new `accessToken` was lost on every successful renewal or generation. Bodies are now parsed regardless of `Content-Type`.
+- **Auth failures are typed by cause.** 429 raises `DhanHQ::RateLimitError`, 5xx `DhanHQ::InternalServerError`, timeouts and connection failures `DhanHQ::NetworkError`; only refused credentials raise `DhanHQ::InvalidAuthenticationError`. Previously every failure, including outages, looked like bad credentials. All remain `DhanHQ::Error` subclasses, and `response_body` now carries the parsed error payload.
+- **Auth requests have timeouts** (`DHAN_CONNECT_TIMEOUT` / `DHAN_READ_TIMEOUT` / `DHAN_WRITE_TIMEOUT`, defaults 10/30/30s, as `Client#build_connection`). They were unbounded.
+- New `spec/dhan_hq/auth_spec.rb` covers both endpoints, error mapping, timeouts and `Auth::TokenRenewal`; the auth module previously had no specs.
+
+### Added
+
+- **Configurable risk limits** — `config.risk_limits = { max_quantity:, max_notional:, max_open_positions:, daily_max_loss:, max_concentration_pct: }` or `DHAN_RISK_MAX_QUANTITY`, `DHAN_RISK_MAX_NOTIONAL`, `DHAN_RISK_MAX_OPEN_POSITIONS`, `DHAN_RISK_DAILY_MAX_LOSS`, `DHAN_RISK_MAX_CONCENTRATION_PCT`. Defaults are unchanged (10 units, ₹1,00,000 notional, 20 positions, ₹50,000 daily loss, 25%). Unknown names or non-positive values raise `ArgumentError` at configuration time.
+
+### Upgrade notes
+
+- **`max_quantity` defaults to 10 units, so one NIFTY lot (75) is rejected** on any order whose instrument resolves. This was already true for camelCase-keyed orders before this release; it now applies to every key style. F&O users must raise `max_quantity` (in units, not lots) and usually `max_notional`.
+- Checks that never ran before now run on every order: `OrderType`, `ProductSupport` (CO/BO support flags) and `Concentration` (one extra `GET /v2/fundlimit` per new-exposure order).
+- A risk-check failure still fails open: if the instrument lookup or a positions/funds fetch raises, the pipeline is skipped and logged as `DHAN_RISK_CHECK_SKIPPED` (unchanged behaviour).
 
 ### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)
 
