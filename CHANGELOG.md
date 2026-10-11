@@ -25,6 +25,28 @@
 - **Auth requests have timeouts** (`DHAN_CONNECT_TIMEOUT` / `DHAN_READ_TIMEOUT` / `DHAN_WRITE_TIMEOUT`, defaults 10/30/30s, as `Client#build_connection`). They were unbounded.
 - New `spec/dhan_hq/auth_spec.rb` covers both endpoints, error mapping, timeouts and `Auth::TokenRenewal`; the auth module previously had no specs.
 
+### Added
+
+- **Configurable risk limits** — `config.risk_limits = { max_quantity:, max_notional:, max_open_positions:, daily_max_loss:, max_concentration_pct: }` or `DHAN_RISK_MAX_QUANTITY`, `DHAN_RISK_MAX_NOTIONAL`, `DHAN_RISK_MAX_OPEN_POSITIONS`, `DHAN_RISK_DAILY_MAX_LOSS`, `DHAN_RISK_MAX_CONCENTRATION_PCT`. Defaults are unchanged (10 units, ₹1,00,000 notional, 20 positions, ₹50,000 daily loss, 25%). Unknown names or non-positive values raise `ArgumentError` at configuration time.
+
+### Upgrade notes
+
+- **`max_quantity` defaults to 10 units, so one NIFTY lot (75) is rejected** on any order whose instrument resolves. This was already true for camelCase-keyed orders before this release; it now applies to every key style. F&O users must raise `max_quantity` (in units, not lots) and usually `max_notional`.
+- Checks that never ran before now run on every order: `OrderType`, `ProductSupport` (CO/BO support flags) and `Concentration` (one extra `GET /v2/fundlimit` per new-exposure order).
+- A risk-check failure still fails open: if the instrument lookup or a positions/funds fetch raises, the pipeline is skipped and logged as `DHAN_RISK_CHECK_SKIPPED` (unchanged behaviour).
+
+## [4.1.1] - 2026-10-11
+
+### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)
+
+- **`:hybrid` mode sent the production token to the sandbox host.** Dhan runs sandbox and production with separate credentials and rejects each other's tokens (docs.dhanhq.co, *Sandbox*), so every sandbox-bound request in `:hybrid` was a guaranteed DH-901. New `sandbox_client_id` / `sandbox_access_token` (`DHAN_SANDBOX_CLIENT_ID` / `DHAN_SANDBOX_ACCESS_TOKEN`) are used for every request routed to the sandbox — `access-token` and `client-id` headers, and a body `dhanClientId` that equals the production ID. In `:sandbox` mode they fall back to `client_id` / `access_token`, so existing setups are unaffected; in `:hybrid` they are required and their absence raises `DhanHQ::AuthenticationError` before any I/O.
+- **Sandbox-unsupported endpoints now fail fast.** Requests routed to the sandbox for super orders, conditional/multi orders, P&L exit, multi-scrip margin, IP setup, ScanX, market quotes, option chain, rolling options and Global Stocks raise `DhanHQ::SandboxUnsupportedError` instead of returning an opaque 404. They are never redirected to production. The list (`Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES`) is the set of paths that are absent from the sandbox OpenAPI document and answer 404 on `sandbox.dhan.co`.
+- **Full Market Depth (20/200-level) WebSocket never emitted data.** The decoder parsed frames as JSON, while Dhan sends binary packets (12-byte header plus 16-byte `float64`/`uint32`/`uint32` rows, bid and ask as separate stacked packets). Rewritten as a binary decoder; the client merges each instrument's bid and ask packets into one `:depth_update` (`bids`, `asks`, `best_bid`, `best_ask`, `spread`, totals) and emits `:disconnect` for server disconnect packets (code 50).
+- **Market depth unsubscribe request code is now 25** (was 24). docs.dhanhq.co gives 25 in both its Annexure and the Full Market Depth page; the older dhanhq.co/docs/v2 Annexure says 24. Not verified against the live feed (it is geo-restricted from CI).
+- **200-level depth subscription uses the documented flat format** (`{RequestCode, ExchangeSegment, SecurityId}`), not the 20-level instrument list, and a second instrument on a 200-level connection is refused (one instrument per connection). 20-level connections cap at 50 instruments.
+- **`MarketDepth::Client#subscribe(hash)`** subscribed nothing — `Array(hash)` split the instrument hash into key/value pairs.
+- **`OrderStatus::INACTIVE`** added; it is in the documented `orderStatus` response enum.
+
 ## [4.1.0] - 2026-10-10
 
 ### Fixed (full-gem review pass — `ruby-agent-skills` audit)
