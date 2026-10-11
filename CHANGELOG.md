@@ -1,4 +1,4 @@
-## [Unreleased]
+## [4.1.1] - 2026-10-11
 
 ### Fixed (review against docs.dhanhq.co, dhanhq.co/docs/v2 and the live/sandbox OpenAPI documents)
 
