@@ -66,7 +66,7 @@ module DhanHQ
 
           renewal = Auth::TokenRenewal.new.renew
           apply_token(renewal)
-        rescue Errors::AuthenticationError
+        rescue DhanHQ::AuthenticationError
           generate!
         end
       end

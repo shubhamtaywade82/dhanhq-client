@@ -124,11 +124,11 @@ RSpec.describe DhanHQ::Auth::TokenManager do
         allow(renewal_double).to receive(:renew).and_raise(DhanHQ::AuthenticationError)
       end
 
-      # NOTE: source uses `rescue Errors::AuthenticationError` but DhanHQ has no Errors
-      # module, so the rescue clause evaluation raises NameError rather than falling back.
-      # The intended behaviour is to call generate!, but the rescue is currently broken.
-      it "raises an error (rescue clause references unresolved constant Errors::AuthenticationError)" do
-        expect { manager.refresh! }.to raise_error(StandardError)
+      it "falls back to generate! when renewal raises AuthenticationError" do
+        allow(generator_double).to receive(:generate).and_return(token_response)
+        manager.refresh!
+        # once in the before block (initial generate!), once from the rescue fallback
+        expect(generator_double).to have_received(:generate).twice
       end
     end
   end

@@ -48,11 +48,8 @@ RSpec.describe DhanHQ::Auth::TokenRenewal do
         end
       end
 
-      # NOTE: the source raises `Errors::AuthenticationError` which is unresolved in
-      # this namespace (DhanHQ has no Errors module); this will raise StandardError/NameError
-      # until that reference is corrected to `DhanHQ::AuthenticationError`.
-      it "raises an error when client_id is blank" do
-        expect { renewal.renew }.to raise_error(StandardError)
+      it "raises DhanHQ::AuthenticationError when client_id is blank" do
+        expect { renewal.renew }.to raise_error(DhanHQ::AuthenticationError, /client_id/)
       end
     end
 
@@ -64,8 +61,8 @@ RSpec.describe DhanHQ::Auth::TokenRenewal do
         end
       end
 
-      it "raises an error when client_id is nil" do
-        expect { renewal.renew }.to raise_error(StandardError)
+      it "raises DhanHQ::AuthenticationError when client_id is nil" do
+        expect { renewal.renew }.to raise_error(DhanHQ::AuthenticationError, /client_id/)
       end
     end
   end
