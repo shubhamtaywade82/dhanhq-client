@@ -8,6 +8,7 @@ require "timeout"
 # caller on that tier with it).
 RSpec.describe DhanHQ::RateLimiter do
   before do
+    DhanHQ.configuration.enforce_rate_limits = true
     stub_const("#{described_class}::RATE_LIMITS",
                test_api: { per_second: Float::INFINITY, per_minute: 2, per_hour: Float::INFINITY,
                            per_day: Float::INFINITY })

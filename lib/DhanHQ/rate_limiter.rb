@@ -26,6 +26,19 @@ module DhanHQ
                          per_day: Float::INFINITY }
     }.freeze
 
+    # Limits in effect when config.enforce_rate_limits is off: the table this gem
+    # shipped before the documented caps were added. It has no per-minute or
+    # per-hour order cap and a 100,000/day order cap.
+    LEGACY_RATE_LIMITS = {
+      order_api: { per_second: 10, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      global_stocks_api: { per_second: 10, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 100_000 },
+      data_api: { per_second: 5, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: 7_000 },
+      quote_api: { per_second: 1, per_minute: Float::INFINITY, per_hour: Float::INFINITY, per_day: Float::INFINITY },
+      option_chain: { per_second: 1.0 / 3, per_minute: 20, per_hour: 600, per_day: 4800 },
+      non_trading_api: { per_second: 20, per_minute: Float::INFINITY, per_hour: Float::INFINITY,
+                         per_day: Float::INFINITY }
+    }.freeze
+
     # Seconds to wait between counter resets, per interval.
     RESET_INTERVALS = { per_minute: 60, per_hour: 3600, per_day: 86_400 }.freeze
 
@@ -35,6 +48,13 @@ module DhanHQ
 
     class << self
       attr_reader :shared_limiters, :mutexes
+
+      # Documented caps apply only when config.enforce_rate_limits is set. The
+      # choice is made when a limiter is created, so it is fixed per API type
+      # for the life of the process.
+      def limits_for_config
+        DhanHQ.configuration&.enforce_rate_limits? ? RATE_LIMITS : LEGACY_RATE_LIMITS
+      end
 
       # Get or create a shared rate limiter instance for the given API type
       def for(api_type)
@@ -49,6 +69,7 @@ module DhanHQ
     # @param api_type [Symbol] One of the keys from {RATE_LIMITS}.
     def initialize(api_type)
       @api_type = api_type
+      @limits = self.class.limits_for_config
       @buckets = Concurrent::Hash.new
       @buckets[:last_request_time] = Time.at(0) if api_type == :option_chain
       # Track request timestamps for per-second limiting
@@ -88,7 +109,7 @@ module DhanHQ
       return option_chain_wait if @api_type == :option_chain
 
       now = Time.now
-      per_second_limit = RATE_LIMITS[@api_type][:per_second]
+      per_second_limit = @limits[@api_type][:per_second]
       finite_per_second = per_second_limit && per_second_limit != Float::INFINITY
       if finite_per_second
         @request_times.reject! { |t| now - t >= 1.0 }
@@ -123,7 +144,7 @@ module DhanHQ
 
     # Prepares the counters used for each interval in {RATE_LIMITS}.
     def initialize_buckets
-      RATE_LIMITS[@api_type].each_key do |interval|
+      @limits[@api_type].each_key do |interval|
         # Skip per_second as we handle it with timestamps
         next if interval == :per_second
 
@@ -135,7 +156,7 @@ module DhanHQ
     #
     # @return [Boolean]
     def allow_request?
-      RATE_LIMITS[@api_type].all? do |interval, limit|
+      @limits[@api_type].all? do |interval, limit|
         # Skip per_second check as it's handled in throttle! with timestamps
         next true if interval == :per_second
 
@@ -145,7 +166,7 @@ module DhanHQ
 
     # Increments the counters for each time window once a request is made.
     def record_request
-      RATE_LIMITS[@api_type].each_key do |interval|
+      @limits[@api_type].each_key do |interval|
         # Skip per_second as it's handled with timestamps
         next if interval == :per_second
 
@@ -162,7 +183,7 @@ module DhanHQ
       @shutdown = Concurrent::AtomicBoolean.new(false)
 
       RESET_INTERVALS.each do |interval, seconds|
-        limit = RATE_LIMITS[@api_type][interval]
+        limit = @limits[@api_type][interval]
         next if limit.nil? || limit >= Float::INFINITY
 
         @cleanup_threads << Thread.new do

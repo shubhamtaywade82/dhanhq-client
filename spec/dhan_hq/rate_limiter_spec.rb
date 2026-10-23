@@ -9,6 +9,9 @@ RSpec.describe DhanHQ::RateLimiter do
   let(:rate_limiter) { described_class.new(api_type) }
 
   before do
+    # These examples assert the documented caps, which apply only when enforcement is on.
+    DhanHQ.configuration.enforce_rate_limits = true
+
     # Allow cleanup threads to run for shutdown tests, but prevent for other tests
     # rubocop:disable RSpec/AnyInstance
     allow_any_instance_of(described_class).to receive(:start_cleanup_threads).and_call_original

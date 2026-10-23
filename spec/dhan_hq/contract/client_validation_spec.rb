@@ -15,6 +15,8 @@ RSpec.describe "contract-first request validation in the client" do
   before do
     stub_const("ENV", ENV.to_h.merge("DHAN_ACCESS_TOKEN" => "test-token", "DHAN_CLIENT_ID" => "1000000001"))
     DhanHQ.configure_with_env
+    # Request validation is opt-in; these examples exercise it.
+    DhanHQ.configuration.validate_requests = true
   end
 
   after { DhanHQ.reset_configuration! }

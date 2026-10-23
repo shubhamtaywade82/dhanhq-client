@@ -195,6 +195,11 @@ module DhanHQ
     # @return [Boolean]
     attr_accessor :validate_requests
 
+    # When true, the documented per-minute and per-hour order caps are enforced
+    # (see RateLimiter::RATE_LIMITS). Off by default: the limits shipped before
+    # this release keep applying until the flag is turned on.
+    attr_accessor :enforce_rate_limits
+
     # Contract-first response validation: when +true+, parsed 2xx responses are
     # checked against the operation's response schema and mismatches are logged
     # (never raised) — an early-warning system for upstream drift such as the
@@ -384,7 +389,12 @@ module DhanHQ
     # @return [Boolean] True when wire payloads are structurally validated
     #   against the vendored contract before being sent.
     def validate_requests?
-      @validate_requests != false
+      @validate_requests == true
+    end
+
+    # @return [Boolean] True when the documented per-minute and per-hour caps are enforced.
+    def enforce_rate_limits?
+      @enforce_rate_limits == true
     end
 
     # @return [Boolean] True when 2xx responses are checked against the
@@ -424,7 +434,8 @@ module DhanHQ
       @dry_run = attrs.key?(:dry_run) ? attrs[:dry_run] : env_flag("DHAN_DRY_RUN", default: false)
       @retry_non_idempotent_writes = attrs.key?(:retry_non_idempotent_writes) ? attrs[:retry_non_idempotent_writes] : env_flag("DHAN_RETRY_WRITES", default: false)
       @auto_correlation_id = attrs.key?(:auto_correlation_id) ? attrs[:auto_correlation_id] : env_flag("DHAN_AUTO_CORRELATION_ID", default: false)
-      @validate_requests = attrs.key?(:validate_requests) ? attrs[:validate_requests] : env_flag("DHAN_VALIDATE_REQUESTS", default: true)
+      @validate_requests = attrs.key?(:validate_requests) ? attrs[:validate_requests] : env_flag("DHAN_VALIDATE_REQUESTS", default: false)
+      @enforce_rate_limits = attrs.key?(:enforce_rate_limits) ? attrs[:enforce_rate_limits] : env_flag("DHAN_ENFORCE_RATE_LIMITS", default: false)
       @validate_responses = attrs.key?(:validate_responses) ? attrs[:validate_responses] : env_flag("DHAN_VALIDATE_RESPONSES", default: false)
       @warn_on_ambiguous_write_failure = if attrs.key?(:warn_on_ambiguous_write_failure)
                                            attrs[:warn_on_ambiguous_write_failure]
