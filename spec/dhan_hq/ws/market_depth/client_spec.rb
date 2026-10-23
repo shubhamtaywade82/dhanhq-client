@@ -41,11 +41,12 @@ RSpec.describe DhanHQ::WS::MarketDepth::Client do
                                "InstrumentList" => [{ "ExchangeSegment" => "NSE_EQ", "SecurityId" => "1333" }])
     end
 
-    it "unsubscribes with request code 25" do
+    # 24 = subscribe + 1, as sent by the official DhanHQ-py SDK (fulldepth.py).
+    it "unsubscribes with request code 24" do
       client.subscribe(instrument)
       client.unsubscribe(instrument)
 
-      expect(sent.last["RequestCode"]).to eq(25)
+      expect(sent.last["RequestCode"]).to eq(24)
     end
 
     context "with 200-level depth" do

@@ -48,12 +48,6 @@ module DhanHQ
   # Raised when the 25-modifications-per-order API cap would be exceeded.
   # Count is tracked per Order instance in this process only (see Order#modify).
   class ModificationLimitError < Error; end
-  # Raised before any network I/O when a request would be routed to the Dhan
-  # sandbox host for an endpoint the sandbox does not serve (super orders,
-  # conditional orders, P&L exit, market quotes, option chain, ...). The request
-  # is never redirected to production instead: in +:hybrid+ mode that would turn
-  # a paper order into a real one.
-  class SandboxUnsupportedError < Error; end
   # Raised when an order placement is attempted but ENV["LIVE_TRADING"] != "true".
   class LiveTradingDisabledError < Error; end
   # Raised when the API signals an issue with the requested data payload.
@@ -74,4 +68,9 @@ module DhanHQ
   class OtherError < Error; end
   # 404
   class NotFoundError < Error; end
+  # Raised before any network I/O when a request would target the sandbox host
+  # with an endpoint the sandbox does not implement (see DhanHQ::SandboxCapabilities).
+  # The request is never redirected to production instead: in +:hybrid+ mode
+  # that would turn a paper order into a real one.
+  class SandboxUnsupportedError < Error; end
 end

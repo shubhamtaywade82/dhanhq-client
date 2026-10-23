@@ -504,14 +504,24 @@ module DhanHQ
       ].freeze
     end
 
-    # Public rate limits published in DhanHQ API documentation.
+    # Public rate limits published in DhanHQ API documentation
+    # (https://dhanhq.co/docs/v2/ — Rate Limits).
     module RateLimit
-      ORDER_API = { per_second: 10, per_day: 100_000 }.freeze
+      # Order APIs: 10/sec, 250/min, 1,000/hr, 7,000/day (25 modifications/order).
+      ORDER_API = { per_second: 10, per_minute: 250, per_hour: 1_000, per_day: 7_000 }.freeze
+      # Data APIs: 5/sec, 7,000/day — the stricter of the two official doc sites
+      # (dhanhq.co/docs/v2 says 100,000/day; docs.dhanhq.co says 7,000/day).
       DATA_API = { per_second: 5, per_day: 7_000 }.freeze
+      # Market Quote APIs: 1/sec (up to 1,000 instruments per call).
       QUOTE_API = { per_second: 1 }.freeze
+      # Option chain: 1 unique request per 3 seconds.
       OPTION_CHAIN = { per_second: 1.0 / 3 }.freeze
+      # Non-trading APIs: 20/sec.
       NON_TRADING_API = { per_second: 20 }.freeze
       ORDER_MODIFICATIONS_PER_ORDER = 25
+      # Live Market Feed: 5 connections/user, 5,000 instruments per connection,
+      # max 100 instruments per subscribe message.
+      MARKET_FEED = { max_connections: 5, instruments_per_connection: 5_000, instruments_per_message: 100 }.freeze
     end
 
     # Canonical Dhan API, auth, WebSocket and instrument URLs (see https://dhanhq.co/docs/v2/).
@@ -599,28 +609,6 @@ module DhanHQ
       "/v2/instrument/",
       "/v2/charts",
       "/v2/data"
-    ].freeze
-
-    # Path prefixes the Dhan sandbox (https://sandbox.dhan.co/v2) does not serve.
-    #
-    # Derived from the sandbox's own OpenAPI document (sandbox.dhan.co/v2/v3/api-docs)
-    # and the "Sandbox" page of docs.dhanhq.co, and confirmed by each prefix
-    # answering HTTP 404 on the sandbox host. Requests routed to the sandbox for
-    # these paths fail fast with {DhanHQ::SandboxUnsupportedError}.
-    #
-    # Deliberately a deny-list of verified gaps rather than an allow-list: a
-    # sandbox route Dhan adds later keeps working without a gem release.
-    SANDBOX_UNSUPPORTED_PATH_PREFIXES = %w[
-      /v2/marketfeed/
-      /v2/optionchain
-      /v2/charts/rollingoption
-      /v2/data/
-      /v2/super/orders
-      /v2/alerts/
-      /v2/pnlExit
-      /v2/margincalculator/multi
-      /v2/ip/
-      /v2/globalstocks/
     ].freeze
 
     # Path prefixes for which the request body (POST/PUT/PATCH) must include dhanClientId.

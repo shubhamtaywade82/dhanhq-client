@@ -1,0 +1,10 @@
+[
+  {
+    "op": "replace",
+    "path": "/components/schemas/OptionChartRequest/properties/securityId",
+    "value": {
+      "type": ["string", "integer"],
+      "description": "Underlying security Id (docs.dhanhq.co Historical Rolling Options Data: string; the vendor spec says int32)"
+    }
+  }
+]

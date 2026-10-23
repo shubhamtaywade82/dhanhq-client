@@ -12,6 +12,7 @@ module DhanHQ
       HTTP_PATH = "/v2/alerts/orders"
 
       def create(params)
+        params = contract_params(params)
         ensure_live_trading!
         run_risk_checks!(params)
         log_order_context("DHAN_ALERT_ORDER_ATTEMPT", params)
@@ -19,6 +20,7 @@ module DhanHQ
       end
 
       def update(id, params)
+        params = contract_params(params)
         ensure_live_trading!
         log_order_context("DHAN_ALERT_ORDER_MODIFY_ATTEMPT", params.merge(alert_id: id))
         super

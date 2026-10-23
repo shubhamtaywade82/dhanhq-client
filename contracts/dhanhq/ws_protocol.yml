@@ -1,0 +1,253 @@
+# DhanHQ WebSocket binary protocol manifest
+#
+# The machine-readable contract for everything the OpenAPI documents cannot
+# express: the byte-level market feed, full market depth, request codes and
+# the exchange-segment enum. Compiled from the official v2 Live Market Feed
+# + Full Market Depth docs (dhanhq.co/docs/v2) cross-validated against the
+# official DhanHQ-py and DhanHQ-js SDKs (see research/dhanhq-market-feed.md).
+#
+# Consumers:
+#   * lib/DhanHQ/ws/protocol.rb        — loads this file (memoized, frozen)
+#   * lib/DhanHQ/ws/segments.rb        — exchange-segment enum
+#   * lib/DhanHQ/ws/connection.rb      — SUB_CODES / UNSUB_CODES
+#   * lib/DhanHQ/ws/market_depth/*     — FMD request codes
+#   * spec/dhan_hq/ws/protocol_spec.rb — packs binary fixtures FROM this
+#     manifest and asserts the decoders parse them: manifest and decoders are
+#     locked together, so a wire-format change is a failing test, not a bug
+#     found in production (the F1–F7 bug class).
+#
+# All multi-byte fields are LITTLE-ENDIAN. Prices are IEEE-754 values in
+# rupees — NO multipliers. Epochs are SECONDS.
+
+meta:
+  version: 2
+  sources:
+    - https://dhanhq.co/docs/v2/live-market-feed/
+    - https://dhanhq.co/docs/v2/full-market-depth/
+    - https://dhanhq.co/docs/v2/annexure/
+    - dhan-oss/DhanHQ-py (marketfeed.py, fulldepth.py)
+    - dhan-oss/DhanHQ-js (marketfeed.ts)
+
+exchange_segments:
+  IDX_I: 0
+  NSE_EQ: 1
+  NSE_FNO: 2
+  NSE_CURRENCY: 3
+  BSE_EQ: 4
+  MCX_COMM: 5
+  # 6 is unassigned
+  BSE_CURRENCY: 7
+  BSE_FNO: 8
+
+# Feed Request Codes (client → server, JSON payloads on v2).
+# Rule: unsubscribe code = subscribe code + 1.
+request_codes:
+  connect_v1: 11          # v1 binary authorization only; unused on v2
+  disconnect: 12          # whole-connection Disconnect Feed frame — NEVER an unsubscribe
+  subscribe:
+    index: 14
+    ticker: 15
+    quote: 17
+    depth: 19             # 5-level depth; rejected by the official v2 SDK, listed in annexure
+    full: 21
+    market_depth: 23      # 20/200-level FMD sockets
+  unsubscribe:
+    index: 13
+    ticker: 16
+    quote: 18
+    depth: 20
+    full: 22
+    market_depth: 24
+
+# Feed Response Codes (server → client, first byte of every binary packet)
+response_codes:
+  index: 1
+  ticker: 2
+  depth: 3
+  quote: 4
+  oi: 5
+  prev_close: 6
+  market_status: 7
+  full: 8
+  fmd_bid: 41
+  fmd_ask: 51
+  disconnect: 50
+
+# 8-byte header common to every live-feed packet.
+response_header:
+  size: 8
+  fields:
+    - { name: feed_response_code, type: uint8, offset: 0 }
+    - { name: message_length, type: uint16, offset: 1 }
+    - { name: exchange_segment, type: uint8, offset: 3 }
+    - { name: security_id, type: int32, offset: 4 }
+
+# Packet layouts. Offsets are 0-based from frame start; the 8-byte header
+# occupies 0–7, payload fields start at 8.
+packets:
+  index:
+    code: 1
+    size: 32
+    fields:
+      - { name: latest, type: float32, offset: 8 }
+      - { name: open, type: float32, offset: 12 }
+      - { name: close, type: float32, offset: 16 }
+      - { name: high, type: float32, offset: 20 }
+      - { name: low, type: float32, offset: 24 }
+      - { name: update_time, type: uint32, offset: 28 }
+
+  ticker:
+    code: 2
+    size: 16
+    fields:
+      - { name: ltp, type: float32, offset: 8 }
+      - { name: ltt, type: uint32, offset: 12 }
+
+  depth:
+    code: 3
+    size: 112
+    fields:
+      - { name: ltp, type: float32, offset: 8 }
+    arrays:
+      - name: market_depth
+        offset: 12
+        count: 5
+        each: 20
+        fields:
+          - { name: bid_quantity, type: uint32, offset: 0 }
+          - { name: ask_quantity, type: uint32, offset: 4 }
+          - { name: no_of_bid_orders, type: uint16, offset: 8 }
+          - { name: no_of_ask_orders, type: uint16, offset: 10 }
+          - { name: bid_price, type: float32, offset: 12 }
+          - { name: ask_price, type: float32, offset: 16 }
+
+  quote:
+    code: 4
+    size: 50
+    fields:
+      - { name: ltp, type: float32, offset: 8 }
+      - { name: last_trade_qty, type: uint16, offset: 12 }
+      - { name: ltt, type: uint32, offset: 14 }
+      - { name: atp, type: float32, offset: 18 }
+      - { name: volume, type: uint32, offset: 22 }
+      - { name: total_sell_qty, type: uint32, offset: 26 }
+      - { name: total_buy_qty, type: uint32, offset: 30 }
+      - { name: day_open, type: float32, offset: 34 }
+      - { name: day_close, type: float32, offset: 38 }
+      - { name: day_high, type: float32, offset: 42 }
+      - { name: day_low, type: float32, offset: 46 }
+
+  oi:
+    code: 5
+    size: 12
+    fields:
+      - { name: open_interest, type: uint32, offset: 8 }
+
+  prev_close:
+    code: 6
+    size: 16
+    fields:
+      - { name: prev_close, type: float32, offset: 8 }   # v1 read int32 here — v2 is float32
+      - { name: oi_prev, type: uint32, offset: 12 }
+
+  market_status:
+    code: 7
+    size: 8     # header-only frame: the code itself signals open/close
+    fields: []
+
+  full:
+    code: 8
+    size: 162
+    fields:
+      - { name: ltp, type: float32, offset: 8 }
+      - { name: last_trade_qty, type: uint16, offset: 12 }
+      - { name: ltt, type: uint32, offset: 14 }
+      - { name: atp, type: float32, offset: 18 }
+      - { name: volume, type: uint32, offset: 22 }
+      - { name: total_sell_qty, type: uint32, offset: 26 }
+      - { name: total_buy_qty, type: uint32, offset: 30 }
+      - { name: open_interest, type: uint32, offset: 34 }
+      - { name: highest_oi, type: uint32, offset: 38 }
+      - { name: lowest_oi, type: uint32, offset: 42 }
+      - { name: day_open, type: float32, offset: 46 }
+      - { name: day_close, type: float32, offset: 50 }
+      - { name: day_high, type: float32, offset: 54 }
+      - { name: day_low, type: float32, offset: 58 }
+    arrays:
+      - name: market_depth
+        offset: 62
+        count: 5
+        each: 20
+        fields:
+          - { name: bid_quantity, type: uint32, offset: 0 }
+          - { name: ask_quantity, type: uint32, offset: 4 }
+          - { name: no_of_bid_orders, type: uint16, offset: 8 }
+          - { name: no_of_ask_orders, type: uint16, offset: 10 }
+          - { name: bid_price, type: float32, offset: 12 }
+          - { name: ask_price, type: float32, offset: 16 }
+
+  disconnect:
+    code: 50
+    size: 10
+    fields:
+      - { name: disconnection_code, type: uint16, offset: 8 }
+
+# Full Market Depth sockets (20-level and 200-level). NOTE: the FMD header
+# field ORDER differs from the 8-byte live-feed header.
+full_market_depth:
+  header:
+    size: 12
+    fields:
+      - { name: message_length, type: int16, offset: 0 }
+      - { name: feed_response_code, type: uint8, offset: 2 }
+      - { name: exchange_segment, type: uint8, offset: 3 }
+      - { name: security_id, type: int32, offset: 4 }
+      - { name: rows, type: uint32, offset: 8 }
+  row:
+    size: 16
+    fields:
+      - { name: price, type: float64, offset: 0 }
+      - { name: quantity, type: uint32, offset: 8 }
+      - { name: orders, type: uint32, offset: 12 }
+  frame_sizes:
+    twenty_level: 332     # 12 + 20 × 16
+    twohundred_level: 3212 # 12 + 200 × 16
+  limits:
+    twenty_level_instruments: 50
+    twohundred_level_instruments: 1
+    segments: [NSE_EQ, NSE_FNO]
+
+# Shape of the JSON command frames clients publish on the v2 sockets.
+# Identical for subscribe and unsubscribe (only requestCode differs) and
+# identical across the live-feed and depth sockets. Verified against
+# research/dhanhq-market-feed.md and the official DhanHQ-py / DhanHQ-js SDKs.
+request_payload:
+  instruments_key: instruments
+  request_code_key: requestCode
+  instrument:
+    required: [exchangeSegment, securityId]
+    properties:
+      exchangeSegment: string
+      securityId: string
+
+# Disconnection message codes (payload of the code-50 packet)
+disconnect_codes:
+  805: Connection limit exceeded
+  806: Data APIs not subscribed
+  807: Access token is expired
+  808: Authentication Failed - Check Client ID
+  809: Access token is invalid
+
+# Connection behaviour (see research/dhanhq-market-feed.md §2)
+connection:
+  v2_url: wss://api-feed.dhan.co
+  v2_query_params: { version: 2, token: required, clientId: required, authType: 2 }
+  market_depth_urls:
+    twenty_level: wss://depth-api-feed.dhan.co/twentydepth
+    twohundred_level: wss://full-depth-api.dhan.co/twohundreddepth
+  max_connections_per_user: 5
+  max_instruments_per_connection: 5000     # v1: unlimited
+  max_instruments_per_json_message: 100
+  server_ping_interval_seconds: 10
+  dead_after_silence_seconds: 40
+  no_session_ttl: true

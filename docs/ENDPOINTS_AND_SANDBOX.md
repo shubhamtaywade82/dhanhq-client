@@ -64,20 +64,22 @@ tier overridden to the sandbox) missing sandbox credentials raise
 
 ## Sandbox endpoint support
 
-Source: the sandbox's own OpenAPI document (`https://sandbox.dhan.co/v2/v3/api-docs`), the
-*Sandbox* page on docs.dhanhq.co, and an unauthenticated probe of each path (an existing
-route answers 401/400, a missing one 404).
+The guard is **contract-derived**: an operation runs on the sandbox exactly when the vendored
+sandbox OpenAPI document (`contracts/dhanhq/sandbox.openapi.json`, captured from
+`https://sandbox.dhan.co/v2/v3/api-docs`, plus overlays) serves that method + path. Anything else
+raises `DhanHQ::SandboxUnsupportedError` before any I/O, failing closed — see
+`lib/DhanHQ/sandbox_capabilities.rb`. An unauthenticated probe of each path (an existing route
+answers 401/400, a missing one 404) agrees with the contract on every 404.
 
 | Status | Endpoints |
 |--------|-----------|
-| **Served by the sandbox** | `/orders` (place, modify, cancel, book, by id, by correlation id), `/orders/slicing`, `/trades`, `/trades/{order-id}`, `/holdings`, `/positions`, `/positions/convert`, `POST /killswitch`, `/edis/tpin`, `/edis/form`, `/edis/bulkform`, `/edis/inquire/{isin}`, `/fundlimit`, `POST /margincalculator`, `/ledger`, `/trades/{from}/{to}/{page}`, `/charts/historical`, `/charts/intraday`, `/forever/orders` (in the sandbox OpenAPI document, not on the docs page), `/profile` (route exists; not documented) |
-| **Not served — 404** (gem raises `DhanHQ::SandboxUnsupportedError`) | `/super/orders`, `/alerts/orders`, `/alerts/multi/orders`, `/pnlExit`, `/margincalculator/multi`, `/ip/*`, `/marketfeed/*`, `/optionchain`, `/optionchain/expirylist`, `/charts/rollingoption`, `/data/*` (ScanX), `/globalstocks/*` |
-| **Unclear** | `GET /killswitch` and `DELETE /positions` answer 400 rather than 404 but are absent from both sandbox sources. Iceberg/TWAP (`/v2/orders/iceberg`, `/v2/orders/twap`) are not in any Dhan documentation; the gateway answers any `/v2/orders/*` path, so a probe cannot tell. |
+| **Served by the sandbox** | `/orders` (place, modify, cancel, book, by id, by correlation id), `/orders/slicing`, `/trades` (all three variants), `/holdings`, `/positions`, `/positions/convert`, `POST /killswitch`, `/edis/tpin`, `/edis/form`, `/edis/bulkform`, `/edis/inquire/{isin}`, `/fundlimit`, `POST /margincalculator`, `/ledger`, `/charts/historical`, `/charts/intraday`, `/forever/orders`, `GET /profile` (absent from the sandbox spec; added by overlay after a recorded sandbox response) |
+| **Not served — 404** | `/super/orders`, `/alerts/orders`, `/alerts/multi/orders`, `/pnlExit`, `/margincalculator/multi`, `/ip/*`, `/marketfeed/*`, `/optionchain`, `/optionchain/expirylist`, `/charts/rollingoption`, `/data/*` (ScanX), `/globalstocks/*` |
+| **Refused by the guard, route unclear** | `GET /killswitch` and `DELETE /positions` (exit-all) answer 400 rather than 404 on the sandbox but are absent from its spec. Iceberg/TWAP (`/v2/orders/iceberg`, `/v2/orders/twap`) appear in no Dhan document. |
 | **Not supported** | All WebSocket endpoints (order updates, market feed, market depth). Production only. |
 
-The deny-list lives in `DhanHQ::Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES`. In
-`:hybrid` mode a blocked request is **never** redirected to production — that would turn a
-paper order into a real one.
+In `:hybrid` mode a refused request is **never** redirected to production — that would turn a
+paper order into a real one. Route a read-only tier to production with `environment_overrides`.
 
 ---
 

@@ -4,7 +4,7 @@ RSpec.describe DhanHQ::Resources::PnlExit do
   subject(:resource) { described_class.new }
 
   let(:configure_params) do
-    { "profitValue" => 500.0, "lossValue" => 300.0, "productType" => "INTRADAY", "enableKillSwitch" => false }
+    { "profitValue" => 500.0, "lossValue" => 300.0, "productType" => ["INTRADAY"], "enableKillSwitch" => false }
   end
 
   before do

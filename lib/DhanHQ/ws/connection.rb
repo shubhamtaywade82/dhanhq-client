@@ -9,14 +9,26 @@ module DhanHQ
     # Low-level wrapper responsible for establishing and maintaining the raw
     # WebSocket connection to the streaming API.
     class Connection
-      # Feed request codes per the official Annexure "Feed Request Code" table
-      # (dhanhq.co/docs/v2/annexure#feed-request-code): 15/16 ticker, 17/18 quote,
-      # 21/22 full. RequestCode 12 is the whole-connection Disconnect Feed frame
-      # and is reserved for #send_disconnect.
-      SUB_CODES   = { ticker: 15, quote: 17, full: 21 }.freeze
-      # Unsubscribe codes per the same table: 16/18/22. Never 12 — that is the
-      # whole-connection disconnect, not a per-instrument unsubscribe.
-      UNSUB_CODES = { ticker: 16, quote: 18, full: 22 }.freeze
+      # Feed request codes — derived from the WebSocket protocol manifest
+      # (contracts/dhanhq/ws_protocol.yml), per the official Annexure
+      # "Feed Request Code" table: 15 = Ticker, 17 = Quote, 21 = Full.
+      # RequestCode 15 subscribes to LTP-only ticker packets regardless of the
+      # fields the caller wants, so each mode must map to its own code.
+      SUB_CODES = {
+        ticker: WS::Protocol.request_code(:ticker, :subscribe),
+        quote: WS::Protocol.request_code(:quote, :subscribe),
+        full: WS::Protocol.request_code(:full, :subscribe)
+      }.freeze
+      # Unsubscribe request codes are the subscribe code + 1 per the same table:
+      # 16 = Ticker, 18 = Quote, 22 = Full. RequestCode 12 (see
+      # Protocol.disconnect_request_code) is the whole-connection Disconnect
+      # Feed frame — it is reserved for #send_disconnect and must never be used
+      # to unsubscribe from individual instruments.
+      UNSUB_CODES = {
+        ticker: WS::Protocol.request_code(:ticker, :unsubscribe),
+        quote: WS::Protocol.request_code(:quote, :unsubscribe),
+        full: WS::Protocol.request_code(:full, :unsubscribe)
+      }.freeze
 
       COOL_OFF_429 = 60  # seconds to cool off on 429
       MAX_BACKOFF  = 90  # cap exponential backoff

@@ -18,6 +18,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash] The parsed API response containing arrays of open, high, low, close, volume, timestamp
       def daily(params)
+        params = contract_params(params)
         post("/historical", params: params)
       end
 
@@ -27,6 +28,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash] The parsed API response containing arrays for candle data
       def intraday(params)
+        params = contract_params(params)
         post("/intraday", params: params)
       end
     end

@@ -31,7 +31,10 @@ module DhanHQ
       HTTP_PATH = "/v2/holdings"
 
       attributes :exchange, :trading_symbol, :security_id, :isin, :total_qty,
-                 :dp_qty, :t1_qty, :available_qty, :collateral_qty, :avg_cost_price
+                 :dp_qty, :t1_qty, :available_qty, :collateral_qty, :avg_cost_price,
+                 # MTF (margin trade funding) fields and live LTP as served by
+                 # GET /holdings (see HoldingResponse in the vendored contract)
+                 :mtf_t1_qty, :mtf_qty, :last_traded_price
 
       # Returns a concise prompt-friendly summary of the holding.
       def to_prompt

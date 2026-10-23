@@ -108,11 +108,14 @@ module DhanHQ
     end
 
     # WebSocket streams bound to this client instance configuration
-    def ws_market_feed(mode: :ticker, url: nil, &block)
-      WS::Client.new(mode: mode, url: url, config: @config).tap do |ws|
-        ws.start if block_given?
-        ws.on(:tick, &block) if block_given?
-      end
+    def ws_market_feed(mode: :ticker, url: nil, &)
+      ws = WS::Client.new(mode: mode, url: url, config: @config)
+      # Register the tick callback BEFORE the socket starts: the connection runs
+      # in a background thread, so subscribing after #start can drop the first
+      # ticks delivered while the callback registration is still in flight.
+      ws.on(:tick, &) if block_given?
+      ws.start if block_given?
+      ws
     end
 
     def ws_order_update = WS::Orders::Client.new(config: @config)
@@ -130,8 +133,9 @@ module DhanHQ
       payload = with_correlation_id(method, path, payload)
       return dry_run.response_for(method, path, payload) if dry_run.simulates?(method, path)
 
-      ensure_sandbox_supports!(method, path)
-
+      assert_sandbox_capability!(method, path)
+      payload = with_injected_client_id(method, path, payload)
+      operation = assert_contract!(method, path, payload)
       @token_manager&.ensure_valid_token!
       @rate_limiter.throttle!
 
@@ -143,9 +147,42 @@ module DhanHQ
             req.headers.merge!(build_headers(path))
             prepare_payload(req, payload, method, path)
           end
-          handle_response(response)
+          parsed = handle_response(response)
+          log_response_contract_drift!(operation, parsed)
+          parsed
         end
       end
+    end
+
+    # Contract-first structural validation of the wire payload (see
+    # DhanHQ::Contract::SchemaValidator). Semantic rules stay in the
+    # dry-validation contracts; this catches drift between the gem and the
+    # vendored OpenAPI document before a request leaves the process.
+    #
+    # @return [DhanHQ::Contract::Operation, nil] the resolved operation, for
+    #   downstream response-drift checks
+    def assert_contract!(method, path, payload)
+      operation = Contract::Registry.resolve(method, path)
+      return unless operation
+      return operation unless @config&.validate_requests?
+
+      Contract::SchemaValidator.validate_request!(operation, payload)
+      operation
+    end
+
+    # Logs (never raises) when a parsed 2xx response no longer matches the
+    # contract — the early-warning tripwire for upstream drift.
+    def log_response_contract_drift!(operation, parsed)
+      return unless operation
+      return unless @config&.validate_responses?
+
+      errors = Contract::SchemaValidator.response_errors(operation, parsed)
+      return if errors.empty?
+
+      DhanHQ.logger&.warn(
+        "[DhanHQ::Client] Response no longer matches the contract for " \
+        "#{operation.label}: #{errors.join("; ")}"
+      )
     end
 
     def with_auth_retry
@@ -282,17 +319,19 @@ module DhanHQ
       @config.client_id_for(@api_type)
     end
 
-    # Fails fast when this request would hit the sandbox host on a path it does
-    # not serve (see {Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES}), instead of
-    # surfacing an opaque 404. Never falls back to production.
-    def ensure_sandbox_supports!(method, path)
-      return unless environment == :sandbox
-      return unless Constants::SANDBOX_UNSUPPORTED_PATH_PREFIXES.any? { |prefix| path.start_with?(prefix) }
+    # Fails fast with a clear error when the effective target host is the
+    # sandbox but the endpoint is not part of the sandbox API surface. Without
+    # this the caller would see an opaque 404/405 or DH-905 from the host.
+    def assert_sandbox_capability!(method, path)
+      return unless @config.environment_for(@api_type) == :sandbox
+      return unless SandboxCapabilities.unsupported?(method, path)
 
+      reason = SandboxCapabilities.reason_for(method, path)
       raise DhanHQ::SandboxUnsupportedError,
-            "#{method.to_s.upcase} #{path} is not available on the Dhan sandbox (#{@config.mode} mode routes " \
-            "#{@api_type} to it). For a read-only endpoint, route its tier to production with " \
-            "environment_overrides (e.g. { #{@api_type}: :live }); order-placing endpoints have no sandbox equivalent."
+            "#{method.to_s.upcase} #{path} cannot run on the Dhan sandbox host " \
+            "(https://sandbox.dhan.co/v2): #{reason}. Use mode :hybrid (live " \
+            "market data + sandbox execution), route this tier to production via " \
+            "config.environment_overrides, or run in :live mode."
     end
 
     def resolve_config(config_or_attrs, keyword_config, attrs = {})

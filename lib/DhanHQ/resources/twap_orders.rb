@@ -23,6 +23,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash]
       def create(params)
+        params = contract_params(params)
         ensure_live_trading!
         run_risk_checks!(params)
         log_order_context("DHAN_TWAP_ORDER_ATTEMPT", params)
@@ -43,6 +44,7 @@ module DhanHQ
       # @param params [Hash]
       # @return [Hash]
       def update(order_id, params)
+        params = contract_params(params)
         ensure_live_trading!
         log_order_context("DHAN_TWAP_ORDER_MODIFY_ATTEMPT", params.merge(order_id: order_id))
         put("/#{order_id}", params: params)

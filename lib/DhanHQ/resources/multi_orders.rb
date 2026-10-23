@@ -26,6 +26,7 @@ module DhanHQ
       # @raise [DhanHQ::LiveTradingDisabledError] Unless LIVE_TRADING is enabled.
       # @raise [DhanHQ::ValidationError] When any leg fails validation.
       def create(orders, dhan_client_id: nil)
+        orders = contract_params(orders)
         ensure_live_trading!
 
         legs = Array(orders).map { |leg| snake_case(leg) }
