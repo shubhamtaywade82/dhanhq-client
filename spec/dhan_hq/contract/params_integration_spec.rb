@@ -74,6 +74,28 @@ RSpec.describe "generated param structs through the resource layer" do
     expect(resource.create(built)["orderId"]).to eq("ORD002")
   end
 
+  it "sends algo_id from a struct under the algoId wire key" do
+    stub = stub_request(:post, %r{/v2/orders\z}).with { |req| JSON.parse(req.body)["algoId"] == "1234" }
+                                                .to_return(status: 200,
+                                                           body: { orderId: "ORD003", orderStatus: "PENDING" }.to_json,
+                                                           headers: { "Content-Type" => "application/json" })
+
+    expect(resource.create(struct.merge(algo_id: "1234"))["orderId"]).to eq("ORD003")
+    expect(stub).to have_been_requested
+  end
+
+  it "sends algo_id from a hash payload under the algoId wire key" do
+    stub = stub_request(:post, %r{/v2/orders\z}).with { |req| JSON.parse(req.body)["algoId"] == "1234" }
+                                                .to_return(status: 200,
+                                                           body: { orderId: "ORD004", orderStatus: "PENDING" }.to_json,
+                                                           headers: { "Content-Type" => "application/json" })
+
+    resource.create(transaction_type: "BUY", exchange_segment: "NSE_EQ", product_type: "CNC",
+                    order_type: "LIMIT", security_id: "11536", quantity: 5, price: 195.5,
+                    validity: "DAY", algo_id: "1234")
+    expect(stub).to have_been_requested
+  end
+
   it "fails at the call site on a schema violation before any socket opens" do
     request_stub = stub_request(:post, %r{/v2/orders\z}).to_return(status: 200, body: "{}")
 

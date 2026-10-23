@@ -66,6 +66,12 @@ RSpec.configure do |config|
   config.before do |example|
     DhanHQ.reset_configuration!
 
+    # Shared rate limiters hold per-hour and per-day counters for the whole
+    # process, and their reset threads run on real time. Start every example
+    # with fresh buckets so one spec's order volume cannot stall another.
+    DhanHQ::RateLimiter.shared_limiters.each_value { |limiter| limiter.send(:shutdown) }
+    DhanHQ::RateLimiter.shared_limiters.clear
+
     # Ensure ENV variables are set correctly
     # If we have original values from .env/shell, use them.
     # Otherwise, only use test defaults if we are not in a VCR test that might need real ones.

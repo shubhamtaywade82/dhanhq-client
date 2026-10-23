@@ -74,6 +74,11 @@ RSpec.describe DhanHQ::Contract::Params do
       expect(order.merge(price: nil).to_h).to eq(order_attrs)
     end
 
+    it "accepts algo_id (vendored OrderRequest field) and maps it to the algoId wire key" do
+      expect(described_class::OrderParams.wire_key_map).to include("algoId" => "algo_id")
+      expect(order.merge(algo_id: "1234").to_h).to include(algo_id: "1234")
+    end
+
     it "rejects unknown fields with the known set in the message" do
       expect { DhanHQ::Contract::Params::OrderParams.new(quantitiy: 5) }
         .to raise_error(DhanHQ::ValidationError, /unknown field `quantitiy`.*exchange_segment/)

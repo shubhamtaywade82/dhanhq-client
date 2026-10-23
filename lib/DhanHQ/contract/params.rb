@@ -857,6 +857,11 @@ module DhanHQ
             "required" => false,
             "type" => "string"
           },
+          "algo_id" => {
+            "wire_key" => "algoId",
+            "required" => false,
+            "type" => "string"
+          },
           "orders" => {
             "wire_key" => "orders",
             "required" => true,
@@ -1262,6 +1267,11 @@ module DhanHQ
             "wire_key" => "boStopLossValue",
             "required" => false,
             "type" => "number"
+          },
+          "algo_id" => {
+            "wire_key" => "algoId",
+            "required" => false,
+            "type" => "string"
           }
         }.freeze
         REQUIRED = [
