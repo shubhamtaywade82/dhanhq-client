@@ -7,11 +7,11 @@ module DhanHQ
     class TokenRenewal
       def renew
         config = DhanHQ.configuration
-        raise Errors::AuthenticationError, "Missing configuration" unless config
+        raise DhanHQ::AuthenticationError, "Missing configuration" unless config
 
         access_token = config.resolved_access_token
         dhan_client_id = config.client_id
-        raise Errors::AuthenticationError, "Missing dhanClientId (client_id)" if dhan_client_id.to_s.strip.empty?
+        raise DhanHQ::AuthenticationError, "Missing dhanClientId (client_id)" if dhan_client_id.to_s.strip.empty?
 
         response = Auth.renew_token(
           access_token: access_token,
