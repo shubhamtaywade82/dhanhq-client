@@ -1,3 +1,13 @@
+## [Unreleased]
+
+### Fixed
+
+- **`WS::Registry#stop_all` deadlock.** Clients are stopped outside the registry mutex. Stopping under it deadlocked on the non-reentrant mutex (each client's `stop` calls `unregister`), so close listeners and the `at_exit` close never ran.
+- **Typed guards on derivative order models.** `SuperOrder`, `ForeverOrder`, `TwapOrder` and `IcebergOrder` raise `DhanHQ::OrderError` for a missing order id (was a bare `RuntimeError`).
+- **Little-endian feed frame headers and disconnect code.** `message_length` and the disconnect reason code (805–809) are little-endian per the live feed spec; both were read big-endian.
+- **Index and market-status packets.** Index packets (response code 1, IDX_I instruments) are decoded instead of dropped. Market-status packets (code 7) are reachable.
+- **Tick callback registration.** `ws_market_feed` registers the tick callback before the socket starts, so early ticks are not dropped.
+
 ## [4.1.1] - 2026-10-11
 
 ### Fixed — pre-trade risk pipeline
@@ -46,6 +56,11 @@
 - **`OrderStatus::INACTIVE`** added; it is in the documented `orderStatus` response enum.
 
 ## [4.1.0] - 2026-10-10
+
+### Fixed (PR review follow-up)
+
+- **`WS::Registry#stop_all` deadlock** — the registry mutex is no longer held while clients are stopped. Both `WS::Client#stop` and `WS::Orders::Client#stop` call `Registry.unregister` (same mutex) from `stop`, so stopping under the mutex raised a recursive-locking `ThreadError` that the per-client rescue silently swallowed — killing the market feed's `emit(:close, true)` notification (orders clients emit before unregistering, so only theirs survived). `stop_all` now snapshots and clears the client list under the mutex, then stops each client outside it; unregister during that later stop is a no-op delete. Regression spec `spec/dhan_hq/ws/registry_stop_all_spec.rb` covers self-unregistering clients, close-listener notification for both orderings, failing-client isolation, and the empty-registry case.
+- **Typed order guards on derivative order models** — `SuperOrder`, `ForeverOrder`, `TwapOrder` and `IcebergOrder` id guards now raise `DhanHQ::OrderError` (was bare `RuntimeError`), so `rescue DhanHQ::Error` catches them consistently with `Models::Order`. Guard assertions strengthened to the error class; new coverage for `TwapOrder`/`IcebergOrder` (`spec/dhan_hq/models/typed_order_guards_spec.rb`).
 
 ### Fixed (full-gem review pass — `ruby-agent-skills` audit)
 

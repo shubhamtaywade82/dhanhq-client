@@ -108,11 +108,14 @@ module DhanHQ
     end
 
     # WebSocket streams bound to this client instance configuration
-    def ws_market_feed(mode: :ticker, url: nil, &block)
-      WS::Client.new(mode: mode, url: url, config: @config).tap do |ws|
-        ws.start if block_given?
-        ws.on(:tick, &block) if block_given?
-      end
+    def ws_market_feed(mode: :ticker, url: nil, &)
+      ws = WS::Client.new(mode: mode, url: url, config: @config)
+      # Register the tick callback BEFORE the socket starts: the connection runs
+      # in a background thread, so subscribing after #start can drop the first
+      # ticks delivered while the callback registration is still in flight.
+      ws.on(:tick, &) if block_given?
+      ws.start if block_given?
+      ws
     end
 
     def ws_order_update = WS::Orders::Client.new(config: @config)

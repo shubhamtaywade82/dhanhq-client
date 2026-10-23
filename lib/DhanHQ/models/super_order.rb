@@ -291,9 +291,9 @@ module DhanHQ
       #     trailing_jump: 15
       #   )
       #
-      # @raise [RuntimeError] If order ID is missing
+      # @raise [DhanHQ::OrderError] If order ID is missing
       def modify(new_params)
-        raise "Order ID is required to modify a super order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to modify a super order" unless id
 
         DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Modifying super order #{id}")
         response = self.class.resource.update(id, new_params)
@@ -332,9 +332,9 @@ module DhanHQ
       #   order = DhanHQ::Models::SuperOrder.all.first
       #   order.cancel("TARGET_LEG")
       #
-      # @raise [RuntimeError] If order ID is missing
+      # @raise [DhanHQ::OrderError] If order ID is missing
       def cancel(leg_name = DhanHQ::Constants::LegName::ENTRY_LEG)
-        raise "Order ID is required to cancel a super order" unless id
+        raise DhanHQ::OrderError, "Order ID is required to cancel a super order" unless id
 
         DhanHQ.logger&.info("[DhanHQ::Models::SuperOrder] Cancelling super order #{id} leg #{leg_name}")
         response = self.class.resource.cancel(id, leg_name)
