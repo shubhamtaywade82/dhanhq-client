@@ -66,11 +66,18 @@ RSpec.configure do |config|
   config.before do |example|
     DhanHQ.reset_configuration!
 
-    # Shared rate limiters hold per-hour and per-day counters for the whole
-    # process, and their reset threads run on real time. Start every example
-    # with fresh buckets so one spec's order volume cannot stall another.
-    DhanHQ::RateLimiter.shared_limiters.each_value { |limiter| limiter.send(:shutdown) }
-    DhanHQ::RateLimiter.shared_limiters.clear
+    # Shared rate limiters keep per-hour and per-day counters for the whole process,
+    # and their reset threads run on real time. Zero the counters in place before each
+    # example so one spec's order volume cannot stall another. Reusing the instances
+    # (rather than recreating them) also avoids spawning reset threads per example.
+    DhanHQ::RateLimiter.shared_limiters.each_value do |limiter|
+      limiter.send(:mutex).synchronize do
+        buckets = limiter.instance_variable_get(:@buckets)
+        buckets.each_value { |bucket| bucket.value = 0 if bucket.is_a?(Concurrent::AtomicFixnum) }
+        buckets[:last_request_time] = Time.at(0) if buckets.key?(:last_request_time)
+        limiter.instance_variable_get(:@request_times).clear
+      end
+    end
 
     # Ensure ENV variables are set correctly
     # If we have original values from .env/shell, use them.
