@@ -1,3 +1,13 @@
+## [Unreleased]
+
+### Fixed
+
+- **`WS::Registry#stop_all` deadlock.** Clients are stopped outside the registry mutex. Stopping under it deadlocked on the non-reentrant mutex (each client's `stop` calls `unregister`), so close listeners and the `at_exit` close never ran.
+- **Typed guards on derivative order models.** `SuperOrder`, `ForeverOrder`, `TwapOrder` and `IcebergOrder` raise `DhanHQ::OrderError` for a missing order id (was a bare `RuntimeError`).
+- **Little-endian feed frame headers and disconnect code.** `message_length` and the disconnect reason code (805–809) are little-endian per the live feed spec; both were read big-endian.
+- **Index and market-status packets.** Index packets (response code 1, IDX_I instruments) are decoded instead of dropped. Market-status packets (code 7) are reachable.
+- **Tick callback registration.** `ws_market_feed` registers the tick callback before the socket starts, so early ticks are not dropped.
+
 ## [4.1.1] - 2026-10-11
 
 ### Fixed — pre-trade risk pipeline
