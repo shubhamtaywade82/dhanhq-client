@@ -20,11 +20,11 @@ Per the actual implementation (`lib/DhanHQ/ws/connection.rb`):
 
 | Action       | Ticker | Quote | Full |
 | ------------ | ------ | ----- | ---- |
-| Subscribe    | 15     | 15    | 15   |
-| Unsubscribe  | 12     | 12    | 12   |
+| Subscribe    | 15     | 17    | 21   |
+| Unsubscribe  | 16     | 18    | 22   |
 | Disconnect   | 12     | 12    | 12   |
 
-All three modes send request code `15` to subscribe (per the official API — mode is set at connection time via the WebSocket URL, not per-message). "Unsubscribe" reuses the disconnect code `12` for all modes rather than distinct per-mode codes.
+Each mode has its own subscribe code, and unsubscribe is the subscribe code + 1. Request code `12` is the whole-connection Disconnect Feed frame. It is never used to unsubscribe from individual instruments.
 
 ---
 
@@ -34,9 +34,9 @@ All three modes send request code `15` to subscribe (per the official API — mo
 
 | Field                | Size   | Encoding | Description                   |
 | -------------------- | ------ | -------- | ----------------------------- |
-| `feed_response_code` | 1 byte | u8, BE   | Identifies the packet type    |
-| `message_length`     | 2 bytes| u16, BE  | Total message length in bytes |
-| `exchange_segment`   | 1 byte | u8, BE   | Exchange segment identifier   |
+| `feed_response_code` | 1 byte | u8, LE   | Identifies the packet type    |
+| `message_length`     | 2 bytes| u16, LE  | Total message length in bytes |
+| `exchange_segment`   | 1 byte | u8, LE   | Exchange segment identifier   |
 | `security_id`        | 4 bytes| i32, LE  | Security identifier           |
 
 ### Packet Types
