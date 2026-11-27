@@ -3,14 +3,14 @@
 require "spec_helper"
 
 RSpec.describe DhanHQ::WS::Packets::Header do
-  # Layout (big-endian except security_id):
+  # Layout (little-endian throughout, per the live feed spec):
   #   uint8  feed_response_code  (1 byte)
-  #   uint16 message_length      (2 bytes, big-endian)
+  #   uint16 message_length      (2 bytes, little-endian)
   #   uint8  exchange_segment    (1 byte)
   #   int32le security_id        (4 bytes, little-endian)
   def build_header(code:, length:, segment:, security_id:)
     [code].pack("C") +
-      [length].pack("n") +
+      [length].pack("S<") +
       [segment].pack("C") +
       [security_id].pack("l<")
   end

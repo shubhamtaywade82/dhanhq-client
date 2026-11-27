@@ -298,10 +298,10 @@ module DhanHQ
       #     validity: "DAY"
       #   )
       #
-      # @raise [RuntimeError] If order_id is not available
+      # @raise [DhanHQ::OrderError] If order_id is not available
       # @note Order modification APIs require Static IP whitelisting
       def modify(new_params)
-        raise "Order ID is required to modify a forever order" unless order_id
+        raise DhanHQ::OrderError, "Order ID is required to modify a forever order" unless order_id
 
         DhanHQ.logger&.info("[DhanHQ::Models::ForeverOrder] Modifying order #{order_id}")
         full_params = snake_case(new_params)
@@ -333,10 +333,10 @@ module DhanHQ
       #     puts "Order #{order.order_id} cancelled successfully"
       #   end
       #
-      # @raise [RuntimeError] If order_id is not available
+      # @raise [DhanHQ::OrderError] If order_id is not available
       # @note Order cancellation APIs require Static IP whitelisting
       def cancel
-        raise "Order ID is required to cancel a forever order" unless order_id
+        raise DhanHQ::OrderError, "Order ID is required to cancel a forever order" unless order_id
 
         response = self.class.resource.cancel(order_id)
         response["orderStatus"] == DhanHQ::Constants::OrderStatus::CANCELLED

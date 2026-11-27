@@ -3,10 +3,10 @@
 require "spec_helper"
 
 RSpec.describe DhanHQ::WS::WebsocketPacketParser do
-  # Build an 8-byte header (big-endian except security_id which is little-endian int32)
+  # Build an 8-byte header (little-endian throughout, per the live feed spec)
   def build_header(code:, length:, segment:, security_id:)
-    [code].pack("C") +      # feed_response_code (uint8)
-      [length].pack("n") +  # message_length (uint16 big-endian)
+    [code].pack("C") + # feed_response_code (uint8)
+      [length].pack("S<") + # message_length (uint16 little-endian)
       [segment].pack("C") + # exchange_segment (uint8)
       [security_id].pack("l<") # security_id (int32 little-endian)
   end
@@ -35,7 +35,7 @@ RSpec.describe DhanHQ::WS::WebsocketPacketParser do
   end
 
   def build_disconnect_payload(code:)
-    [code].pack("s>")
+    [code].pack("s<")
   end
 
   describe "#parse" do

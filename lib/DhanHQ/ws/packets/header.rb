@@ -7,16 +7,17 @@ module DhanHQ
     # Binary structures backing the streaming feed decoder.
     module Packets
       # Binary representation of the 8-byte frame header.
+      #
+      # Per the official Live Market Feed spec the header is LITTLE-ENDIAN
+      # throughout: responseCode (1 byte), messageLength (2 bytes), then the
+      # exchange segment (1 byte) and security id (4 bytes).
       class Header < BinData::Record
-        endian :big # Default to big-endian for majority fields
+        endian :little
 
         uint8  :feed_response_code     # Byte 1
         uint16 :message_length         # Bytes 2–3
         uint8  :exchange_segment       # Byte 4
-
-        # Parse security_id separately using little-endian
-        # This works because `BinData` allows override
-        int32le :security_id # Bytes 5–8
+        int32  :security_id            # Bytes 5–8
       end
     end
   end

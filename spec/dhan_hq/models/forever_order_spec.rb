@@ -90,7 +90,7 @@ RSpec.describe DhanHQ::Models::ForeverOrder do
     it "raises when order_id is missing" do
       record = described_class.new({}, skip_validation: true)
 
-      expect { record.modify({}) }.to raise_error("Order ID is required to modify a forever order")
+      expect { record.modify({}) }.to raise_error(DhanHQ::OrderError, "Order ID is required to modify a forever order")
     end
 
     it "returns updated record when the response is successful" do
@@ -115,7 +115,7 @@ RSpec.describe DhanHQ::Models::ForeverOrder do
 
     it "raises when order_id missing" do
       record = described_class.new({}, skip_validation: true)
-      expect { record.cancel }.to raise_error("Order ID is required to cancel a forever order")
+      expect { record.cancel }.to raise_error(DhanHQ::OrderError, "Order ID is required to cancel a forever order")
     end
 
     it "returns true when cancellation succeeds" do
